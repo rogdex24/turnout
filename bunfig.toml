@@ -1,0 +1,6 @@
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
+
+[test]
+# e2e/*.spec.ts belong to Playwright (bun run e2e), not bun test.
+root = "test"

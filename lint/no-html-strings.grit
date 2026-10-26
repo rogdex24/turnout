@@ -1,0 +1,13 @@
+// No DOM built from strings under src/web (R3 in docs/plans/map-react-migration.md).
+// React renders markup; fixed server blocks go through src/web/ui/rawBlock.tsx.
+or {
+  `$obj.innerHTML = $value`,
+  `$obj.outerHTML = $value`,
+  `$obj.insertAdjacentHTML($where, $html)`,
+  `document.write($html)`
+} as $hit where {
+  register_diagnostic(
+    span = $hit,
+    message = "Do not build DOM from strings. Render it with React; fixed server blocks go through src/web/ui/rawBlock.tsx."
+  )
+}

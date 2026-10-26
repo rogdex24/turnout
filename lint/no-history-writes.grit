@@ -1,0 +1,12 @@
+// nuqs owns the URL on /map (D4, S4.4). Writing history directly bypasses its state.
+or {
+  `history.pushState($...)`,
+  `history.replaceState($...)`,
+  `window.history.pushState($...)`,
+  `window.history.replaceState($...)`
+} as $hit where {
+  register_diagnostic(
+    span = $hit,
+    message = "nuqs owns the URL on /map. Change state through the descriptor in src/web/map/model/url.ts."
+  )
+}

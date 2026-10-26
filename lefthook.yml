@@ -1,0 +1,17 @@
+# Git hooks (lefthook). Installed by `bun install` through the prepare script.
+# They run in every worktree of this repo: hooks live in the shared .git directory.
+# Skip once with LEFTHOOK=0 only when you know why; CI will run the same checks.
+
+pre-commit:
+  jobs:
+    - name: format staged files
+      glob: "*.{ts,tsx,js,json,css}"
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    - name: check (types, lint, design, tests, dependency rule)
+      run: bun run check
+
+pre-push:
+  jobs:
+    - name: browser tests
+      run: bun run e2e
