@@ -1,0 +1,252 @@
+{
+  "api_id": "evt-vTk0e897DkgiyBR",
+  "event": {
+    "api_id": "evt-vTk0e897DkgiyBR",
+    "calendar_api_id": "cal-CKU14DI41lWyZLO",
+    "cover_url": "https://images.lumacdn.com/uploads/yx/3e692a9f-2100-4261-9b2e-3d6eed242fb4.jpg",
+    "end_at": "2026-09-08T12:30:00.000Z",
+    "event_type": "independent",
+    "hide_rsvp": false,
+    "location_type": "offline",
+    "name": "Shell E4 - Energy Transition Track 2026",
+    "one_to_one": true,
+    "recurrence_id": null,
+    "show_guest_list": false,
+    "social_image_url": "https://images.lumacdn.com/event-social/pq/9701ae31-882a-4fdc-a784-50cb6221c2c0.png",
+    "start_at": "2026-09-08T08:30:00.000Z",
+    "timezone": "Asia/Kolkata",
+    "url": "jv4nmryc",
+    "user_api_id": "usr-example00000001",
+    "visibility": "public",
+    "virtual_info": {
+      "has_access": false
+    },
+    "geo_address_info": {
+      "city": "Hyderabad",
+      "type": "google",
+      "region": "Telangana",
+      "address": "T-Hub",
+      "country": "India",
+      "place_id": "ChIJDwtBGL2TyzsRzlgYieo_fo0",
+      "localized": {
+        "hi": {
+          "city": "Hyderabad",
+          "region": "Telangana",
+          "address": "टी-हब",
+          "country": "भारत",
+          "city_state": "Hyderabad, भारत",
+          "sublocality": "panmaktha",
+          "full_address": "टी-हब, Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Madhapur, Hyderabad, Serilingampalle (M), Telangana 500032, भारत",
+          "region_short": "TS",
+          "short_address": "Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Hyderabad, Serilingampalle (M)"
+        },
+        "en-GB": {
+          "city": "Hyderabad",
+          "region": "Telangana",
+          "address": "T-Hub",
+          "country": "India",
+          "city_state": "Hyderabad, India",
+          "sublocality": "panmaktha",
+          "full_address": "T-Hub, Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Madhapur, Hyderabad, Serilingampalle (M), Telangana 500032, India",
+          "region_short": "TS",
+          "short_address": "Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Hyderabad, Serilingampalle (M)"
+        }
+      },
+      "city_state": "Hyderabad, India",
+      "description": "The Oasis, 7th Floor",
+      "sublocality": "panmaktha",
+      "country_code": "IN",
+      "full_address": "T-Hub, Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Madhapur, Hyderabad, Serilingampalle (M), Telangana 500032, India",
+      "region_short": "TS",
+      "short_address": "Plot No 1/C, Sy No 83/1, Raidurgam, Knowledge City Rd, panmaktha, Hyderabad, Serilingampalle (M)",
+      "place_coordinate": {
+        "latitude": 17.4339057,
+        "longitude": 78.3788131
+      },
+      "apple_maps_place_id": "I8193280C02168BCC",
+      "mode": "shown"
+    },
+    "geo_address_visibility": "public",
+    "coordinate": {
+      "longitude": 78.3788131,
+      "latitude": 17.4339057
+    },
+    "waitlist_enabled": true,
+    "waitlist_status": "active"
+  },
+  "cover_image": {
+    "colors": [
+      "#fbc40e",
+      "#3a3a3a",
+      "#fbfbfb",
+      "#d42a22"
+    ],
+    "palette": {
+      "neutral": [
+        {
+          "color": "#3a3a3a",
+          "percentage": 16.14
+        },
+        {
+          "color": "#fbfbfb",
+          "percentage": 10.54
+        }
+      ],
+      "vibrant": [
+        {
+          "color": "#fbc40e",
+          "percentage": 30.92
+        },
+        {
+          "color": "#d42a22",
+          "percentage": 1.44
+        }
+      ]
+    }
+  },
+  "calendar": {
+    "access_level": "public",
+    "api_id": "cal-CKU14DI41lWyZLO",
+    "avatar_url": "https://cdn.lu.ma/avatars-default/community_avatar_21.png",
+    "coordinate": null,
+    "cover_image_url": null,
+    "description_short": null,
+    "event_submission_restriction": "open",
+    "google_measurement_id": null,
+    "instagram_handle": null,
+    "is_blocked": false,
+    "launch_status": "launched",
+    "linkedin_handle": null,
+    "location": null,
+    "luma_plan": "free",
+    "luma_plus_active": false,
+    "meta_pixel_id": null,
+    "name": "Shell E4 - Energy Transition Track 2026",
+    "personal_user_api_id": null,
+    "refund_policy": null,
+    "slug": null,
+    "social_image_url": null,
+    "stripe_account_id": null,
+    "tax_config": null,
+    "tiktok_handle": null,
+    "tint_color": "#F8712B",
+    "track_meta_ads_from_luma": false,
+    "twitter_handle": null,
+    "verified_at": null,
+    "website": null,
+    "youtube_handle": null,
+    "city": null,
+    "is_personal": false,
+    "personal_user": null,
+    "geo_city": null,
+    "geo_country": null,
+    "geo_region": null,
+    "timezone": null
+  },
+  "start_at": "2026-09-08T08:30:00.000Z",
+  "hosts": [
+    {
+      "api_id": "usr-example00000001",
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
+      "bio_short": null,
+      "first_name": "Example",
+      "last_name": "Host",
+      "instagram_handle": null,
+      "is_verified": false,
+      "linkedin_handle": "example-host",
+      "name": "Example Host 1",
+      "tiktok_handle": null,
+      "timezone": "Asia/Kolkata",
+      "twitter_handle": null,
+      "username": null,
+      "website": null,
+      "youtube_handle": null
+    },
+    {
+      "api_id": "usr-example00000002",
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_22.png",
+      "bio_short": null,
+      "first_name": "Example Host 2",
+      "last_name": "",
+      "instagram_handle": null,
+      "is_verified": false,
+      "linkedin_handle": "example-host",
+      "name": "Example Host 2",
+      "tiktok_handle": null,
+      "timezone": "Asia/Kolkata",
+      "twitter_handle": null,
+      "username": null,
+      "website": null,
+      "youtube_handle": null
+    },
+    {
+      "api_id": "usr-example00000003",
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_31.png",
+      "bio_short": null,
+      "first_name": null,
+      "last_name": null,
+      "instagram_handle": null,
+      "is_verified": false,
+      "linkedin_handle": null,
+      "name": "Example Host 10",
+      "tiktok_handle": null,
+      "timezone": "Asia/Kolkata",
+      "twitter_handle": null,
+      "username": null,
+      "website": null,
+      "youtube_handle": null
+    },
+    {
+      "api_id": "usr-example00000004",
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_44.png",
+      "bio_short": null,
+      "first_name": "Example",
+      "last_name": "Host",
+      "instagram_handle": null,
+      "is_verified": false,
+      "linkedin_handle": null,
+      "name": "Example Host 3",
+      "tiktok_handle": null,
+      "timezone": "Asia/Kolkata",
+      "twitter_handle": null,
+      "username": null,
+      "website": null,
+      "youtube_handle": null
+    },
+    {
+      "api_id": "usr-example00000005",
+      "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_32.png",
+      "bio_short": "",
+      "first_name": "Example",
+      "last_name": "Host",
+      "instagram_handle": null,
+      "is_verified": false,
+      "linkedin_handle": null,
+      "name": "Example Host 4",
+      "tiktok_handle": null,
+      "timezone": "Asia/Kolkata",
+      "twitter_handle": null,
+      "username": null,
+      "website": null,
+      "youtube_handle": null
+    }
+  ],
+  "guest_count": 0,
+  "ticket_count": 0,
+  "ticket_info": {
+    "price": null,
+    "is_free": true,
+    "max_price": null,
+    "is_sold_out": true,
+    "spots_remaining": 0,
+    "is_near_capacity": false,
+    "require_approval": true
+  },
+  "registration_availability": "waitlist",
+  "featured_guests": [],
+  "manager_info": null,
+  "guest_info": null,
+  "host_info": null,
+  "waitlist_active": true,
+  "featured_city": null
+}

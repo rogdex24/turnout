@@ -1,0 +1,144 @@
+[
+  {
+    "id": "6767a79f-3c9a-4cfb-8434-930cf88fdf95",
+    "slug": "boulder-jam",
+    "title": "BOULDER JAM",
+    "shortDesc": "A fun, beginner-friendly bouldering competition for ages 8+.",
+    "status": "LIVE",
+    "approvalStatus": "APPROVED",
+    "categories": [{ "id": "3dadc7b7-a94a-46a9-a841-8e337c2be5b7", "name": "Sports", "slug": "sports" }],
+    "tags": ["Fitness", "Adventure"],
+    "minimumBasePrice": 700.0,
+    "timeSlots": [
+      {
+        "venueName": "Crag Studio - Gachibowli",
+        "address": "Crag Studio, Gachibowli, Hyderabad, Telangana 500032, India",
+        "latitude": 17.4349317,
+        "longitude": 78.3597017,
+        "venueMode": "PHYSICAL",
+        "scheduleSlots": [
+          {
+            "id": "74a6903c-c933-46cd-8b05-0439233ecb61",
+            "slotDate": "2026-09-11",
+            "startTime": "17:00:00",
+            "durationMinutes": 90,
+            "active": true
+          },
+          {
+            "id": "62d247c0-3ebe-4469-9009-63cdf3d775d7",
+            "slotDate": "2026-09-11",
+            "startTime": "18:30:00",
+            "durationMinutes": 90,
+            "active": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "90a734a9-898a-43ab-8312-6eaa908d339c",
+    "slug": "micless-with-merakee",
+    "title": "Micless with Merakee",
+    "shortDesc": "The biggest Telugu sing along is here!",
+    "status": "LIVE",
+    "approvalStatus": "APPROVED",
+    "categories": [{ "id": "c1", "name": "Music", "slug": "music" }],
+    "tags": ["Music"],
+    "minimumBasePrice": 0.0,
+    "timeSlots": [
+      {
+        "venueName": "Lamakaan",
+        "address": "Banjara Hills, Hyderabad",
+        "latitude": 17.4165,
+        "longitude": 78.4392,
+        "venueMode": "PHYSICAL",
+        "scheduleSlots": [
+          {
+            "id": "a1a1a1a1-0000-0000-0000-000000000001",
+            "slotDate": "2026-09-12",
+            "startTime": "19:00:00",
+            "durationMinutes": 120,
+            "active": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "duplicate-listing-id-0000",
+    "slug": "micless-with-merakee-hyderabad-edition",
+    "title": "Micless with Merakee | Hyderabad Edition",
+    "shortDesc": "Telugu sing-along, resubmitted under a second listing.",
+    "status": "LIVE",
+    "approvalStatus": "APPROVED",
+    "categories": [{ "id": "c1", "name": "Music", "slug": "music" }],
+    "tags": ["Music"],
+    "minimumBasePrice": 0.0,
+    "timeSlots": [
+      {
+        "venueName": "Lamakaan",
+        "address": "Banjara Hills, Hyderabad",
+        "latitude": 17.4165,
+        "longitude": 78.4392,
+        "venueMode": "PHYSICAL",
+        "scheduleSlots": [
+          {
+            "id": "a1a1a1a1-0000-0000-0000-000000000002",
+            "slotDate": "2026-09-12",
+            "startTime": "19:00:00",
+            "durationMinutes": 120,
+            "active": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unrelated-event-same-night",
+    "slug": "quiz-night-lamakaan",
+    "title": "Quiz Night",
+    "shortDesc": "Weekly pub quiz, same venue and night as the sing-along above but a different show.",
+    "status": "LIVE",
+    "approvalStatus": "APPROVED",
+    "categories": [{ "id": "c2", "name": "Community", "slug": "community" }],
+    "tags": [],
+    "minimumBasePrice": 0.0,
+    "timeSlots": [
+      {
+        "venueName": "Lamakaan",
+        "address": "Banjara Hills, Hyderabad",
+        "latitude": 17.4165,
+        "longitude": 78.4392,
+        "venueMode": "PHYSICAL",
+        "scheduleSlots": [
+          {
+            "id": "b2b2b2b2-0000-0000-0000-000000000001",
+            "slotDate": "2026-09-12",
+            "startTime": "19:00:00",
+            "durationMinutes": 60,
+            "active": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "not-approved-event",
+    "slug": "pending-review",
+    "title": "Pending Review Event",
+    "shortDesc": "Should never be stored.",
+    "status": "LIVE",
+    "approvalStatus": "PENDING",
+    "categories": [],
+    "tags": [],
+    "minimumBasePrice": 0.0,
+    "timeSlots": [
+      {
+        "venueName": "Somewhere",
+        "scheduleSlots": [
+          { "id": "c3c3c3c3-0000-0000-0000-000000000001", "slotDate": "2026-09-12", "startTime": "19:00:00", "active": true }
+        ]
+      }
+    ]
+  }
+]

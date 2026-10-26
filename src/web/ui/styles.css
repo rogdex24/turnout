@@ -1,0 +1,55 @@
+/*
+ * The public site's Tailwind entry. It maps the shadcn variables that
+ * src/web/map/tokens.ts generates from DESIGN.md onto Tailwind utilities.
+ * There is no color, size or shadow value in this file: every value is a var().
+ *
+ * Preflight is left out on purpose. The page keeps its own base styles (the
+ * generated block in the page head); utilities arrive in later slices, one
+ * component at a time.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+/* Scan only the public components. Without this Tailwind reads the whole repo, admin included. */
+@source "./";
+@source "../map/components";
+
+@theme inline {
+  --color-*: initial;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-family);
+
+  /* The concentric radius scale of DESIGN.md, Shapes. */
+  --radius-xs: var(--rounded-xs);
+  --radius-sm: var(--rounded-sm);
+  --radius-md: var(--rounded-tile);
+  --radius-lg: var(--rounded-card);
+  --radius-xl: var(--rounded-panel);
+  --radius-full: var(--rounded-full);
+
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+
+  --spacing-control: var(--control-height);
+  --spacing-hit: var(--hit-area-size);
+}

@@ -1,0 +1,98 @@
+{
+  "forbidden": [
+    {
+      "name": "utils-imports-nothing",
+      "comment": "utils is the bottom layer: generic helpers only.",
+      "severity": "error",
+      "from": { "path": "^src/utils/" },
+      "to": { "path": "^src/(catalog|ingestion|curation|web)/" }
+    },
+    {
+      "name": "catalog-imports-utils-only",
+      "severity": "error",
+      "from": { "path": "^src/catalog/" },
+      "to": { "path": "^src/(ingestion|curation|web)/" }
+    },
+    {
+      "name": "curation-imports-catalog-and-utils-only",
+      "severity": "error",
+      "from": { "path": "^src/curation/" },
+      "to": { "path": "^src/(ingestion|web)/" }
+    },
+    {
+      "name": "ingestion-never-imports-web-or-curation",
+      "severity": "error",
+      "from": { "path": "^src/ingestion/" },
+      "to": { "path": "^src/(web|curation)/" }
+    },
+    {
+      "name": "web-never-imports-ingestion",
+      "severity": "error",
+      "from": { "path": "^src/web/" },
+      "to": { "path": "^src/ingestion/" }
+    },
+    {
+      "name": "sources-do-not-import-each-other",
+      "comment": "A source file may import sources/shared.ts and sources/types.ts, never another source. registry.ts is the one file that lists them all.",
+      "severity": "error",
+      "from": { "path": "^src/ingestion/sources/(?!(registry|shared|types)\\.ts$)([^/]+)\\.ts$" },
+      "to": {
+        "path": "^src/ingestion/sources/[^/]+\\.ts$",
+        "pathNot": "^src/ingestion/sources/(shared|types|$2)\\.ts$"
+      }
+    },
+    {
+      "name": "only-cli-imports-the-composition-root",
+      "comment": "cli.ts and migrate.ts compose the modules; nothing below them may reach back up.",
+      "severity": "error",
+      "from": { "pathNot": "^src/(cli|migrate)\\.ts$" },
+      "to": { "path": "^src/(cli|migrate)\\.ts$" }
+    },
+    {
+      "name": "only-cli-imports-admin",
+      "comment": "The admin console is wired in by cli.ts alone; no other module may depend on it.",
+      "severity": "error",
+      "from": { "pathNot": "^src/(cli\\.ts|admin/)" },
+      "to": { "path": "^src/admin/" }
+    },
+    {
+      "name": "admin-never-imports-web",
+      "comment": "Admin may query the listable_event view in SQL but must not share web code.",
+      "severity": "error",
+      "from": { "path": "^src/admin/" },
+      "to": { "path": "^src/web/" }
+    },
+    {
+      "name": "admin-reads-ingestion-registry-only",
+      "comment": "From ingestion the admin takes the source list and the run-window constant, nothing that writes.",
+      "severity": "error",
+      "from": { "path": "^src/admin/" },
+      "to": { "path": "^src/ingestion/", "pathNot": "^src/ingestion/(schema|sources/registry)\\.ts$" }
+    },
+    {
+      "name": "admin-ui-is-browser-only",
+      "comment": "The frontend runs in the browser: it may use utils helpers and the API types, never server modules.",
+      "severity": "error",
+      "from": { "path": "^src/admin/ui/" },
+      "to": { "path": "^src/", "pathNot": "^src/(admin/ui/|utils/|admin/api\\.ts$)" }
+    },
+    {
+      "name": "web-ui-is-a-leaf",
+      "comment": "src/web/ui is the shadcn component folder: it imports utils (and itself) only, so any page can use it and it can never reach into a route.",
+      "severity": "error",
+      "from": { "path": "^src/web/ui/" },
+      "to": { "path": "^src/", "pathNot": "^src/(web/ui/|utils/)" }
+    },
+    {
+      "name": "no-circular",
+      "severity": "error",
+      "from": {},
+      "to": { "circular": true }
+    }
+  ],
+  "options": {
+    "doNotFollow": { "path": "node_modules" },
+    "tsConfig": { "fileName": "tsconfig.json" },
+    "tsPreCompilationDeps": true
+  }
+}

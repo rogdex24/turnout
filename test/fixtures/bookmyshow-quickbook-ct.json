@@ -1,0 +1,486 @@
+{
+  "data": {
+    "BookMyShow": {
+      "arrEvent": [
+        {
+          "EventCode": "ET00414970",
+          "ImageCode": "telugu-standup-kukatpally-et00414970-2024-10-7-t-3-31-58",
+          "EventTitle": "Telugu Standup @Hyderabad",
+          "EventType": "CT",
+          "Genre": "Comedy Shows",
+          "GenreArray": [
+            "Comedy Shows"
+          ],
+          "Language": "Telugu",
+          "Length": "1 hr 30 mins",
+          "Seq": "50",
+          "EventIsGlobal": "N",
+          "EventIsWebView": "Y",
+          "EventWebViewURL": "https://in.bookmyshow.com/go/?ref=mobileapp&med=referral&telugu-standup-kukatpally_010101&url=https://in.bookmyshow.com/events/telugu-standup-kukatpally/ET00414970&type=0",
+          "BannerURL": "https://in.bmscdn.com/Events/Mobile/ET00414970.jpg?202609080317",
+          "EventCensor": "",
+          "FShareURL": "https://in.bookmyshow.com/events/telugu-standup-kukatpally/ET00414970",
+          "MinPrice": "0.00",
+          "jsonGenre": {
+            "Comedy Shows": [
+              "Stand up Comedy",
+              "Outdoor Events"
+            ],
+            "GenreMeta": [
+              "Comedy"
+            ]
+          },
+          "BookingType": "",
+          "Event_dtmCreated": "2024-10-07 09:01:57",
+          "ProducerCode": "",
+          "Event_strGenreSchema": "",
+          "IsSuperstarExclusiveEvent": "N",
+          "ActualEventType": "NA",
+          "WebRedirectUrl": "",
+          "EventGroupCode": "EG00413212",
+          "ReleaseDateCode": "20260102",
+          "SuperstarBannerImageURL": "",
+          "EventSoldOut": "N",
+          "AppCodes": [
+            "ANDNCPA",
+            "MI",
+            "KIDZ",
+            "BMSMMT",
+            "CFT",
+            "FIFA",
+            "IOSNCPA",
+            "PHONEPE",
+            "SOCIAL",
+            "NCPA"
+          ],
+          "arrDates": [
+            {
+              "ShowDateCode": "20260908",
+              "ShowEndDateCode": "20260908",
+              "ShowDateDisplay": "Today, 8 Sep",
+              "ShowEndDateDisplay": "Today, 8 Sep"
+            },
+            {
+              "ShowDateCode": "20260909",
+              "ShowEndDateCode": "20260909",
+              "ShowDateDisplay": "Tomorrow, 9 Sep",
+              "ShowEndDateDisplay": "Tomorrow, 9 Sep"
+            },
+            {
+              "ShowDateCode": "20260910",
+              "ShowEndDateCode": "20260910",
+              "ShowDateDisplay": "Thursday, 10 Sep",
+              "ShowEndDateDisplay": "Thursday, 10 Sep"
+            }
+          ],
+          "arrVenues": [
+            {
+              "VenueCode": "TSDM",
+              "VenueName": "The Street Comedy Club: Hyderabad",
+              "VenueLatitude": "17.4532814",
+              "VenueLongitude": "78.3852158",
+              "SubRegionCode": "HYD",
+              "RegionCode": "HYD",
+              "CompanyCode": "TSDM",
+              "VenueAddress": "100 Feet Road, Ayyappa Society, Siddhi Vinayak Nagar, Madhapur, Hyderabad, Telangana 500081, India"
+            }
+          ]
+        },
+        {
+          "EventCode": "ET00355125",
+          "ImageCode": "anubhav-singh-bassi-new-material-et00355125-2026-5-5-t-6-44-58",
+          "EventTitle": "Kisi Ko Batana Mat Ft. Anubhav Singh Bassi",
+          "EventType": "CT",
+          "Genre": "Comedy Shows",
+          "GenreArray": [
+            "Comedy Shows"
+          ],
+          "Language": "Hindi",
+          "Length": "2 hrs ",
+          "Seq": "50",
+          "EventIsGlobal": "Y",
+          "EventIsWebView": "Y",
+          "EventWebViewURL": "https://in.bookmyshow.com/go/?ref=mobileapp&med=referral&anubhav-singh-bassi-new-material_010101&url=https://in.bookmyshow.com/events/anubhav-singh-bassi-new-material/ET00355125&type=0",
+          "BannerURL": "https://in.bmscdn.com/Events/Mobile/ET00355125.jpg?202609080317",
+          "EventCensor": "",
+          "FShareURL": "https://in.bookmyshow.com/events/anubhav-singh-bassi-new-material/ET00355125",
+          "MinPrice": "799.00",
+          "jsonGenre": {
+            "Comedy Shows": [
+              "Stand up Comedy",
+              "Outdoor Events"
+            ],
+            "GenreMeta": [
+              "Comedy"
+            ]
+          },
+          "BookingType": "",
+          "Event_dtmCreated": "2023-03-16 17:18:17",
+          "ProducerCode": "",
+          "Event_strGenreSchema": "",
+          "IsSuperstarExclusiveEvent": "N",
+          "ActualEventType": "NA",
+          "WebRedirectUrl": "",
+          "EventGroupCode": "EG00354242",
+          "ReleaseDateCode": "20260325",
+          "SuperstarBannerImageURL": "",
+          "EventSoldOut": "N",
+          "AppCodes": [
+            "ANDNCPA",
+            "MI",
+            "KIDZ",
+            "BMSMMT",
+            "CFT",
+            "FIFA",
+            "IOSNCPA",
+            "PHONEPE",
+            "SOCIAL",
+            "NCPA"
+          ],
+          "arrDates": [
+            {
+              "ShowDateCode": "20260911",
+              "ShowEndDateCode": "20260911",
+              "ShowDateDisplay": "Friday, 11 Sep",
+              "ShowEndDateDisplay": "Friday, 11 Sep"
+            },
+            {
+              "ShowDateCode": "20260912",
+              "ShowEndDateCode": "20260912",
+              "ShowDateDisplay": "Saturday, 12 Sep",
+              "ShowEndDateDisplay": "Saturday, 12 Sep"
+            },
+            {
+              "ShowDateCode": "20260913",
+              "ShowEndDateCode": "20260913",
+              "ShowDateDisplay": "Sunday, 13 Sep",
+              "ShowEndDateDisplay": "Sunday, 13 Sep"
+            }
+          ],
+          "arrVenues": [
+            {
+              "VenueCode": "GNDB",
+              "VenueName": "Guru Nanak Dev Bhawan: Ludhiana",
+              "VenueLatitude": "30.9011097",
+              "VenueLongitude": "75.8386993",
+              "SubRegionCode": "LUDH",
+              "RegionCode": "LUDH",
+              "CompanyCode": "GNDB",
+              "VenueAddress": "NH 95, Jila Kacheri Area, Model Gram, Ludhiana, Punjab 141001, India"
+            },
+            {
+              "VenueCode": "IDSH",
+              "VenueName": "Indradhanush Auditorium, Panchkula: Chandigarh",
+              "VenueLatitude": "30.6940136",
+              "VenueLongitude": "76.854454",
+              "SubRegionCode": "PNCH",
+              "RegionCode": "PNCH",
+              "CompanyCode": "IDSH",
+              "VenueAddress": "Sector 5, G.K. Panchkula, Panchkula, Haryana 134108, India"
+            },
+            {
+              "VenueCode": "LGGI",
+              "VenueName": "Labh Mandapam (Abhay Prashal): Indore",
+              "VenueLatitude": "22.7243347",
+              "VenueLongitude": "75.8778763",
+              "SubRegionCode": "IND",
+              "RegionCode": "IND",
+              "CompanyCode": "LGGI",
+              "VenueAddress": "Abhay Prashal Campus, 10, Race Course Road, New Palasia, Indore, Madhya Pradesh 452001, India"
+            },
+            {
+              "VenueCode": "PDIA",
+              "VenueName": "Pandit Dindayal Upadhyay Auditorium : Ahmedabad",
+              "VenueLatitude": "23.0345993",
+              "VenueLongitude": "72.5027618",
+              "SubRegionCode": "AHD",
+              "RegionCode": "AHD",
+              "CompanyCode": "PDIA",
+              "VenueAddress": "1, Rajpath Club Road, Vikram Nagar, Ahmedabad, Gujarat 380059, India"
+            },
+            {
+              "VenueCode": "PDUN",
+              "VenueName": "Pandit Dindayal Upadhyay Nagargruh: Vadodara",
+              "VenueLatitude": "22.3271427",
+              "VenueLongitude": "73.2498627",
+              "SubRegionCode": "VAD",
+              "RegionCode": "VAD",
+              "CompanyCode": "PDUN",
+              "VenueAddress": "Jay Yogeshwar Township Part-1, Nehru Chacha Nagar, Sayaji Park Society, Vadodara, Gujarat 390019, India"
+            },
+            {
+              "VenueCode": "RBBP",
+              "VenueName": "Ravindra Bhawan Auditorium: Bhopal",
+              "VenueLatitude": "23.2427387",
+              "VenueLongitude": "77.3985138",
+              "SubRegionCode": "BHOP",
+              "RegionCode": "BHOP",
+              "CompanyCode": "RBBP",
+              "VenueAddress": "Rajbhavan Road, Professors Colony, Near Sardar Vallabh Bhai Patel Polytechnic Chouraha, Bhopal, Madhya Pradesh 462002, India"
+            },
+            {
+              "VenueCode": "SHVD",
+              "VenueName": "Shilpakala Vedika: Hyderabad",
+              "VenueLatitude": "17.4514427",
+              "VenueLongitude": "78.379509",
+              "SubRegionCode": "HYD",
+              "RegionCode": "HYD",
+              "CompanyCode": "SHVD",
+              "VenueAddress": "Shilparamam, Hitech, Hitech City Rd, Jubilee Enclave, Hyderabad, Telangana 500081, India"
+            },
+            {
+              "VenueCode": "SKAS",
+              "VenueName": "Sanjeev Kumar Auditorium: Surat",
+              "VenueLatitude": "21.1857357",
+              "VenueLongitude": "72.7846603",
+              "SubRegionCode": "SURT",
+              "RegionCode": "SURT",
+              "CompanyCode": "SKAS",
+              "VenueAddress": "14, Hazira Road, Behind Rajhans Theater, Adajan Gam, Pal Gam, Surat, Gujarat 395009, India"
+            },
+            {
+              "VenueCode": "SMVR",
+              "VenueName": "Sir Mutha Venkatasubba Rao Concert Hall: Chennai",
+              "VenueLatitude": "13.068367",
+              "VenueLongitude": "80.2383881",
+              "SubRegionCode": "CHEN",
+              "RegionCode": "CHEN",
+              "CompanyCode": "SMVR",
+              "VenueAddress": "Lady Andal Premises, Shenstone Park, 13/1, 7, Harrington Road, Chetpet, Chennai, Tamil Nadu 600031, India"
+            }
+          ]
+        },
+        {
+          "EventCode": "ET00324077",
+          "ImageCode": "science-it-up-et00324077-2022-3-5-t-11-54-58",
+          "EventTitle": "Science it Up",
+          "EventType": "CT",
+          "Genre": "Comedy Shows",
+          "GenreArray": [
+            "Comedy Shows"
+          ],
+          "Language": "English",
+          "Length": "1 hr 15 mins",
+          "Seq": "50",
+          "EventIsGlobal": "N",
+          "EventIsWebView": "Y",
+          "EventWebViewURL": "https://in.bookmyshow.com/go/?ref=mobileapp&med=referral&science-it-up_010101&url=https://in.bookmyshow.com/events/science-it-up/ET00324077&type=0",
+          "BannerURL": "https://in.bmscdn.com/Events/Mobile/ET00324077.jpg?202609080317",
+          "EventCensor": "",
+          "FShareURL": "https://in.bookmyshow.com/events/science-it-up/ET00324077",
+          "MinPrice": "699.00",
+          "jsonGenre": {
+            "Comedy Shows": [
+              "Stand up Comedy",
+              "Outdoor Events"
+            ],
+            "GenreMeta": [
+              "Comedy"
+            ]
+          },
+          "BookingType": "",
+          "Event_dtmCreated": "2022-03-05 17:24:58",
+          "ProducerCode": "",
+          "Event_strGenreSchema": "",
+          "IsSuperstarExclusiveEvent": "N",
+          "ActualEventType": "NA",
+          "WebRedirectUrl": "",
+          "EventGroupCode": "EG00323689",
+          "ReleaseDateCode": "20240310",
+          "SuperstarBannerImageURL": "",
+          "EventSoldOut": "N",
+          "AppCodes": [
+            "ANDNCPA",
+            "MI",
+            "KIDZ",
+            "BMSMMT",
+            "CFT",
+            "FIFA",
+            "IOSNCPA",
+            "PHONEPE",
+            "SOCIAL",
+            "NCPA"
+          ],
+          "arrDates": [
+            {
+              "ShowDateCode": "20260912",
+              "ShowEndDateCode": "20260912",
+              "ShowDateDisplay": "Saturday, 12 Sep",
+              "ShowEndDateDisplay": "Saturday, 12 Sep"
+            }
+          ],
+          "arrVenues": [
+            {
+              "VenueCode": "ARME",
+              "VenueName": "Aaromale - Cafe and Creative Community: Hyderabad",
+              "VenueLatitude": "17.4129391",
+              "VenueLongitude": "78.4064865",
+              "SubRegionCode": "HYD",
+              "RegionCode": "HYD",
+              "CompanyCode": "AREM",
+              "VenueAddress": "A-72, Road Number 12, Giani Zail Singh Nagar, Film Nagar, Hyderabad, Telangana 500096, India"
+            }
+          ]
+        },
+        {
+          "EventCode": "ET00508708",
+          "ImageCode": "rajadhiraaj-yatra-krishna-leela-aapke-dwar-et00508708-2026-8-4-t-15-2-59",
+          "EventTitle": "Rajadhiraaj Yatra - Krishna Leela Aapke Dwar",
+          "EventType": "PL",
+          "Genre": "Musical,Mythological,Theatre",
+          "GenreArray": [
+            "Musical",
+            "Mythological",
+            "Theatre"
+          ],
+          "Language": "Hindi",
+          "Length": "2 hrs 35 mins",
+          "Seq": "50",
+          "EventIsGlobal": "N",
+          "EventIsWebView": "Y",
+          "EventWebViewURL": "https://in.bookmyshow.com/go/?ref=mobileapp&med=referral&rajadhiraaj-yatra-krishna-leela-aapke-dwar_260922&url=https://in.bookmyshow.com/plays/rajadhiraaj-yatra-krishna-leela-aapke-dwar/ET00508708&type=0",
+          "BannerURL": "https://in.bmscdn.com/Events/Mobile/ET00508708.jpg?202609080317",
+          "EventCensor": "",
+          "FShareURL": "https://in.bookmyshow.com/plays/rajadhiraaj-yatra-krishna-leela-aapke-dwar/ET00508708",
+          "MinPrice": "999.00",
+          "jsonGenre": {
+            "GenreMeta": [
+              "Mythological",
+              "Musical"
+            ],
+            "Musical": [],
+            "Mythological": [],
+            "Theatre": [
+              "Outdoor Events"
+            ]
+          },
+          "BookingType": "",
+          "Event_dtmCreated": "2026-07-22 17:41:00",
+          "ProducerCode": "",
+          "Event_strGenreSchema": "",
+          "IsSuperstarExclusiveEvent": "N",
+          "ActualEventType": "NA",
+          "WebRedirectUrl": "",
+          "EventGroupCode": "EG00505616",
+          "ReleaseDateCode": "20260922",
+          "SuperstarBannerImageURL": "",
+          "EventSoldOut": "N",
+          "AppCodes": [
+            "ANDNCPA",
+            "MI",
+            "KIDZ",
+            "BMSMMT",
+            "CFT",
+            "FIFA",
+            "IOSNCPA",
+            "PHONEPE",
+            "ZOMATO",
+            "SOCIAL",
+            "NCPA"
+          ],
+          "arrDates": [
+            {
+              "ShowDateCode": "20261002",
+              "ShowEndDateCode": "20261002",
+              "ShowDateDisplay": "Friday, 2 Oct",
+              "ShowEndDateDisplay": "Friday, 2 Oct"
+            },
+            {
+              "ShowDateCode": "20261003",
+              "ShowEndDateCode": "20261003",
+              "ShowDateDisplay": "Saturday, 3 Oct",
+              "ShowEndDateDisplay": "Saturday, 3 Oct"
+            },
+            {
+              "ShowDateCode": "20261004",
+              "ShowEndDateCode": "20261004",
+              "ShowDateDisplay": "Sunday, 4 Oct",
+              "ShowEndDateDisplay": "Sunday, 4 Oct"
+            }
+          ],
+          "arrVenues": [
+            {
+              "VenueCode": "SHVD",
+              "VenueName": "Shilpakala Vedika: Hyderabad",
+              "VenueLatitude": "17.4514427",
+              "VenueLongitude": "78.379509",
+              "SubRegionCode": "HYD",
+              "RegionCode": "HYD",
+              "CompanyCode": "SHVD",
+              "VenueAddress": "Shilparamam, Hitech, Hitech City Rd, Jubilee Enclave, Hyderabad, Telangana 500081, India"
+            }
+          ]
+        },
+        {
+          "EventCode": "ET00495012",
+          "ImageCode": "cardiac-rehab-run-et00495012-2026-4-11-t-8-10-33",
+          "EventTitle": "Cardiac Rehab Run",
+          "EventType": "SP",
+          "Genre": "Running",
+          "GenreArray": [
+            "Running"
+          ],
+          "Language": "",
+          "Length": "3 hrs ",
+          "Seq": "50",
+          "EventIsGlobal": "N",
+          "EventIsWebView": "Y",
+          "EventWebViewURL": "https://in.bookmyshow.com/go/?ref=mobileapp&med=referral&cardiac-rehab-run_260920&url=https://in.bookmyshow.com/sports/cardiac-rehab-run/ET00495012&type=0",
+          "BannerURL": "https://in.bmscdn.com/Events/Mobile/ET00495012.jpg?202609080317",
+          "EventCensor": "",
+          "FShareURL": "https://in.bookmyshow.com/sports/cardiac-rehab-run/ET00495012",
+          "MinPrice": "699.00",
+          "jsonGenre": {
+            "GenreMeta": [],
+            "Running": [
+              "Marathon",
+              "Outdoor Events"
+            ]
+          },
+          "BookingType": "",
+          "Event_dtmCreated": "2026-04-11 13:40:32",
+          "ProducerCode": "",
+          "Event_strGenreSchema": "",
+          "IsSuperstarExclusiveEvent": "N",
+          "ActualEventType": "NA",
+          "WebRedirectUrl": "",
+          "EventGroupCode": "EG00492263",
+          "ReleaseDateCode": "20260920",
+          "SuperstarBannerImageURL": "",
+          "EventSoldOut": "N",
+          "AppCodes": [
+            "ANDNCPA",
+            "MI",
+            "BMSMMT",
+            "CFT",
+            "FIFA",
+            "IOSNCPA",
+            "PHONEPE",
+            "SOCIAL",
+            "NCPA"
+          ],
+          "arrDates": [
+            {
+              "ShowDateCode": "20260913",
+              "ShowEndDateCode": "20260913",
+              "ShowDateDisplay": "Sunday, 13 Sep",
+              "ShowEndDateDisplay": "Sunday, 13 Sep"
+            }
+          ],
+          "arrVenues": [
+            {
+              "VenueCode": "SPHY",
+              "VenueName": "Sanjeevaiah Park: Hyderabad",
+              "VenueLatitude": "17.4327183",
+              "VenueLongitude": "78.4756241",
+              "SubRegionCode": "HYD",
+              "RegionCode": "HYD",
+              "CompanyCode": "SPHY",
+              "VenueAddress": "Hussain Sagar, Khairatabad, Necklace Road, Hyderabad, Telangana 500003, India"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

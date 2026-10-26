@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>hydsocial API sample</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #0f1115; --card: #1a1d24; --text: #e8eaed; --muted: #9aa0a6; --accent: #7dd3fc; --border: #2a2f3a; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f6f7f9; --card: #fff; --text: #111; --muted: #5f6368; --accent: #0369a1; --border: #e3e6eb; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.45 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 1.25rem 1rem 0.5rem; max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.25rem; margin: 0 0 0.35rem; font-weight: 650; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.85rem 0 0.25rem; }
+    input, select, button {
+      font: inherit; padding: 0.45rem 0.65rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--card); color: var(--text);
+    }
+    button { cursor: pointer; background: var(--accent); color: #041018; border: none; font-weight: 600; }
+    main { max-width: 720px; margin: 0 auto; padding: 0.75rem 1rem 2rem; }
+    .err { background: #3f1d1d; color: #fecaca; padding: 0.75rem 1rem; border-radius: 10px; }
+    @media (prefers-color-scheme: light) { .err { background: #fee2e2; color: #991b1b; } }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.9rem 1rem; margin: 0.65rem 0;
+    }
+    .card h2 { font-size: 1.05rem; margin: 0 0 0.35rem; }
+    .card a { color: var(--accent); }
+    .row { color: var(--muted); font-size: 0.9rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+    .tag { font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    code { font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>hydsocial API sample</h1>
+    <p class="meta">Fetches <code>GET /api/events</code> from the local Bun server. Start with <code>bun run serve</code> if this is empty.</p>
+    <div class="controls">
+      <input id="base" value="" size="22" title="API base (blank = this origin, or http://127.0.0.1:3000 from file://)" placeholder="same origin" />
+      <select id="area">
+        <option value="">all areas</option>
+        <option>gachibowli</option>
+        <option>madhapur</option>
+        <option>jubilee-hills</option>
+        <option>banjara-hills</option>
+        <option>hitec-city</option>
+      </select>
+      <label><input type="checkbox" id="free" /> free only</label>
+      <input id="limit" type="number" min="1" max="50" value="12" style="width:4.5rem" />
+      <button id="go" type="button">Load</button>
+    </div>
+    <p class="meta" id="status">Idle.</p>
+  </header>
+  <main id="list"></main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    function qs() {
+      const p = new URLSearchParams();
+      p.set("limit", String($("limit").value || 12));
+      if ($("area").value) p.set("area", $("area").value);
+      if ($("free").checked) p.set("free", "true");
+      return p.toString();
+    }
+    function money(ev) {
+      if (ev.is_free) return "Free";
+      if (ev.price_min == null) return "Price TBA";
+      return "₹" + ev.price_min + (ev.currency ? " " + ev.currency : "");
+    }
+    function when(ev) {
+      try {
+        return new Date(ev.starts_at_local || ev.starts_at).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short",
+          hour: "numeric", minute: "2-digit"
+        });
+      } catch { return ev.starts_at_local || ev.starts_at; }
+    }
+    async function load() {
+      let base = $("base").value.trim().replace(/\/$/, "");
+      if (!base) base = location.protocol.startsWith("http") ? location.origin : "http://127.0.0.1:3000";
+      const url = base + "/api/events?" + qs();
+      $("status").textContent = "Loading " + url + " …";
+      $("list").innerHTML = "";
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        $("status").textContent = (data.city || "Hyd") + " · " + (data.count ?? data.events?.length ?? 0) +
+          " events · " + (data.timezone || "") + " · generated " + (data.generated_at || "");
+        const events = data.events || [];
+        if (!events.length) {
+          $("list").innerHTML = "<p class='meta'>No listing-eligible events for these filters.</p>";
+          return;
+        }
+        for (const ev of events) {
+          const el = document.createElement("article");
+          el.className = "card";
+          const venue = ev.venue?.name || "Venue TBA";
+          const area = ev.venue?.area || "";
+          const src = ev.source?.url || ev.ticket_url || "#";
+          const page = ev.url || "#";
+          el.innerHTML =
+            "<h2><a href=\"" + page + "\" target=\"_blank\" rel=\"noopener\">" + escapeHtml(ev.title) + "</a></h2>" +
+            "<div class=\"row\">" + escapeHtml(when(ev)) + " · " + escapeHtml(venue) +
+            (area ? " · " + escapeHtml(area) : "") + "</div>" +
+            "<div class=\"row\">" + escapeHtml(money(ev)) +
+            " · <a href=\"" + src + "\" target=\"_blank\" rel=\"noopener\">source</a></div>" +
+            "<div class=\"tags\">" +
+            (ev.category ? "<span class=\"tag\">" + escapeHtml(ev.category) + "</span>" : "") +
+            (ev.source?.name ? "<span class=\"tag\">" + escapeHtml(ev.source.name) + "</span>" : "") +
+            "</div>";
+          $("list").appendChild(el);
+        }
+      } catch (e) {
+        $("status").textContent = "Failed.";
+        $("list").innerHTML = "<div class='err'>Could not reach the API. Is <code>bun run serve</code> running on port 3000?<br>" +
+          escapeHtml(String(e.message || e)) + "</div>";
+      }
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>\"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
+    $("go").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>
