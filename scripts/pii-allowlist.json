@@ -1,0 +1,8 @@
+{
+  "emailDomains": ["example.com", "example.org", "example.net", "example", "test", "invalid", "localhost", "users.noreply.github.com"],
+  "emails": [
+    { "value": "noreply@anthropic.com", "reason": "Co-Authored-By trailer shown in the commit rules" },
+    { "value": "git@github.com", "reason": "the SSH remote form git@github.com:owner/repo, not a mailbox" }
+  ],
+  "phoneSha256": []
+}

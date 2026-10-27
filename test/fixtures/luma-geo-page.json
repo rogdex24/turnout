@@ -168,7 +168,7 @@
           "api_id": "usr-example00000002",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_22.png",
           "bio_short": null,
-          "first_name": "Example Host 2",
+          "first_name": "Example",
           "last_name": "",
           "instagram_handle": null,
           "is_verified": false,
@@ -412,7 +412,7 @@
           "name": "Example Host 6",
           "tiktok_handle": null,
           "timezone": "Asia/Kolkata",
-          "twitter_handle": "example-host",
+          "twitter_handle": "example_host",
           "username": "example-host",
           "website": null,
           "youtube_handle": ""

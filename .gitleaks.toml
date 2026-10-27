@@ -1,0 +1,11 @@
+# gitleaks 8.30.1. Runs in CI (the `secrets` job in .github/workflows/ci.yml) and by hand:
+#   gitleaks dir --redact .
+#   gitleaks git --redact --log-opts="--all" .
+# Every default rule stays on and nothing is allowlisted today: the scan is clean once fixtures hold fictional values.
+# If a fictional fixture value ever trips a rule, allowlist that exact value here with a [[allowlists]] block and a
+# `regexes` entry that names the fixture file in its comment. Never allowlist a real secret: rotate it and rewrite
+# history instead (docs/public-repo-checklist.md).
+title = "turnout"
+
+[extend]
+useDefault = true
