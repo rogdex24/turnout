@@ -41,6 +41,9 @@ export const filtersOf = ({ venue: _venue, event: _event, ...filters }: RawUrl):
 export const href = ({ filters, selection }: MapState): string =>
   `/map${serialize({ ...filters, venue: selectedVenue(selection), event: selectedEvent(selection) })}`;
 
+/** Whether two states write the same URL. Defaults are left out, so they compare as the URL does. */
+export const sameUrl = (a: RawUrl, b: RawUrl): boolean => serialize(a) === serialize(b);
+
 /** Filters from a submitted form. The form leaves out the venue and event, so submitting closes any open card. */
 export const filtersFromForm = (form: HTMLFormElement): MapFilters =>
   filtersOf(loadFilters(new URLSearchParams(new FormData(form) as unknown as Record<string, string>)));

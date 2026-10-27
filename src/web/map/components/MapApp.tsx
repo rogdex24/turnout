@@ -17,7 +17,7 @@ import { areasIn, type Bounds, categoriesIn, counts, filterCollection, inBounds,
 import { plural } from "../model/format.js";
 import { at, type MapState, normalizeSelection, selectedEvent, selectedVenue } from "../model/selection.js";
 import { initialSession, nearby, reduce } from "../model/state.js";
-import { filterParsers, filtersOf } from "../model/url.js";
+import { filterParsers, filtersOf, sameUrl } from "../model/url.js";
 import type { MapCollection } from "../types.js";
 import { FilterBar } from "./FilterBar.js";
 import type { CameraCommand, CameraRequest, Padding } from "./MapCanvas.js";
@@ -106,13 +106,17 @@ export function MapApp({ data: loaded, windows, preview }: Omit<MapBoot, "search
    * The one way to change the URL: every link, form and marker goes through it and pushes a history entry (typing in the
    * search box does not, it is a draft until submit). Nothing here moves the camera or the sheet; the effect below derives
    * those from the resulting filters, so Back and Forward get the same behavior as a click.
+   * A state that writes the URL already shown pushes nothing: nuqs would push a duplicate entry, which drops the Forward
+   * history (Back, then Apply without a change) and makes the next Back land on the same page.
    */
   const go = useCallback(
     ({ filters: next, selection: chosen }: MapState, options: NavOptions = {}) => {
       if (options.focus) focusTarget.current = options.focus;
-      void setRaw({ ...next, venue: selectedVenue(chosen), event: selectedEvent(chosen) }, { history: "push" });
+      const url = { ...next, venue: selectedVenue(chosen), event: selectedEvent(chosen) };
+      if (sameUrl(url, raw)) return;
+      void setRaw(url, { history: "push" });
     },
-    [setRaw],
+    [setRaw, raw],
   );
   const nav = useMemo(() => ({ go }), [go]);
 
