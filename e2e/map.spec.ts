@@ -350,7 +350,10 @@ test("the Filters popover shows the restored URL after Back, Forward and Clear a
   await pill().click();
   await type().fill("fil");
   await page.getByRole("option", { name: "Film" }).click();
+  // The pick closes the list; Escape then closes the popover and keeps the pick as an unsubmitted edit.
+  await expect(page.getByRole("listbox")).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Filters" })).toHaveCount(0);
   const map = (await page.locator("#map").boundingBox())!;
   await page.mouse.move(map.x + 200, map.y + 300);
   await page.mouse.down();

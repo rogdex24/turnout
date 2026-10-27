@@ -14,7 +14,7 @@ import {
 } from "../src/web/map/model/filters.js";
 import { groupEvents } from "../src/web/map/model/group.js";
 import { at, NONE, normalizeSelection, type Selection } from "../src/web/map/model/selection.js";
-import { href, loadFilters } from "../src/web/map/model/url.js";
+import { href, loadFilters, sameUrl } from "../src/web/map/model/url.js";
 import type { MapCollection, MapEvent, MapFeature } from "../src/web/map/types.js";
 
 const event = (id: string, over: Partial<MapEvent> = {}): MapEvent => ({
@@ -86,6 +86,14 @@ test("free reads 1, true and on, writes only 1, and an empty value means unset",
   expect(query(f({ free: true }))).toBe("?free=1");
   expect(parse("category=&area=&venue=&event=")).toEqual(RAW);
   expect(parse("q=%20%20jazz%20%20").q).toBe("jazz"); // trimmed
+});
+
+test("sameUrl is true only when two states write the same URL, so applying unchanged filters adds no history entry", () => {
+  const music = { ...RAW, category: "music" };
+  expect(sameUrl(music, { ...music })).toBe(true);
+  expect(sameUrl(music, { ...music, q: "" })).toBe(true); // a default is not written, so it cannot differ
+  expect(sameUrl(music, { ...music, category: "comedy" })).toBe(false);
+  expect(sameUrl(music, { ...music, venue: "v1" })).toBe(false);
 });
 
 test("the venue and event in a URL resolve once against the data (D6)", () => {
