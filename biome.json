@@ -18,6 +18,7 @@
       "!src/admin/ui/components/ui",
       "!test/fixtures",
       "!packages/**/node_modules",
+      "!packages/design-tokens/*.generated.*",
       "!**/*.sqlite*"
     ]
   },

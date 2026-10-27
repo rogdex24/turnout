@@ -18,6 +18,13 @@ type Front = DesignFront;
 
 export const readFrontMatter = readDesignFront;
 
+/**
+ * The mobile app's tokens are for packages/design-tokens, not this page: `app-*` colors and components, and the
+ * type styles `app-*`, `display`, `title-large` and `display-*` (DESIGN.md, Mobile app).
+ */
+const isAppVar = (line: string) => line.startsWith("--color-app-");
+const isAppType = (name: string) => /^(app-|display|title-large$)/.test(name);
+
 function exportCssVars(): string[] {
   const run = Bun.spawnSync([process.execPath, CLI_URL.pathname, "export", "--format", "css-vars", DESIGN_URL.pathname]);
   if (run.exitCode !== 0) throw new Error(`design.md export failed: ${run.stderr.toString()}`);
@@ -25,7 +32,7 @@ function exportCssVars(): string[] {
     .toString()
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.startsWith("--"));
+    .filter((line) => line.startsWith("--") && !isAppVar(line));
 }
 
 /** A `--color-X` var with a `--color-X-dark` twin becomes a role. A role is every color with a -dark twin. */
@@ -45,6 +52,7 @@ function roles(vars: string[]): { light: string[]; dark: string[] } {
 function typographyVars(front: Front): string[] {
   const out: string[] = [];
   for (const [name, t] of Object.entries(front.typography)) {
+    if (isAppType(name)) continue;
     out.push(`--font-${name}: ${t.fontSize}/${t.lineHeight} ${t.fontFamily};`);
     out.push(`--weight-${name}: ${t.fontWeight};`);
     out.push(`--size-${name}: ${t.fontSize};`, `--leading-${name}: ${t.lineHeight};`);
@@ -56,6 +64,7 @@ function typographyVars(front: Front): string[] {
 function componentVars(front: Front): string[] {
   const out: string[] = [];
   for (const [name, props] of Object.entries(front.components)) {
+    if (name.startsWith("app-")) continue;
     for (const prop of ["height", "size", "width", "padding"]) {
       if (props[prop] !== undefined) out.push(`--${name}-${prop}: ${props[prop]};`);
     }

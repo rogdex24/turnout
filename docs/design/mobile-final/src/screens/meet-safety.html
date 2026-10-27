@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Meet card, Safety sheet</title>
+<meta name="description" content="Turnout meet card under the Safety sheet: call 112 first, report someone, leave this plan and how matching works.">
+<!-- @head -->
+<style>
+.navbar h1{position:absolute;left:96px;right:96px;pointer-events:none}
+.navbar .labelbtn{margin-left:auto;margin-right:4px}
+.wrap{position:absolute;top:96px;left:0;right:0;bottom:127px;padding:4px 16px 0;overflow:hidden}
+.showrow{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;line-height:18px;color:var(--muted)}
+.showrow .mini{width:28px;height:28px;border-radius:8px;flex:none}
+.showrow b{color:var(--ink);font-weight:600}
+.time{margin-top:10px;display:flex;align-items:flex-end;gap:12px}
+.time .bigtime{animation:rise .7s var(--ease) .1s both}
+.time .side{padding-bottom:4px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;animation:rise .7s var(--ease) .2s both}
+.place{margin-top:18px;animation:rise .7s var(--ease) .3s both}
+.placehead{display:flex;align-items:center;gap:14px}
+.placehead>div{flex:1;min-width:0}
+.placehead p{margin-top:2px}
+.photo{width:104px;height:84px;border-radius:14px;flex:none;border:1px solid var(--line);background:var(--s2) url(img/cafe-niloufer.jpg) center/cover no-repeat}
+.placecard{margin-top:12px;overflow:hidden}
+.map{position:relative;height:100px;background:var(--map-bg)}
+.map svg{position:absolute;inset:0}
+.marker{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:999px;display:grid;place-items:center;font-size:15px;background:var(--s2);color:var(--ink);border:1.5px solid var(--outline)}
+.marker.cafe{background:var(--btn-bg);color:var(--btn-ink);border:0;width:34px;height:34px;margin:-17px 0 0 -17px;font-size:17px;box-shadow:0 0 0 3px var(--map-bg)}
+.vlabel{position:absolute;font-size:12px;line-height:16px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--s1);border:1px solid var(--line);white-space:nowrap}
+.maps{margin-top:12px}
+.locline{display:flex;align-items:center;gap:12px;margin-top:12px}
+.locline i{font-size:20px;color:var(--muted);flex:none}
+.locline p{flex:1;font-size:14px;line-height:20px}
+.locline .link{flex:none;padding:0 4px}
+.group{margin-top:22px}
+.ghead{display:flex;justify-content:space-between;align-items:center}
+.people{display:flex;justify-content:space-between;margin-top:12px}
+.person{width:54px;text-align:center;animation:rise .5s var(--ease) both}
+.person:nth-child(2){animation-delay:.06s}.person:nth-child(3){animation-delay:.12s}.person:nth-child(4){animation-delay:.18s}.person:nth-child(5){animation-delay:.24s}.person:nth-child(6){animation-delay:.3s}
+.person .face{width:54px;height:66px}
+.person .face.here{border:2px solid var(--sig)}
+.person .nm{font-size:13px;line-height:18px;font-weight:600;margin-top:6px}
+.thread{margin-top:18px;display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:64px}
+.thread .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--s2);font-size:22px;flex:none}
+.thread .tx{flex:1;min-width:0}
+.thread .tx b{display:block;font-size:15px;font-weight:600;line-height:20px}
+.thread .tx span{display:block;font-size:13px;line-height:18px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:var(--btn-bg);color:var(--btn-ink);font-size:13px;font-weight:600;display:inline-grid;place-items:center;flex:none}
+.thread .go{font-size:18px;color:var(--muted)}
+.btn.here::after{content:"";position:absolute;inset:-2px;border-radius:999px;border:2px solid var(--btn-bg);opacity:0;animation:ring 2.2s var(--ease) 1s 2}
+@keyframes ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.06,1.3);opacity:0}}
+.sheet h2{margin-bottom:14px}
+.sheet .card{background:var(--bg)}
+.sheet .row .ic{color:var(--ink)}
+.sheet .close{display:flex;justify-content:center;margin-top:12px}
+.gesture{z-index:90}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 5:12 -->
+<div class="page" aria-hidden="true" inert>
+<header class="navbar">
+  <button class="iconbtn" aria-label="Back" data-component-id="back"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+  <h1>Meet card</h1>
+  <button class="labelbtn" data-component-id="safety"><i class="ph ph-shield" aria-hidden="true"></i>Safety</button>
+</header>
+<main class="wrap">
+  <a href="#" class="showrow pressable" data-component-id="show-row" aria-label="Then Traffic Jam Tales, 7:00 PM at Shilpa Kala Vedika">
+    <span class="mini poster comedy" aria-hidden="true"></span>
+    <span class="tnum">Then <b>Traffic Jam Tales</b>, 7:00 PM</span>
+  </a>
+  <div class="time" role="text" aria-label="Meet at 6:00 PM, in 48 minutes">
+    <span class="bigtime tnum" aria-hidden="true">6:00</span>
+    <span class="side" aria-hidden="true"><span class="bigtime-pm">PM</span><span class="live tnum"><span class="live-dot"></span>In 48 min</span></span>
+  </div>
+  <section class="place" aria-labelledby="place-h">
+    <div class="placehead">
+      <div>
+        <h2 class="t-title-l" id="place-h">Cafe Niloufer</h2>
+        <p class="t-body">Hitec City</p>
+        <p class="t-meta">6 min walk to Shilpa Kala Vedika</p>
+      </div>
+      <div class="photo" role="img" aria-label="Cafe Niloufer from the street" data-component-id="cafe-photo"></div>
+    </div>
+    <div class="card placecard" data-component-id="meet-map">
+      <div class="map" role="img" aria-label="Map with Cafe Niloufer and Shilpa Kala Vedika, a 6 minute walk apart">
+        <svg width="356" height="100" viewBox="0 0 356 100" aria-hidden="true">
+          <path d="M232 -6 C280 18 306 8 364 26 L364 92 C318 84 284 64 246 50 Z" fill="var(--map-water)"/>
+          <path d="M136 70 L200 62 L212 98 L154 108 Z" fill="var(--map-park)"/>
+          <g stroke="var(--map-case)" stroke-linecap="round" fill="none"><path d="M-8 44 L366 98" stroke-width="10"/><path d="M98 -6 L124 118" stroke-width="10"/><path d="M184 -6 L220 118" stroke-width="8"/><path d="M-8 96 L136 78" stroke-width="8"/></g>
+          <g stroke="var(--map-road)" stroke-linecap="round" fill="none"><path d="M-8 44 L366 98" stroke-width="7"/><path d="M98 -6 L124 118" stroke-width="7"/><path d="M184 -6 L220 118" stroke-width="5"/><path d="M-8 96 L136 78" stroke-width="5"/><path d="M136 30 L300 12" stroke-width="4"/><path d="M240 104 L366 114" stroke-width="4"/></g>
+          <path d="M132 54 C176 46 220 40 254 37" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 6" fill="none"/>
+        </svg>
+        <span class="marker cafe" style="left:114px;top:56px" aria-hidden="true"><i class="ph-fill ph-coffee"></i></span>
+        <span class="marker" style="left:272px;top:36px" aria-hidden="true"><i class="ph-fill ph-microphone-stage"></i></span>
+        <span class="vlabel" style="left:204px;top:62px" aria-hidden="true">Shilpa Kala Vedika</span>
+      </div>
+    </div>
+    <a href="#" class="btn2 maps" data-component-id="open-maps" aria-label="Open in Maps, opens your maps app">Open in Maps<i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+    <div class="locline">
+      <i class="ph ph-navigation-arrow" aria-hidden="true"></i>
+      <p>Show how far you are. Your location stays on your phone.</p>
+      <a href="#" class="link" data-component-id="location-on" aria-label="Turn on location">Turn on</a>
+    </div>
+  </section>
+  <section class="group" aria-labelledby="group-h">
+    <div class="ghead">
+      <h2 class="t-title-l" id="group-h">Your group</h2>
+    </div>
+    <ul class="people">
+      <li class="person"><div class="face"><img src="img/face-priya.jpg" alt=""></div><p class="nm">Priya</p></li>
+      <li class="person"><div class="face"><img src="img/face-sana.jpg" alt=""></div><p class="nm">Sana</p></li>
+      <li class="person"><div class="face"><img src="img/face-meera.jpg" alt=""></div><p class="nm">Meera</p></li>
+      <li class="person"><div class="face"><img src="img/face-arjun.jpg" alt=""></div><p class="nm">Arjun</p></li>
+      <li class="person"><div class="face"><img src="img/face-rahul.jpg" alt=""></div><p class="nm">Rahul</p></li>
+      <li class="person"><div class="face"><img src="img/face-you.jpg" alt=""></div><p class="nm">You</p></li>
+    </ul>
+  </section>
+  <a href="#" class="card thread pressable" data-component-id="meet-thread" aria-label="Group chat, 2 unread. Priya: Got the big table near the window">
+    <span class="ic" aria-hidden="true"><i class="ph ph-chats-circle"></i></span>
+    <span class="tx" aria-hidden="true"><b>Group chat</b><span>Priya: Got the big table near the window</span></span>
+    <span class="count tnum" aria-hidden="true">2</span>
+    <i class="ph ph-caret-right go" aria-hidden="true"></i>
+  </a>
+</main>
+<div class="dock">
+  <p class="hint tnum" id="here-hint">You can tap this from 5:30 PM, when you head over</p>
+  <button class="btn" disabled aria-describedby="here-hint" data-component-id="meet-here"><i class="ph-fill ph-hand-waving" aria-hidden="true"></i>I'm here</button>
+</div>
+</div>
+<div class="scrim" aria-hidden="true" data-component-id="scrim"></div>
+<section class="sheet" role="dialog" aria-modal="true" aria-labelledby="safety-h" data-component-id="safety-sheet">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="safety-h">Safety</h2>
+  <div class="card">
+    <a href="tel:112" class="row" data-component-id="call-112"><span class="ic" aria-hidden="true"><i class="ph ph-phone"></i></span><span class="tx"><b class="tnum">Call 112, emergency</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="report-someone"><span class="ic" aria-hidden="true"><i class="ph ph-flag"></i></span><span class="tx"><b>Report someone</b><span class="tnum">We read every report within 24 hours.</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="leave-plan"><span class="ic" aria-hidden="true"><i class="ph ph-sign-out"></i></span><span class="tx"><b>Leave this plan</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="how-matching"><span class="ic" aria-hidden="true"><i class="ph ph-question"></i></span><span class="tx"><b>How matching works</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+  </div>
+  <div class="close"><button class="btn3" data-component-id="close-safety">Close</button></div>
+</section>
+<!-- @gesture -->
+</div>
+</body>
+</html>

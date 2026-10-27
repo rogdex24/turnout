@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Your plan, group confirmed</title>
+<meta name="description" content="Plan detail at 11:20 AM after the group is confirmed and before the 4:00 PM reveal: a count of 5 people, no names or photos, chat opens at 4:00 PM.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:96px;left:0;right:0;bottom:0;overflow:hidden;padding:0 16px}
+.scroll.docked{bottom:98px}
+.scroll.docked2{bottom:150px}
+.showhead{display:flex;gap:12px;align-items:flex-start;padding:4px 4px 0}
+.showhead .thumb{width:40px;height:40px;border-radius:10px;flex:none;background-size:cover;background-position:center}
+.showhead .t-meta{margin-top:2px}
+.showhead .t-meta+.t-meta{margin-top:0}
+.stack>*+*{margin-top:12px}
+.block{padding:16px}
+.block .t-body{margin-top:6px}
+.block .t-meta{margin-top:4px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:16px}
+.steps li{font-size:12px;line-height:16px;font-weight:500;color:var(--muted)}
+.steps li::before{content:"";display:block;height:4px;border-radius:2px;background:var(--line);margin-bottom:8px}
+.steps li.done{color:var(--ink)}
+.steps li.done::before{background:var(--ink)}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now::before{background:var(--outline)}
+.steps li.now.on::before{background:var(--sig)}
+.steps li.off::before{background:transparent;border:1px dashed var(--outline)}
+.steps li i{font-size:12px;margin-right:4px;vertical-align:-1px}
+.rows .row{width:100%;text-align:left}
+.rows .row[aria-disabled="true"] .tx b{color:var(--muted)}
+.rows .row .end{font-size:13px;line-height:18px;color:var(--muted);flex:none}
+.dock .btn3{display:flex;margin:4px auto 0}
+.reveal{padding:16px}
+.reveal .count{display:flex;align-items:center;gap:12px}
+.reveal .num{font-size:36px;line-height:1;font-weight:800;flex:none}
+.reveal .count .t-title{flex:1}
+.reveal .t-meta{margin-top:10px}
+.reveal.in{animation-delay:.1s}
+.block.in{animation-delay:0s}
+.rows.in{animation-delay:.2s}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 11:20 -->
+<header class="navbar">
+  <a href="#" class="iconbtn" data-component-id="back" aria-label="Back"><i class="ph ph-caret-left" aria-hidden="true"></i></a>
+  <h1>Your plan</h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<main class="scroll stack">
+  <div class="showhead">
+    <span class="thumb poster comedy" aria-hidden="true"></span>
+    <div>
+      <p class="t-title">Traffic Jam Tales</p>
+      <p class="t-meta tnum">Sat 31 Oct, 7:00 PM</p>
+      <p class="t-meta">Shilpa Kala Vedika, Madhapur</p>
+    </div>
+  </div>
+  <section class="card block in" aria-label="Status" data-component-id="plan-status">
+    <p class="status-text ok" role="status"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>Group confirmed</p>
+    <p class="t-body">You're going with a group. See who at <span style="white-space:nowrap">4:00 PM</span>.</p>
+    <ol class="steps" aria-label="Plan progress"><li class="done"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>Ticket<span class="sr">, done</span></li><li class="done"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>Group<span class="sr">, done</span></li><li class="now">Meet card<span class="sr">, current step</span></li></ol>
+  </section>
+  <section class="card reveal in" aria-label="5 people with tickets, plus you" data-component-id="reveal-count">
+    <p class="count"><span class="d num tnum" aria-hidden="true">5</span><span class="t-title">people with tickets, plus you</span></p>
+    <p class="t-meta tnum">Names, photos and the cafe at 4:00 PM</p>
+  </section>
+  <div class="card rows in">
+    <div class="row" data-component-id="meet-hint"><span class="ic" aria-hidden="true"><i class="ph ph-clock"></i></span><span class="tx"><b class="tnum">You'll meet around 6:00 PM near the venue.</b></span></div>
+    <a href="#" class="row" data-component-id="group-chat" aria-label="Group chat, Opens at 4:00 PM" aria-disabled="true"><span class="ic" aria-hidden="true"><i class="ph ph-chat-circle"></i></span><span class="tx"><b>Group chat</b><span>Opens at 4:00 PM</span></span></a>
+  </div>
+  <div class="card rows"><a href="#" class="row" data-component-id="ticket-row" aria-label="Ticket, Accepted"><span class="ic" aria-hidden="true"><i class="ph ph-ticket"></i></span><span class="tx"><b>Ticket</b><span>Accepted</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a><a href="#" class="row" data-component-id="how-matching" aria-label="How matching works"><span class="ic" aria-hidden="true"><i class="ph ph-question"></i></span><span class="tx"><b>How matching works</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a><a href="#" class="row" data-component-id="leave-plan" aria-label="Leave this plan"><span class="ic" aria-hidden="true"><i class="ph ph-sign-out"></i></span><span class="tx"><b>Leave this plan</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a></div>
+</main>
+<!-- @gesture -->
+</div>
+</body>
+</html>

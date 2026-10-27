@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, You</title>
+<meta name="description" content="You tab: your photo and name with the profile check, social profile, women and non-binary groups, notifications, blocked people, safety and 112, privacy notice, grievance officer, usage data, sign out and delete account.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:44px;left:0;right:0;bottom:84px;overflow:hidden;padding:4px 16px 0}
+.scroll>*+*{margin-top:8px}
+.me{display:flex;align-items:center;gap:14px;padding:10px 8px 10px 12px;border-radius:16px}
+.me .face{width:56px;height:56px}
+.me .tx{flex:1;min-width:0}
+.me .tx h1{font-size:22px;line-height:28px;font-weight:600}
+.me .check{display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--muted)}
+.me .check i{font-size:16px}
+.me .go{font-size:18px;color:var(--muted);width:32px;text-align:center}
+.card .row .go{width:20px}
+.row .tx span.wrap{white-space:normal}
+/* Switch (local, to move into base.css) */
+.switch{width:51px;height:31px;border-radius:999px;background:var(--s2);border:1px solid var(--outline);position:relative;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:1px;left:1px;width:27px;height:27px;border-radius:99px;background:var(--muted);transition:transform var(--press) var(--ease)}
+.switch[aria-checked="true"]{background:var(--ink);border-color:var(--ink)}
+.switch[aria-checked="true"]::after{background:var(--bg);transform:translateX(20px)}
+.row.tall{align-items:flex-start;padding-top:10px;padding-bottom:10px}
+.row.tall .ic,.row.tall .switch{margin-top:-2px}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<main class="scroll">
+  <a href="#" class="me card pressable" data-component-id="profile" aria-label="Profile, Ananya. Profile check: checking, usually within a day.">
+    <span class="face"><img src="img/face-you.jpg" alt=""></span>
+    <span class="tx">
+      <h1>Ananya</h1>
+      <span class="check"><i class="ph ph-hourglass-medium" aria-hidden="true"></i>Checking, usually within a day</span>
+    </span>
+    <i class="ph ph-caret-right go" aria-hidden="true"></i>
+  </a>
+  <div class="card">
+    <a href="#" class="row" data-component-id="social-profile"><span class="ic"><i class="ph ph-instagram-logo" aria-hidden="true"></i></span><span class="tx"><b>Social profile</b><span>Instagram, checking</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <div class="row tall"><span class="ic"><i class="ph ph-users-three" aria-hidden="true"></i></span><span class="tx" id="wo-label"><b>Women and non-binary groups</b><span class="wrap">Applies to plans you join from now on.</span></span><button class="switch" role="switch" aria-checked="true" aria-labelledby="wo-label" data-component-id="women-only"></button></div>
+  </div>
+  <div class="card">
+    <a href="#" class="row" data-component-id="notifications"><span class="ic"><i class="ph ph-bell" aria-hidden="true"></i></span><span class="tx"><b>Notifications</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="blocked"><span class="ic"><i class="ph ph-prohibit" aria-hidden="true"></i></span><span class="tx"><b>Blocked people</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="safety"><span class="ic"><i class="ph ph-lifebuoy" aria-hidden="true"></i></span><span class="tx"><b>Safety and 112</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+  </div>
+  <div class="card">
+    <a href="#" class="row" data-component-id="privacy-notice"><span class="ic"><i class="ph ph-file-text" aria-hidden="true"></i></span><span class="tx"><b>Privacy notice</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="row" data-component-id="grievance-officer"><span class="ic"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span><span class="tx"><b>Grievance officer</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <div class="row"><span class="ic"><i class="ph ph-chart-bar" aria-hidden="true"></i></span><span class="tx" id="usage-label"><b>Share usage data</b></span><button class="switch" role="switch" aria-checked="false" aria-labelledby="usage-label" data-component-id="usage-data"></button></div>
+  </div>
+  <div class="card">
+    <button class="row" style="width:100%;text-align:left" data-component-id="sign-out"><span class="ic"><i class="ph ph-sign-out" aria-hidden="true"></i></span><span class="tx"><b>Sign out</b></span></button>
+    <a href="#" class="row" data-component-id="delete-account"><span class="ic"><i class="ph ph-trash" aria-hidden="true"></i></span><span class="tx"><b>Delete account</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+  </div>
+</main>
+<!-- @tabbar you -->
+<!-- @gesture -->
+</div>
+</body>
+</html>

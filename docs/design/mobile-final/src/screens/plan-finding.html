@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Your plan, finding your group</title>
+<meta name="description" content="Plan detail for Traffic Jam Tales while Turnout looks for a group: live status, 7 people looking, groups set by Fri 7:00 PM.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:96px;left:0;right:0;bottom:0;overflow:hidden;padding:0 16px}
+.scroll.docked{bottom:98px}
+.scroll.docked2{bottom:150px}
+.showhead{display:flex;gap:12px;align-items:flex-start;padding:4px 4px 0}
+.showhead .thumb{width:40px;height:40px;border-radius:10px;flex:none;background-size:cover;background-position:center}
+.showhead .t-meta{margin-top:2px}
+.showhead .t-meta+.t-meta{margin-top:0}
+.stack>*+*{margin-top:12px}
+.block{padding:16px}
+.block .t-body{margin-top:6px}
+.block .t-meta{margin-top:4px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:16px}
+.steps li{font-size:12px;line-height:16px;font-weight:500;color:var(--muted)}
+.steps li::before{content:"";display:block;height:4px;border-radius:2px;background:var(--line);margin-bottom:8px}
+.steps li.done{color:var(--ink)}
+.steps li.done::before{background:var(--ink)}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now::before{background:var(--outline)}
+.steps li.now.on::before{background:var(--sig)}
+.steps li.off::before{background:transparent;border:1px dashed var(--outline)}
+.steps li i{font-size:12px;margin-right:4px;vertical-align:-1px}
+.rows .row{width:100%;text-align:left}
+.rows .row[aria-disabled="true"] .tx b{color:var(--muted)}
+.rows .row .end{font-size:13px;line-height:18px;color:var(--muted);flex:none}
+.dock .btn3{display:flex;margin:4px auto 0}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<header class="navbar">
+  <a href="#" class="iconbtn" data-component-id="back" aria-label="Back"><i class="ph ph-caret-left" aria-hidden="true"></i></a>
+  <h1>Your plan</h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<main class="scroll stack">
+  <div class="showhead">
+    <span class="thumb poster comedy" aria-hidden="true"></span>
+    <div>
+      <p class="t-title">Traffic Jam Tales</p>
+      <p class="t-meta tnum">Sat 31 Oct, 7:00 PM</p>
+      <p class="t-meta">Shilpa Kala Vedika, Madhapur</p>
+    </div>
+  </div>
+  <section class="card block" aria-label="Status" data-component-id="plan-status">
+    <p class="status-text" role="status"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>Finding your group</p>
+    <p class="t-body tnum">No group yet. 7 people with tickets are looking.</p>
+    <p class="t-meta tnum">Groups are set by Fri 7:00 PM, 24 hours before.</p>
+    <ol class="steps" aria-label="Plan progress"><li class="done"><i class="ph-fill ph-check-circle" aria-hidden="true"></i>Ticket<span class="sr">, done</span></li><li class="now on">Group<span class="sr">, current step</span></li><li class="">Meet card<span class="sr">, not yet</span></li></ol>
+  </section>
+  <div class="card rows">
+    <a href="#" class="row" data-component-id="group-chat" aria-label="Group chat, Opens at Sat 4:00 PM" aria-disabled="true"><span class="ic" aria-hidden="true"><i class="ph ph-chat-circle"></i></span><span class="tx"><b>Group chat</b><span>Opens at Sat 4:00 PM</span></span></a>
+  </div>
+  <div class="card rows"><a href="#" class="row" data-component-id="ticket-row" aria-label="Ticket, Accepted"><span class="ic" aria-hidden="true"><i class="ph ph-ticket"></i></span><span class="tx"><b>Ticket</b><span>Accepted</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a><a href="#" class="row" data-component-id="how-matching" aria-label="How matching works"><span class="ic" aria-hidden="true"><i class="ph ph-question"></i></span><span class="tx"><b>How matching works</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a><a href="#" class="row" data-component-id="leave-plan" aria-label="Leave this plan"><span class="ic" aria-hidden="true"><i class="ph ph-sign-out"></i></span><span class="tx"><b>Leave this plan</b></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a></div>
+</main>
+<!-- @gesture -->
+</div>
+</body>
+</html>

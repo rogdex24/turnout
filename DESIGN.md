@@ -57,6 +57,44 @@ colors:
   tint-film: "#6e7b87"
   tint-other: "#a78bfa"
   icon-lift: "#ffffff"
+  app-bg: "#ede8e1"
+  app-bg-dark: "#121212"
+  app-surface: "#f6f2ed"
+  app-surface-dark: "#1a1a1a"
+  app-surface-raised: "#e2dcd3"
+  app-surface-raised-dark: "#232323"
+  app-line: "#cfc8be"
+  app-line-dark: "#2f2f2f"
+  app-outline: "#87827b"
+  app-outline-dark: "#6b665f"
+  app-ink: "#181818"
+  app-ink-dark: "#ede8e1"
+  app-muted: "#645f59"
+  app-muted-dark: "#9a958e"
+  app-signal: "#94400a"
+  app-signal-dark: "#ea6e12"
+  app-signal-soft: "#94400a14"
+  app-signal-soft-dark: "#ea6e1224"
+  app-primary: "#181818"
+  app-primary-dark: "#ede8e1"
+  app-on-primary: "#ede8e1"
+  app-on-primary-dark: "#121212"
+  app-scrim: "#18181873"
+  app-scrim-dark: "#00000099"
+  app-on-photo: "#f3eee7"
+  app-on-photo-dark: "#f3eee7"
+  app-marquee: "#181818"
+  app-marquee-dark: "#1a1a1a"
+  app-pressed: "#18181814"
+  app-pressed-dark: "#ede8e114"
+  app-skeleton: "#e2dcd3"
+  app-skeleton-dark: "#232323"
+  app-poster-comedy: "#6b2a0c"
+  app-poster-comedy-dark: "#6b2a0c"
+  app-poster-music: "#2a2826"
+  app-poster-music-dark: "#2a2826"
+  app-poster-theatre: "#3a2c22"
+  app-poster-theatre-dark: "#3a2c22"
 typography:
   heading:
     fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
@@ -94,6 +132,45 @@ typography:
     fontWeight: 600
     lineHeight: 14px
     fontFeature: '"tnum"'
+  display:
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+    fontSize: 28px
+    fontWeight: 600
+    lineHeight: 34px
+    letterSpacing: -0.01em
+  title-large:
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+    fontSize: 22px
+    fontWeight: 600
+    lineHeight: 28px
+    letterSpacing: -0.005em
+  app-title:
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+    fontSize: 17px
+    fontWeight: 600
+    lineHeight: 24px
+  app-body:
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+    fontSize: 15px
+    fontWeight: 400
+    lineHeight: 22px
+  app-control:
+    fontFamily: '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+    fontSize: 15px
+    fontWeight: 500
+    lineHeight: 20px
+  display-hero:
+    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontSize: 116px
+    fontWeight: 900
+    lineHeight: 90px
+    letterSpacing: -0.01em
+  display-band:
+    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontSize: 28px
+    fontWeight: 800
+    lineHeight: 28px
+    letterSpacing: 0.06em
 rounded:
   xs: 4px
   sm: 8px
@@ -311,6 +388,98 @@ components:
   organiser-avatar:
     rounded: "{rounded.full}"
     size: 40px
+  app-screen:
+    backgroundColor: "{colors.app-bg}"
+    textColor: "{colors.app-ink}"
+    typography: "{typography.app-body}"
+  app-screen-dark:
+    backgroundColor: "{colors.app-bg-dark}"
+    textColor: "{colors.app-ink-dark}"
+  app-card:
+    backgroundColor: "{colors.app-surface}"
+    textColor: "{colors.app-ink}"
+  app-card-dark:
+    backgroundColor: "{colors.app-surface-dark}"
+    textColor: "{colors.app-ink-dark}"
+  app-note:
+    backgroundColor: "{colors.app-surface-raised}"
+    textColor: "{colors.app-ink}"
+  app-note-dark:
+    backgroundColor: "{colors.app-surface-raised-dark}"
+    textColor: "{colors.app-ink-dark}"
+  app-meta:
+    backgroundColor: "{colors.app-bg}"
+    textColor: "{colors.app-muted}"
+    typography: "{typography.meta}"
+  app-meta-dark:
+    backgroundColor: "{colors.app-bg-dark}"
+    textColor: "{colors.app-muted-dark}"
+  app-live-chip:
+    backgroundColor: "{colors.app-bg}"
+    textColor: "{colors.app-signal}"
+    typography: "{typography.meta}"
+    rounded: "{rounded.full}"
+  app-live-chip-dark:
+    backgroundColor: "{colors.app-bg-dark}"
+    textColor: "{colors.app-signal-dark}"
+  app-live-chip-tint:
+    backgroundColor: "{colors.app-signal-soft}"
+  app-live-chip-tint-dark:
+    backgroundColor: "{colors.app-signal-soft-dark}"
+  app-button-primary:
+    backgroundColor: "{colors.app-primary}"
+    textColor: "{colors.app-on-primary}"
+    typography: "{typography.app-control}"
+    rounded: "{rounded.full}"
+    height: 56px
+  app-button-primary-dark:
+    backgroundColor: "{colors.app-primary-dark}"
+    textColor: "{colors.app-on-primary-dark}"
+  app-outline-edge:
+    backgroundColor: "{colors.app-outline}"
+  app-outline-edge-dark:
+    backgroundColor: "{colors.app-outline-dark}"
+  app-hairline:
+    backgroundColor: "{colors.app-line}"
+  app-hairline-dark:
+    backgroundColor: "{colors.app-line-dark}"
+  app-scrim:
+    backgroundColor: "{colors.app-scrim}"
+  app-scrim-dark:
+    backgroundColor: "{colors.app-scrim-dark}"
+  app-pressed-fill:
+    backgroundColor: "{colors.app-pressed}"
+  app-pressed-fill-dark:
+    backgroundColor: "{colors.app-pressed-dark}"
+  app-skeleton:
+    backgroundColor: "{colors.app-skeleton}"
+  app-skeleton-dark:
+    backgroundColor: "{colors.app-skeleton-dark}"
+  app-marquee:
+    backgroundColor: "{colors.app-marquee}"
+    textColor: "{colors.app-ink-dark}"
+    typography: "{typography.display-band}"
+    height: 56px
+  app-marquee-dark:
+    backgroundColor: "{colors.app-marquee-dark}"
+  app-poster-comedy:
+    backgroundColor: "{colors.app-poster-comedy}"
+    textColor: "{colors.app-on-photo}"
+  app-poster-music:
+    backgroundColor: "{colors.app-poster-music}"
+    textColor: "{colors.app-on-photo}"
+  app-poster-theatre:
+    backgroundColor: "{colors.app-poster-theatre}"
+    textColor: "{colors.app-on-photo}"
+  app-poster-comedy-dark:
+    backgroundColor: "{colors.app-poster-comedy-dark}"
+    textColor: "{colors.app-on-photo-dark}"
+  app-poster-music-dark:
+    backgroundColor: "{colors.app-poster-music-dark}"
+    textColor: "{colors.app-on-photo-dark}"
+  app-poster-theatre-dark:
+    backgroundColor: "{colors.app-poster-theatre-dark}"
+    textColor: "{colors.app-on-photo-dark}"
 ---
 
 # Hyd Tonight map
@@ -331,7 +500,8 @@ computed. When you cite a value in a commit or review, cite the token name.
 Scope is the public map in `src/web/map/`, the server-rendered listing, category, area and event pages in
 `src/web/site/`, and the shared component folder `src/web/ui/` (the brand lockup, the List / Map switch and the
 shared chrome CSS). All of them read the one generated token block. The admin panel keeps its own
-palette; it shares only the theme preference protocol (`src/utils/theme.ts`).
+palette; it shares only the theme preference protocol (`src/utils/theme.ts`). The mobile app's `app-*` tokens
+are in the Mobile app section.
 
 Principles:
 1. The map is the canvas, the events are the content.
@@ -840,6 +1010,65 @@ justify it.
 - Focus ring 2 px **primary**, 2 px offset, never removed.
 - All text and non-text pairs meet the Colors table.
 
+## Mobile app
+
+The Turnout app (`apps/mobile`) has its own palette and type scale in this file, under the `app-` prefix. Every web and
+`/map` token above is unchanged; `primary` stays `#1f6f5c`. `src/web/map/tokens.ts` leaves the app tokens out of the page's
+CSS, and `scripts/build-mobile-tokens.ts` turns them into `packages/design-tokens` (`bun run tokens:mobile`). The reference
+mockups and the full spec are in `docs/design/mobile-final/`.
+
+Direction: Nightlife in Gallery Night. A warm near-black and a warm paper, ivory or ink for the one primary button,
+and a single orange that only ever means something is live. The app follows the system theme; there is no theme toggle.
+
+- **Orange is the live signal and nothing else**: finding your group, "In 48 min", the thread is open, someone just arrived.
+  Never a price, a count, a button or a heading.
+- **Waiting and checking use `app-muted`**, not orange. Done states use `app-ink`.
+- **Rejected and called-off states use the neutral note** (`app-surface-raised` with an icon). Never `danger`; the app has
+  no red.
+- **The live chip sits on `app-bg` or `app-surface`**, never on `app-surface-raised`: in dark the tint lowers the ratio there
+  to 4.15.
+- `app-signal-soft` is the signal at 8% (light) and 14% (dark). The mockups use 10% in light; at 10% the "In 48 min" chip
+  falls to 4.97 on `app-bg`, below the 5.1 target, so light uses 8%.
+- `app-pressed` (ink at 8%) and `app-skeleton` (the `app-surface-raised` tone) are not in the mockups; they are derived from
+  its ink and raised surface.
+- Text on a poster or photo is `app-on-photo`; the placeholder poster tones are `app-poster-comedy`, `-music` and `-theatre`.
+- The marquee band is dark in both themes; its text is `app-ink-dark`.
+
+Contrast, WCAG relative luminance. `test/mobileTokens.test.ts` computes every row from this file and fails on a regression.
+
+| Pair | Light | Dark | Needed |
+|---|---|---|---|
+| `app-ink` on bg, surface, raised | 14.57, 15.93, 13.03 | 15.37, 14.28, 12.90 | 4.5 |
+| `app-muted` on bg, surface, raised | 5.19, 5.67, 4.64 | 6.30, 5.85, 5.29 | 4.5 |
+| `app-signal` on bg, surface, raised | 5.75, 6.29, 5.14 | 6.01, 5.58, 5.04 | 4.5 (light target 5.1) |
+| `app-signal` on the soft chip over bg, surface | 5.14, 5.59 | 5.06, 4.63 | 4.5 (light target 5.1 on bg) |
+| `app-on-primary` on `app-primary` | 14.57 | 15.37 | 4.5 |
+| `app-on-photo` on the poster tones | 9.28 to 12.72 | same | 4.5 |
+| marquee text on `app-marquee` | 14.57 | 14.28 | 4.5 |
+| `app-outline` on bg | 3.13 | 3.29 | 3 (SC 1.4.11) |
+| `app-signal` on bg (dot, ring) | 5.75 | 6.01 | 3 |
+
+Type. The app takes its scale from the Typography table, with these additions and overrides:
+
+| Token | Face | Size / line / weight | Scales with text size |
+|---|---|---|---|
+| `display` | Inter | 28 / 34 / 600 | yes, up to 1.6 |
+| `title-large` | Inter | 22 / 28 / 600 | yes, up to 1.6 |
+| `app-title` (the app's `title`) | Inter | 17 / 24 / 600 | yes |
+| `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes |
+| `app-control` (the app's `control`) | Inter | 15 / 20 / 500 | yes |
+| `meta`, `label`, `badge` | Inter | as above | `label` and `badge` up to 1.3 |
+| `display-hero` | Big Shoulders Display | 116 / 90 / 900 | no, fixed (the meet time) |
+| `display-band` | Big Shoulders Display | 28 / 28 / 800, caps | no, fixed (the marquee) |
+| `display-poster` | Big Shoulders Display | 30 to 70, 800, caps | no, fixed boxes |
+| `display-numeral` | Big Shoulders Display | 24 to 36, 800 | no (price, count, code digits) |
+
+`design.md` types take one size, so the two ranges (`display-poster`, `display-numeral`) and the scaling caps live in
+`packages/design-tokens/native.ts`. The display face is for the wordmark, poster titles, the marquee, the meet time and single
+data numerals; everything else is Inter. Section heads are sentence case; no eyebrows, no all-caps labels. Times, dates, prices,
+counts and codes use tabular figures. Radii (14 fields and faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
+dp, hit areas (44 minimum, 56 primary button, 48 secondary), the springs and the pressed feedback are in `native.ts` too.
+
 ## Verification
 
 1. `bun run design:lint` runs `@google/design.md lint` on this file (pinned version). It
@@ -912,6 +1141,7 @@ Sources: nextdoor.company computed styles (2026-10-10); OpenFreeMap style JSON
 Material 3 BottomSheetDefaults; DESIGN.md format (github.com/google-labs-code/design.md).
 
 Changelog:
+- 2026-10-27 mobile app: `app-*` palette with dark twins, the display and title-large type styles and the display-face styles, and a Mobile app section (Colors, Typography, Mobile app).
 - 2026-10-11 category icons: Phosphor duotone from a static SVG sprite replace the system emoji; glyph colour is the tint mixed toward ink (light) or lifted with white (dark); the dark-mode light face for music and film is gone; native select options show the word only (Icons, Marker tile, Placeholder, Colors).
 - 2026-10-11 bundle: phone first load is its own 580 KB line; MapLibre CSS trimmed; presets and Group by are plain links (Bundle budget).
 - 2026-10-11 S6 polish: header is one wrapping row (brand, search, List / Map switch, theme button); control column and bottom-left filter row on wide screens; phone keeps the filter row under the top row; one event row anatomy on spacing tokens with a concentric panel inset of 8; the open event is a card with a close button and no second image; light face for music and film placeholders and group headings in dark mode; peek shows the heading and one row; surfaces take their shadow level from the table; popovers fade in (Chrome layout, Event row, Expanded event, Placeholder, Elevation & Depth).
