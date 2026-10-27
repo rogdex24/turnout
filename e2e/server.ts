@@ -16,8 +16,6 @@ export const IMAGE_HOST = "https://img.example.test";
 /** The point the tests report as the reader's location. */
 export const ORIGIN = { latitude: 17.4126, longitude: 78.4482 };
 
-const hours = (h: number) => new Date(NOW.getTime() + h * 3_600_000).toISOString();
-
 /** Venues at about 1, 3, 6 and 12 km from ORIGIN, each with two or three events. */
 const VENUES = [
   {
@@ -64,7 +62,9 @@ const VENUES = [
   { name: "Rough Cafe", area: "gachibowli", events: [["Open air film", "film", 40]] },
 ] as const;
 
-function seed(file: string): void {
+/** Writes the fixture events, hours ahead of `now`. The browser tests pin `now` to NOW; `e2e/mobile-server.ts` passes the real clock so the events are upcoming. */
+export function seed(file: string, now: Date = NOW): void {
+  const hours = (h: number) => new Date(now.getTime() + h * 3_600_000).toISOString();
   const db = new Database(file, { create: true, strict: true });
   migrate(db);
   const insert = db.prepare(

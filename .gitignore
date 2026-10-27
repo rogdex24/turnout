@@ -25,3 +25,6 @@ google-services.json
 
 # reference images for the design board: kept on the developer's machine
 docs/design/mobile-board/refs/
+
+# visual diff reports (scripts/visual-diff.ts)
+visual-diff-report/

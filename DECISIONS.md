@@ -49,3 +49,34 @@ Update 2026-10-10 (later). The date check now verifies by parts (day, month, tim
 60 characters), and run directories sit next to the --db file. Verification run on a copy
 of the pilot DB: 53 emitted, 43 accepted, 0 rejections for date formatting (was 10 of 17).
 The Grok MCP follow-up is still open.
+
+## 2026-10-27: mobile stack confirmed; odiff for visual diffs, our own chat, WhatsApp codes
+
+Decision. The mobile stack in plan section 2 stands, and the four Week 1 questions in
+`docs/plans/mobile-app-brief.md` are answered. The monorepo works with Expo and Metro, so the
+app lives in `apps/mobile` under Bun workspaces. Maps use `react-native-maps` 1.29.11. Visual
+diffs use `odiff-bin` 4.5.0 at threshold 0.1, with baselines in Git LFS. The identity vendor is
+dropped. The group thread is our own, polled while the screen is focused. Sign-in codes go by
+WhatsApp, with no SMS. The full table with versions, sources and publish dates is
+`docs/plans/mobile-stack.md`.
+
+Evidence. Expo's monorepo guide (https://docs.expo.dev/guides/monorepos/) and its map view page
+for SDK 58 (https://docs.expo.dev/versions/v58.0.0/sdk/map-view/). Every version was read from
+the npm `time` entry on 2026-10-27 and held to the 14-day rule at the scaffold date,
+2026-10-29 19:40 UTC. `odiff-bin` 4.5.0 is installed and the diff script runs against generated
+sample PNGs (same, changed, missing, new, resized) in `test/visualDiff.test.ts`.
+
+Why. A monorepo keeps `@turnout/contract` one source for the server and the app. `expo-maps`
+needs iOS 17, and the plan supports iOS 16.4. odiff is free and fast, and a threshold of 0.1
+leaves room for anti-aliasing. The identity check is gone from v1, replaced by the handle check
+and the ban list. A text thread for one group needs none of a chat SDK's moderation and read
+state. WhatsApp codes cost about 0.136 INR each with GST and have one-tap autofill on Android.
+
+Caveats. Uniwind against NativeWind is not decided: the F8 spike on 2026-10-30 and 2026-11-02
+decides it, and NativeWind 4.2.7 stays as the fallback until after M5. Several Expo-managed
+versions are candidates that `expo install` may move at the scaffold. `posthog-react-native`
+4.84.2, `react-hook-form` 7.91.0, `@tanstack/react-query` 5.105.0 and `eas-cli` 26.0.0 are under
+14 days old today, so older versions are listed. Baseline LFS use is an estimate (about 168 MB a
+set, about 2 GB a month of bandwidth) until the first snapshot on 2026-11-02. The iOS gaps (no
+TestFlight, real iPhone, universal links, iOS push, or App Store listing) are listed in
+`docs/plans/mobile-visual-testing.md`.
