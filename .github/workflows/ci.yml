@@ -14,9 +14,11 @@ on:
 permissions:
   contents: read
 
+# One group per PR, or per ref for pushes. Only PR runs cancel each other: a push to main always finishes, because the next
+# push scans only its own commits.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   BUN_VERSION: "1.4.3"
@@ -99,10 +101,19 @@ jobs:
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            gitleaks git --redact --no-banner --log-opts="$HEAD" .
+          # A missing, all-zero or unknown BASE (a first push, or a force-push such as the history rewrite) scans all of
+          # HEAD's history. gitleaks exits 0 with "0 commits scanned" on a bad range, so the range is checked first and
+          # any ERR line from gitleaks fails the step.
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            range="$BASE..$HEAD"
           else
-            gitleaks git --redact --no-banner --log-opts="$BASE..$HEAD" .
+            range="$HEAD"
+          fi
+          echo "Scanning $(git rev-list --count "$range") commits in $range"
+          gitleaks git --redact --no-banner --no-color --log-opts="$range" . 2>&1 | tee "$RUNNER_TEMP/gitleaks.log"
+          if grep -q " ERR " "$RUNNER_TEMP/gitleaks.log"; then
+            echo "gitleaks reported an error" >&2
+            exit 1
           fi
       - name: Scan working tree
         run: gitleaks dir --redact --no-banner .

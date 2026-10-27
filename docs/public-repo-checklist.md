@@ -72,4 +72,5 @@ Do these in order. Steps 1 to 3 need the owner; do not skip ahead.
 ## Commit author metadata
 
 Git history carries each author's name and email. The audit found two authors. If a personal address should not be public,
-add a `--mailmap` file to the rewrite. That choice belongs to the repo owner; see the open questions in the audit plan.
+add a `--mailmap` file to the rewrite. For this repo the owner chose the mailmap to the GitHub no-reply address
+(see the owner decisions in the audit plan).

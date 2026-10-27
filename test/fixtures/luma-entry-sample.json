@@ -16,7 +16,7 @@
     "start_at": "2026-09-08T08:30:00.000Z",
     "timezone": "Asia/Kolkata",
     "url": "jv4nmryc",
-    "user_api_id": "usr-hNVrcoRRxVcRiMq",
+    "user_api_id": "usr-example00000001",
     "visibility": "public",
     "virtual_info": {
       "has_access": false
@@ -146,7 +146,7 @@
   "start_at": "2026-09-08T08:30:00.000Z",
   "hosts": [
     {
-      "api_id": "usr-hNVrcoRRxVcRiMq",
+      "api_id": "usr-example00000001",
       "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
       "bio_short": null,
       "first_name": "Example",
@@ -163,7 +163,7 @@
       "youtube_handle": null
     },
     {
-      "api_id": "usr-0lRy1F5bXu3LhyL",
+      "api_id": "usr-example00000002",
       "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_22.png",
       "bio_short": null,
       "first_name": "Example",
@@ -180,7 +180,7 @@
       "youtube_handle": null
     },
     {
-      "api_id": "usr-GzTgCkwBZy2ZYuK",
+      "api_id": "usr-example00000003",
       "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_31.png",
       "bio_short": null,
       "first_name": null,
@@ -188,7 +188,7 @@
       "instagram_handle": null,
       "is_verified": false,
       "linkedin_handle": null,
-      "name": "Sushant Bindal",
+      "name": "Example Host 10",
       "tiktok_handle": null,
       "timezone": "Asia/Kolkata",
       "twitter_handle": null,
@@ -197,7 +197,7 @@
       "youtube_handle": null
     },
     {
-      "api_id": "usr-h3p4RVLGAaHtCTD",
+      "api_id": "usr-example00000004",
       "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_44.png",
       "bio_short": null,
       "first_name": "Example",
@@ -214,7 +214,7 @@
       "youtube_handle": null
     },
     {
-      "api_id": "usr-8l2664FXasYOY55",
+      "api_id": "usr-example00000005",
       "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_32.png",
       "bio_short": "",
       "first_name": "Example",

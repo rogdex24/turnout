@@ -23,12 +23,19 @@ export interface PiiAllowlist {
   phoneSha256: { sha256: string; reason: string }[];
 }
 
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
-/** 10 digits starting 6 to 9, with an optional +91, 91 or 0091 prefix and an optional 5+5 split. Not inside a longer token. */
-const PHONE = /(?<![\w.+-])(?:(?:\+|00)?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}(?![\w-]|\.\d)/g;
+/** An address with a plain `@`, or URL-encoded as `%40`. */
+const EMAIL = /[A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/gi;
+/**
+ * 10 digits starting 6 to 9, with an optional +91, 91, 0091 or 0 prefix, written whole or split 5+5 or 3+3+4. Not inside a
+ * longer token, except right after an escape (`\n`, `\t`, `\r`, `\u00a0`) in captured JSON or HTML text.
+ */
+const PHONE =
+  /(?:(?<=\\[nrt])|(?<=\\u00a0)|(?<![\w.+-]))(?:(?:\+|00)?91[\s-]?|0)?(?:[6-9]\d{4}[\s-]?\d{5}|[6-9]\d{2}[\s-]\d{3}[\s-]\d{4})(?![\w-]|\.\d)/g;
 /** `image@2x.png`, `name@1.2.3` and similar are not addresses. */
 const FILE_EXTENSION = /\.(?:png|jpe?g|gif|webp|avif|svg|ico|css|js|mjs|cjs|ts|tsx|json|md|html|woff2?|ttf|map)$/i;
 const SKIPPED_FILE = /\.(?:png|jpe?g|gif|webp|avif|ico|woff2?|ttf|sqlite[\w-]*|db|lock|lockb|pdf)$|(?:^|\/)bun\.lock$/i;
+/** A NUL byte in the first 8 KB marks a binary file (the same test git uses), which is not scanned as text. */
+const isBinary = (bytes: Buffer): boolean => bytes.subarray(0, 8192).includes(0);
 
 export const ALLOWLIST_PATH = new URL("./pii-allowlist.json", import.meta.url);
 
@@ -40,7 +47,7 @@ const sha256 = (value: string): string => createHash("sha256").update(value).dig
 const phoneDigits = (value: string): string => value.replace(/\D/g, "").slice(-10);
 
 function emailAllowed(email: string, allow: PiiAllowlist): boolean {
-  const lower = email.toLowerCase();
+  const lower = email.toLowerCase().replace("%40", "@");
   const domain = lower.slice(lower.lastIndexOf("@") + 1);
   if (FILE_EXTENSION.test(domain)) return true;
   if (lower === TAKEDOWN_EMAIL.toLowerCase()) return true;
@@ -70,13 +77,14 @@ export function scanFiles(root: string, paths: string[], allow: PiiAllowlist = l
   const findings: PiiFinding[] = [];
   for (const path of paths) {
     if (SKIPPED_FILE.test(path)) continue;
-    let text: string;
+    let bytes: Buffer;
     try {
-      text = fs.readFileSync(`${root}/${path}`, "utf8");
+      bytes = fs.readFileSync(`${root}/${path}`);
     } catch {
       continue;
     }
-    findings.push(...scanText(path, text, allow));
+    if (isBinary(bytes)) continue;
+    findings.push(...scanText(path, bytes.toString("utf8"), allow));
   }
   return findings;
 }

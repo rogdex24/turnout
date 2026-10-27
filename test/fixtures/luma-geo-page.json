@@ -18,7 +18,7 @@
         "start_at": "2026-09-08T08:30:00.000Z",
         "timezone": "Asia/Kolkata",
         "url": "jv4nmryc",
-        "user_api_id": "usr-hNVrcoRRxVcRiMq",
+        "user_api_id": "usr-example00000001",
         "visibility": "public",
         "virtual_info": {
           "has_access": false
@@ -148,7 +148,7 @@
       "start_at": "2026-09-08T08:30:00.000Z",
       "hosts": [
         {
-          "api_id": "usr-hNVrcoRRxVcRiMq",
+          "api_id": "usr-example00000001",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
           "bio_short": null,
           "first_name": "Example",
@@ -165,7 +165,7 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-0lRy1F5bXu3LhyL",
+          "api_id": "usr-example00000002",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_22.png",
           "bio_short": null,
           "first_name": "Example",
@@ -182,7 +182,7 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-GzTgCkwBZy2ZYuK",
+          "api_id": "usr-example00000003",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_31.png",
           "bio_short": null,
           "first_name": null,
@@ -190,7 +190,7 @@
           "instagram_handle": null,
           "is_verified": false,
           "linkedin_handle": null,
-          "name": "Sushant Bindal",
+          "name": "Example Host 10",
           "tiktok_handle": null,
           "timezone": "Asia/Kolkata",
           "twitter_handle": null,
@@ -199,7 +199,7 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-h3p4RVLGAaHtCTD",
+          "api_id": "usr-example00000004",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_44.png",
           "bio_short": null,
           "first_name": "Example",
@@ -216,7 +216,7 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-8l2664FXasYOY55",
+          "api_id": "usr-example00000005",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_32.png",
           "bio_short": "",
           "first_name": "Example",
@@ -270,7 +270,7 @@
         "start_at": "2026-09-08T10:30:00.000Z",
         "timezone": "Asia/Kolkata",
         "url": "bv8h2qx1",
-        "user_api_id": "usr-TKTI8nZgRk9RQjL",
+        "user_api_id": "usr-example00000006",
         "visibility": "public",
         "virtual_info": {
           "has_access": false
@@ -384,8 +384,8 @@
       "start_at": "2026-09-08T10:30:00.000Z",
       "hosts": [
         {
-          "api_id": "usr-TKTI8nZgRk9RQjL",
-          "avatar_url": "https://images.lumacdn.com/uploads/5k/a9c63918-6103-4d44-a144-7df0153f260a.png",
+          "api_id": "usr-example00000006",
+          "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
           "bio_short": "",
           "first_name": "Example",
           "last_name": "Host",
@@ -401,8 +401,8 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-kHC28Z54CSb84zH",
-          "avatar_url": "https://images.lumacdn.com/avatars/5i/053c0e4e-9c45-40cb-816c-3620a07ea338.png",
+          "api_id": "usr-example00000007",
+          "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
           "bio_short": "Example host bio.",
           "first_name": "Example",
           "last_name": "Host",
@@ -418,7 +418,7 @@
           "youtube_handle": ""
         },
         {
-          "api_id": "usr-q5ym0J6R98UrFQ6",
+          "api_id": "usr-example00000008",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_34.png",
           "bio_short": null,
           "first_name": null,
@@ -426,7 +426,7 @@
           "instagram_handle": null,
           "is_verified": false,
           "linkedin_handle": null,
-          "name": "Prateek Jain",
+          "name": "Example Host 11",
           "tiktok_handle": null,
           "timezone": "Asia/Kolkata",
           "twitter_handle": null,
@@ -472,7 +472,7 @@
         "start_at": "2026-09-10T10:30:00.000Z",
         "timezone": "Asia/Kolkata",
         "url": "a9lu5tnd",
-        "user_api_id": "usr-QeNWKzZmkyiLQqn",
+        "user_api_id": "usr-example00000009",
         "visibility": "public",
         "virtual_info": {
           "has_access": false
@@ -567,8 +567,8 @@
       "start_at": "2026-09-10T10:30:00.000Z",
       "hosts": [
         {
-          "api_id": "usr-QeNWKzZmkyiLQqn",
-          "avatar_url": "https://images.lumacdn.com/avatars/h2/c1b657ec-f993-4708-a92b-2f0707d0463a",
+          "api_id": "usr-example00000009",
+          "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_21.png",
           "bio_short": "Example host bio.",
           "first_name": "Example",
           "last_name": "Host",
@@ -584,7 +584,7 @@
           "youtube_handle": ""
         },
         {
-          "api_id": "usr-3NYGggCbVHqmGHv",
+          "api_id": "usr-example00000010",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_30.png",
           "bio_short": null,
           "first_name": "Example",
@@ -601,7 +601,7 @@
           "youtube_handle": null
         },
         {
-          "api_id": "usr-HnYGzBJvqC1tBPI",
+          "api_id": "usr-example00000011",
           "avatar_url": "https://cdn.lu.ma/avatars-default/avatar_27.png",
           "bio_short": "Example host bio.",
           "first_name": "Example",
