@@ -84,6 +84,62 @@
       "to": { "path": "^src/", "pathNot": "^src/(web/ui/|utils/)" }
     },
     {
+      "name": "contract-is-pure",
+      "comment": "@turnout/contract runs on the server and in the app, so it imports itself and zod only: no src/, no apps/, no bun: or node: modules.",
+      "severity": "error",
+      "from": { "path": "^packages/contract/" },
+      "to": { "pathNot": "^(packages/contract/|node_modules/zod/)" }
+    },
+    {
+      "name": "src-not-to-apps",
+      "comment": "The server never imports the mobile app or the design tokens. It reaches shared code through @turnout/contract only.",
+      "severity": "error",
+      "from": { "path": "^src/" },
+      "to": { "path": "^(apps/|packages/design-tokens/)" }
+    },
+    {
+      "name": "design-tokens-is-data",
+      "comment": "packages/design-tokens is generated data: it imports nothing outside itself. No rule match while the package does not exist.",
+      "severity": "error",
+      "from": { "path": "^packages/design-tokens/" },
+      "to": { "pathNot": "^packages/design-tokens/" }
+    },
+    {
+      "name": "social-model-pure",
+      "comment": "src/social/model is pure product rules: it never imports the DB layer in src/social.",
+      "severity": "error",
+      "from": { "path": "^src/social/model/" },
+      "to": { "path": "^src/social/", "pathNot": "^src/social/model/" }
+    },
+    {
+      "name": "social-model-no-io",
+      "comment": "No bun:, node: or Node core modules in src/social/model.",
+      "severity": "error",
+      "from": { "path": "^src/social/model/" },
+      "to": { "dependencyTypes": ["core"] }
+    },
+    {
+      "name": "social-layer",
+      "comment": "src/social is the DB layer for people, plans and groups. It reads utils, catalog and its own model, and never reaches the HTTP layers or the other pipelines.",
+      "severity": "error",
+      "from": { "path": "^src/social/" },
+      "to": { "path": "^src/(web|admin|app-api|ingestion|curation)/" }
+    },
+    {
+      "name": "app-api-layer",
+      "comment": "src/app-api is the HTTP layer for the app: social, utils and @turnout/contract, never the site or the admin.",
+      "severity": "error",
+      "from": { "path": "^src/app-api/" },
+      "to": { "path": "^src/(web|admin)/" }
+    },
+    {
+      "name": "only-cli-imports-app-api",
+      "comment": "The app API is wired in by cli.ts alone, like the admin.",
+      "severity": "error",
+      "from": { "pathNot": "^src/(cli\\.ts|app-api/)" },
+      "to": { "path": "^src/app-api/" }
+    },
+    {
       "name": "no-circular",
       "severity": "error",
       "from": {},

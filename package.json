@@ -3,14 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.3",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "description": "Fetch Hyderabad events from Communitie and sync them into a local SQLite database.",
   "scripts": {
     "sync": "bun run src/cli.ts sync",
     "serve": "bun run src/cli.ts serve",
     "test": "bun test",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/admin/ui/tsconfig.json --noEmit && tsc -p src/web/ui/tsconfig.json --noEmit && tsc -p e2e/tsconfig.json --noEmit",
-    "deps": "bun --bun depcruise src",
-    "check": "bun run typecheck && bun run lint && bun run design:lint && bun test && bun run deps",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/admin/ui/tsconfig.json --noEmit && tsc -p src/web/ui/tsconfig.json --noEmit && tsc -p e2e/tsconfig.json --noEmit && tsc -p packages/contract/tsconfig.json --noEmit",
+    "deps": "bun --bun depcruise src packages",
+    "check:server": "bun run typecheck && bun run lint && bun run design:lint && bun test && bun run deps",
+    "check": "bun run check:server",
+    "secrets:scan": "gitleaks dir --redact .",
     "admin": "bun run src/cli.ts admin",
     "design:lint": "design.md lint DESIGN.md",
     "icons": "bun scripts/build-category-sprite.ts",
@@ -34,6 +41,7 @@
   "dependencies": {
     "@base-ui/react": "1.9.0",
     "@fontsource-variable/inter": "5.3.0",
+    "@turnout/contract": "workspace:*",
     "bun-plugin-tailwind": "0.1.2",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

@@ -10,12 +10,14 @@
       "src/**",
       "test/**",
       "e2e/**",
+      "packages/**",
       "scripts/**",
       "bench/**",
       "*.ts",
       "*.json",
       "!src/admin/ui/components/ui",
       "!test/fixtures",
+      "!packages/**/node_modules",
       "!**/*.sqlite*"
     ]
   },

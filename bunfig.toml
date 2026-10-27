@@ -1,3 +1,9 @@
+[install]
+# One flat node_modules, as before the workspaces. Expo and Metro expect hoisted packages.
+linker = "hoisted"
+# Refuse versions published in the last 14 days (seconds). Renovate uses the same age.
+minimumReleaseAge = 1209600
+
 [serve.static]
 plugins = ["bun-plugin-tailwind"]
 
