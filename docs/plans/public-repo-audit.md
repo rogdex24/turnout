@@ -1,7 +1,7 @@
 # Public repo audit
 
-Status: day 1 scan and day 2 non-destructive fixes done on branch `vorflux/m1-public-repo-audit`, 2026-10-27.
-The owner approved the history rewrite on 2026-10-27. It runs after PR 1 and PR 2 merge. Review fixes added on the same day.
+Status: the scan, the fixes and the history rewrite are done (2026-10-27). The repo is public. Two owner steps are still
+open: the GitHub Support purge of `refs/pull/*` and the repository settings (see the sign-off checklist).
 
 This file lists findings by category with counts. It never contains the values. Raw paths and line numbers are kept outside
 the repo (`/tmp/audit/findings.md` on the audit machine). The standing rules and the sign-off steps are in
@@ -42,7 +42,35 @@ The takedown address is public by design and is on the allowlist (`scripts/pii-a
   force-push such as the rewrite) it scans all of the head's history, and any gitleaks error fails the job. The full
   history scan is run by hand after the rewrite.
 
-## What waits for the history rewrite
+## History rewrite (done 2026-10-27, 22:31 UTC)
+
+The owner flipped the repo to public at about 22:19 UTC, before the rewrite ran. For about 12 minutes the old values were
+public on `main`. They stay reachable through the hidden pull request refs until GitHub Support purges them.
+
+What was run, on a fresh mirror with an untouched backup bundle kept outside the repo:
+
+1. `main` was rebuilt as PR 1 plus the six PRs (2 to 7) that had merged into the PR 1 branch instead of `main`. The new tip
+   has the same tree as that branch.
+2. `git filter-repo` 2.47.0 with `--invert-paths --path-glob 'data/verify/pilot-copy.sqlite*'`, `--replace-text` and
+   `--replace-message` (59 expressions, built from the old and scrubbed fixtures, kept outside the repo), and a mailmap
+   that maps the personal author address to the owner's GitHub no-reply address.
+3. Force-push of `main` only, then deletion of the seven merged `vorflux/*` branches.
+
+Re-scan of the rewritten history before the push:
+
+| Check | Result |
+| --- | --- |
+| gitleaks 8.30.1, `git` mode over all refs | No leaks |
+| Each old literal value, searched in every commit | 0 hits |
+| Old token and local path patterns, every commit | 0 hits |
+| Personal email addresses, every commit | 0 |
+| Phone-like numbers in history that are not in the tip | 0 (the tip ones are the allowed fictional and public values) |
+| `sqlite` paths in `git log --all` | 0 |
+| Commit author and committer addresses | GitHub no-reply addresses only |
+| `bun scripts/pii-scan.ts` and `bun run check` on the new tip | Clean, 389 tests pass |
+| CI on the new `main` (run 40595341731) | Pass |
+
+## What the rewrite plan was
 
 Everything above only changes the tip. The old values are still in earlier commits, and nothing is public yet, so the
 rewrite is the fix.
@@ -64,11 +92,11 @@ Do in this order. The long form with commands is in `docs/public-repo-checklist.
 
 - [ ] Rotate any real secret first. The audit found none; confirm that against your own list of credentials.
 - [x] Approve the rewrite plan, including the author metadata choice (2026-10-27: mailmap to the no-reply address).
-- [ ] Run the rewrite on a fresh mirror and re-scan it (gitleaks history, PII sweep, search for each old value).
-- [ ] Force-push heads and tags only, never `--mirror`.
+- [x] Run the rewrite on a fresh mirror and re-scan it (gitleaks history, PII sweep, search for each old value).
+- [x] Force-push heads and tags only, never `--mirror`.
 - [ ] Recreate the repo or ask GitHub Support to purge `refs/pull/*` and cached views.
-- [ ] Re-clone every working copy.
-- [ ] Flip the repo to public.
+- [ ] Re-clone every working copy. The agent machine has a fresh clone; the owner's own clones still need it.
+- [x] Flip the repo to public. (Done before the rewrite and the purge, out of order; see above.)
 - [ ] Turn on secret scanning and push protection.
 - [ ] Make `ci-gate` the required check on `main`.
 
