@@ -3,6 +3,7 @@ import { AREAS } from "../catalog/area.js";
 import { isCategory } from "../catalog/category.js";
 import { haversineKm } from "../utils/geo.js";
 import { endOfDayIst, istCalendarDate, startOfDayIst } from "../utils/time.js";
+import { groupEligibility, groupEligibleClauses } from "./groupEligible.js";
 import { PublicInputError } from "./input.js";
 import type { EventCard, EventCursor, FacetCounts, ListingFilters, NowFn } from "./types.js";
 
@@ -10,6 +11,9 @@ const EVENT_SELECT = `SELECT id, source_event_id AS sourceEventId,
               id AS publicId,
               title, time_kind AS timeKind, starts_at AS startsAt, ends_at AS endsAt, venue_name AS venueName, address,
               area, latitude, longitude,
+              (SELECT v.lat FROM venue v WHERE v.id = listable_event.venue_id) AS venueLat,
+              (SELECT v.lng FROM venue v WHERE v.id = listable_event.venue_id) AS venueLng,
+              (SELECT v.geocode_state FROM venue v WHERE v.id = listable_event.venue_id) AS venueGeocodeState,
               categories, category, is_free AS isFree, price_min AS priceMin, source, source_url AS sourceUrl,
               description
        FROM listable_event`;
@@ -53,6 +57,9 @@ export function readFilters(url: URL): ListingFilters {
   const free = value("free");
   if (free !== null && !["true", "1", "on", "false", "0", "off"].includes(free)) throw new PublicInputError("invalid free");
   filters.free = free === "true" || free === "1" || free === "on";
+  const groupEligible = value("group_eligible");
+  if (groupEligible !== null && !["1", "0"].includes(groupEligible)) throw new PublicInputError("invalid group_eligible");
+  filters.groupEligible = groupEligible === "1";
   if (filters.area && !(AREAS as readonly string[]).includes(filters.area)) throw new PublicInputError("invalid area");
   if (filters.category && !isCategory(filters.category)) throw new PublicInputError("invalid category");
   if (filters.from && filters.to && filters.from > filters.to) throw new PublicInputError("inverted date range");
@@ -79,6 +86,7 @@ export function emptyFilters(): ListingFilters {
     lng: null,
     radiusKm: null,
     venueId: null,
+    groupEligible: false,
   };
 }
 
@@ -93,7 +101,35 @@ function listingWindow(filters: ListingFilters, now: NowFn, defaultDays: number)
   };
 }
 
+/** One page, or with `group_eligible` a page of only the shows `isEligible` accepts (see `groupEligibleClauses`). */
 function queryEvents(
+  db: Database,
+  filters: ListingFilters,
+  now: NowFn,
+  limit: number,
+  defaultDays: number,
+  after: EventCursor | null,
+): EventCard[] {
+  if (!filters.groupEligible) return queryEventsOnce(db, filters, now, limit, defaultDays, after);
+  const wantDistance = filters.lat != null && filters.lng != null;
+  const at = now();
+  const accepted = (row: EventCard) => groupEligibility(row, at).eligible;
+  // Distance order reads every candidate anyway, so one pass is enough.
+  if (wantDistance) return queryEventsOnce(db, filters, now, limit, defaultDays, after).filter(accepted);
+  // The SQL clauses leave out only the placeholder-radius check, so a batch is nearly always all accepted. When it
+  // is not, read on from the last row so a page is still full.
+  const out: EventCard[] = [];
+  let cursor = after;
+  for (;;) {
+    const batch = queryEventsOnce(db, filters, now, limit, defaultDays, cursor);
+    for (const row of batch) if (accepted(row)) out.push(row);
+    const last = batch[batch.length - 1];
+    if (out.length >= limit || batch.length < limit || !last) return out.slice(0, limit);
+    cursor = { kind: "time", startsAt: last.startsAt, id: last.id };
+  }
+}
+
+function queryEventsOnce(
   db: Database,
   filters: ListingFilters,
   now: NowFn,
@@ -128,6 +164,11 @@ function queryEvents(
   if (filters.venueId) {
     clauses.push("venue_id = ?");
     params.push(filters.venueId);
+  }
+  if (filters.groupEligible) {
+    const eligible = groupEligibleClauses(now());
+    clauses.push(...eligible.clauses);
+    params.push(...eligible.params);
   }
 
   const wantDistance = filters.lat != null && filters.lng != null;

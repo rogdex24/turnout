@@ -59,6 +59,14 @@ export function isUsablePoint(lat: number | null | undefined, lng: number | null
   return haversineKm(lat, lng, CITY_CENTRE_PLACEHOLDER.lat, CITY_CENTRE_PLACEHOLDER.lng) > PLACEHOLDER_RADIUS_KM;
 }
 
+/** The geocode states whose point may be shown and used: it was resolved, approximated from the area, or set by hand. */
+export const PLACED_GEOCODE_STATES = ["resolved", "approximate", "manual"] as const;
+
+/** A venue is placed when it has a usable point and a state that vouches for it. Anything else counts as missing. */
+export function isPlacedVenue(venue: { lat: number | null; lng: number | null; state: string | null }): boolean {
+  return isUsablePoint(venue.lat, venue.lng) && (PLACED_GEOCODE_STATES as readonly (string | null)[]).includes(venue.state);
+}
+
 export interface VenuePlacement {
   lat: number | null;
   lng: number | null;

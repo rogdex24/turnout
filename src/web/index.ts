@@ -64,18 +64,18 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
   [/^\/assets\/icons\/categories\.[0-9a-f]+\.svg$/, ({ url }) => iconSpriteResponse(url.pathname)],
   [/^\/map$/, ({ db, url, now }) => mapPage(db, url, now, mapAssetsNow())],
   [/^\/api\/map$/, ({ db, url, now }) => mapApi(db, url, now)],
-  [/^\/api\/events\/([^/]+)$/, ({ db, url, params }) => eventsApiDetail(db, params[0], url.origin)],
+  [/^\/api\/events\/([^/]+)$/, ({ db, url, params, now }) => eventsApiDetail(db, params[0], url.origin, now)],
 
   // Thin HTTP tool endpoints matching data-model 10.4 names (full MCP transport deferred).
   [/^\/tools\/search_events$/, ({ db, url, now }) => eventsApiList(db, url, now)],
   [
     /^\/tools\/get_event$/,
-    ({ db, url }) => {
+    ({ db, url, now }) => {
       const id = url.searchParams.get("id") ?? url.searchParams.get("slug");
-      return id ? eventsApiDetail(db, id, url.origin) : jsonResponse({ error: "missing_id" }, 400);
+      return id ? eventsApiDetail(db, id, url.origin, now) : jsonResponse({ error: "missing_id" }, 400);
     },
   ],
-  [/^\/tools\/get_event\/([^/]+)$/, ({ db, url, params }) => eventsApiDetail(db, params[0], url.origin)],
+  [/^\/tools\/get_event\/([^/]+)$/, ({ db, url, params, now }) => eventsApiDetail(db, params[0], url.origin, now)],
   [/^\/tools\/whats_on_this_weekend$/, ({ db, url, now }) => whatsOnThisWeekendTool(db, url, now)],
   [/^\/tools\/list_venues$/, ({ db, url, now }) => listVenuesTool(db, url, now)],
   [/^\/tools\/list_areas$/, ({ db, now }) => listAreasTool(db, now)],

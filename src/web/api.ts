@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { AREAS } from "../catalog/area.js";
 import { istCalendarDate, toIstOffset, weekendRangeIst } from "../utils/time.js";
+import { groupEligibility } from "./groupEligible.js";
 import { readCursor, readLimit } from "./input.js";
 import { cursorForEvent, emptyFilters, loadEligibleEvent, queryEventPage, queryListingEvents, readFilters } from "./queries.js";
 import { publicSourceUrl } from "./source-url.js";
@@ -30,7 +31,7 @@ export function whatsOnThisWeekendTool(db: Database, url: URL, now: NowFn): Resp
     city: "Hyderabad",
     window: { from, to },
     count: rows.length,
-    events: rows.map((row) => toApiEvent(row, url.origin, false)),
+    events: rows.map((row) => toApiEvent(row, url.origin, false, now())),
   });
 }
 
@@ -126,21 +127,21 @@ export function eventsApiList(db: Database, url: URL, now: NowFn): Response {
     city: "Hyderabad",
     count: rows.length,
     next_cursor: nextCursor,
-    events: rows.map((row) => toApiEvent(row, url.origin, false)),
+    events: rows.map((row) => toApiEvent(row, url.origin, false, now())),
   };
   return jsonResponse(body);
 }
 
-export function eventsApiDetail(db: Database, publicId: string, origin: string): Response {
+export function eventsApiDetail(db: Database, publicId: string, origin: string, now: NowFn): Response {
   const row = loadEligibleEvent(db, publicId);
   if (!row) {
     return jsonResponse({ error: "not_found" }, 404);
   }
-  return jsonResponse(toApiEvent(row, origin, true));
+  return jsonResponse(toApiEvent(row, origin, true, now()));
 }
 
 /** data-model.md §10.1 public event shape (list item; detail adds description + alternate_ticket_urls). */
-function toApiEvent(row: EventCard, origin: string, includeDescription: boolean) {
+function toApiEvent(row: EventCard, origin: string, includeDescription: boolean, now: Date) {
   const path = `/e/${row.publicId}`;
   const event: Record<string, unknown> = {
     id: row.id,
@@ -164,6 +165,7 @@ function toApiEvent(row: EventCard, origin: string, includeDescription: boolean)
     source: { name: row.source, url: publicSourceUrl(row.sourceUrl) },
     ticket_url: publicSourceUrl(row.sourceUrl),
     image_url: null,
+    group_eligible: groupEligibility(row, now).eligible,
   };
   if (includeDescription) {
     event.description = row.description;

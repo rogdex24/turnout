@@ -352,8 +352,8 @@ Rules:
 ### 10.1 JSON endpoint
 `GET /api/events` with query parameters, all optional and combinable:
 `from`, `to` (ISO dates, IST), `area`, `category`, `free` (bool),
-`max_price` (rupees), `lat`, `lng`, `radius_km`, `limit` (default 50, max 200),
-`cursor`.
+`max_price` (rupees), `lat`, `lng`, `radius_km`, `group_eligible` (`1` keeps only
+shows a group can be made for), `limit` (default 50, max 200), `cursor`.
 
 ```json
 {
@@ -379,13 +379,18 @@ Rules:
     "price_min": null, "price_max": null, "currency": "INR",
     "source": { "name": "Instagram", "url": "https://..." },
     "ticket_url": null,
-    "image_url": "https://.../thumb.jpg"
+    "image_url": "https://.../thumb.jpg",
+    "group_eligible": true
   }]
 }
 ```
 
 No API key, no rate limit beyond basic abuse protection, CORS open. The point is
 to be quoted, including by AI assistants. `next_cursor` is null on the last page.
+
+`group_eligible` is true when a group can be made for the show now: comedy, music or
+theatre, not free, from ₹499, a real start time, a placed venue, and more than 24 hours
+away (exactly 24 hours is already closed). The rule is `src/social/model/eligibility.ts`.
 
 `GET /api/events/{id}` returns one event with `alternate_ticket_urls` and the
 full description.
