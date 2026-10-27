@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Asia/Kolkata",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "prConcurrentLimit": 3,
+  "rangeStrategy": "pin",
+  "packageRules": [
+    {
+      "description": "One batch PR a week for minor and patch updates. Majors get their own PR.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "weekly batch"
+    },
+    {
+      "description": "Expo owns these versions. They move with an SDK bump through `bunx expo install --fix`, never one by one.",
+      "matchPackageNames": [
+        "expo",
+        "expo-*",
+        "@expo/*",
+        "react",
+        "react-dom",
+        "react-native",
+        "react-native-gesture-handler",
+        "react-native-keyboard-controller",
+        "react-native-maps",
+        "react-native-pager-view",
+        "react-native-reanimated",
+        "react-native-safe-area-context",
+        "react-native-screens",
+        "react-native-svg",
+        "react-native-view-shot",
+        "react-native-webview",
+        "react-native-worklets",
+        "@react-native-*/*",
+        "@shopify/flash-list",
+        "@shopify/react-native-skia",
+        "@sentry/react-native",
+        "jest-expo",
+        "eslint-config-expo",
+        "lottie-react-native"
+      ],
+      "enabled": false
+    }
+  ]
+}

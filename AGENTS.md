@@ -9,10 +9,11 @@ sections). Change `DESIGN.md` first, then the code.
 
 ## Commands
 
-- `bun install`
-- `bun run check`: typecheck (four projects), `bun run lint` (Biome lint and format), the DESIGN.md lint, unit tests and the dependency rule. The pre-commit hook runs it.
+- `bun install` (Bun workspaces, hoisted linker; `minimumReleaseAge` in `bunfig.toml` refuses versions younger than 14 days)
+- `bun run check`: today it runs `bun run check:server`: typecheck (five projects: the four server ones plus `packages/contract`), `bun run lint` (Biome lint and format), the DESIGN.md lint, unit tests and the dependency rules. `check:mobile` joins it when `apps/mobile` exists. The pre-commit hook runs the server half as `check-server`.
+- `bun run secrets:scan`: gitleaks over the working tree (`gitleaks dir --redact .`). The pre-commit hook also runs `gitleaks git --staged --redact` on what is staged.
 - `bun run lint`: `biome check .`. `bunx biome check --write .` applies formatting and safe fixes.
-- Git hooks (lefthook, installed by `bun install`): pre-commit formats the staged files and runs `bun run check`; pre-push runs `bun run e2e`. Never bypass them with `--no-verify` or `LEFTHOOK=0` to get a commit through; fix the failure.
+- Git hooks (lefthook, installed by `bun install`): pre-commit formats the staged files, runs `bun run check:server` and scans the staged files with gitleaks; pre-push runs `bun run e2e`. Never bypass them with `--no-verify` or `LEFTHOOK=0` to get a commit through; fix the failure.
 - Toolchain note: `bun run` puts `node_modules/.bin` first, which holds Bun 1.4.3 (installed as a peer of `bun-plugin-tailwind`), while a bare `bun` may be older. The two bundle the map differently (chunk splitting), so bundle sizes and the budget tests are measured under `bun run`; use `bun run check`, not `bun test`.
 - `bun run e2e [specs]`: Playwright (headless Chromium) against a fixture server on a free port with a seeded SQLite file; the basemap is stubbed, so no network. Needs `bunx playwright install chromium` once. Specs live in `e2e/` (the same run also starts the admin on a second port). `SHOTS=<dir> SHOTS_LIVE=1 bun run e2e e2e/shots.spec.ts` takes the screenshot matrix with the real basemap; a spec that waits on a later migration slice is `test.fixme` with the slice ID.
 - `bun run sync [--sources communitie,luma] [--db <path>]`
@@ -35,6 +36,22 @@ These hold for every change. The checks below enforce most of them; the rest are
 - **Budget.** `/map` first load and on-demand chunks have byte limits in `DESIGN.md`, checked by `test/mapBundle.test.ts`. Measure before adding a dependency to the public bundle.
 - **Done means.** `bun run check` and `bun run e2e` pass, and for UI work you have looked at the result in a browser at 1280×800 and 390×844, light and dark.
 - **Writing.** Comments, commits and docs: plain sentences, no em dashes. Commit messages say what changed and why.
+
+## Workspaces
+
+The root is still the server package. `apps/*` and `packages/*` are Bun workspaces (`workspaces` in `package.json`).
+
+- `packages/contract` (`@turnout/contract`): Zod schemas and pure rules shared by the server and the app. Exists.
+- `packages/design-tokens` (`@turnout/design-tokens`): data generated from `DESIGN.md`. Coming with the token pipeline.
+- `apps/mobile`: the Expo app. Coming; it gets its own TypeScript project, lint and `check:mobile`.
+
+### The contract
+
+- Zod only (pinned 4.6.6 in the package). No `bun:` or `node:` import, no import from `src/`, no runtime API. The package compiles with `types: []` and `lib: ["ES2022"]`, so a Bun, Node or DOM global is a type error.
+- Files: `category.ts` (the vocabulary and classifier; `src/catalog/category.ts` re-exports it, import from `@turnout/contract/category` so the browser bundle never pulls in zod), `events.ts`, `profile.ts` (gender, group preference and the women-only rule, handle normalization), `ticket.ts` (proof kinds and file rules), `app/*.ts` per API area. Import a subpath, not the index, from code that ships to a browser.
+- Every request schema is `.strict()`. Response schemas are not, so the server can add a field.
+- Each enum and rule lives here once and both sides use it. The server vocabulary wins over any app name.
+- A rule that both sides must apply (women-only, `normalizeHandle`, the ticket file check) goes here with a test in `test/contract.test.ts`.
 
 ## Module map
 
@@ -64,6 +81,9 @@ Enforced by dependency-cruiser (`.dependency-cruiser.json`, `bun run deps`).
 - No cycles. Only `cli.ts` and `migrate.ts` may import across modules freely, and nothing imports them.
 - `admin` imports `catalog`, `curation`, `utils` and, from `ingestion`, only `sources/registry.ts` and `schema.ts`. Never `web`. Nothing but `cli.ts` imports it. `admin/ui` imports `utils` and the types in `admin/api.ts` only.
 - `web/ui` imports `utils` and itself only, so it stays a leaf any page can use.
+- `packages/contract` imports itself and `zod` only (`contract-is-pure`). `packages/design-tokens` imports nothing outside itself (`design-tokens-is-data`). Nothing in `src/` imports `apps/` or `packages/design-tokens` (`src-not-to-apps`).
+- When the product modules arrive, these hold from the first file: `src/social/model` imports no `bun:`, `node:` or core module and nothing from the DB files of `src/social` (`social-model-pure`, `social-model-no-io`). `src/social` imports no `web`, `admin`, `app-api`, `ingestion` or `curation` (`social-layer`). `src/app-api` imports no `web` or `admin` (`app-api-layer`) and only `cli.ts` imports `src/app-api` (`only-cli-imports-app-api`). The rules match nothing while those directories are absent.
+- `bun run deps` cruises `src` and `packages`.
 - `test/`, `e2e/` and `bench/` are exempt.
 
 Lint rules that guard architecture: `lint/no-html-strings.grit` (no string-built DOM in `src/web`), `lint/no-history-writes.grit` (nuqs owns the URL in `src/web/map`), and `noDangerouslySetInnerHtml` everywhere but `rawBlock.tsx`. Biome plugin `includes` need a `**/` prefix (they match absolute paths).
