@@ -1,0 +1,6 @@
+# Checkouts and plain `git lfs pull` skip the visual baselines, so clones and PR jobs that do not compare shots download nothing from LFS.
+# A device job fetches its own folder with:
+#   git -c lfs.fetchexclude= lfs pull --include="apps/mobile/.maestro/visual/baselines/<target>/**"
+# (a bare --include does not work: the exclude below still applies to it).
+[lfs]
+	fetchexclude = apps/mobile/.maestro/visual/baselines/**
