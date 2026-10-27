@@ -25,7 +25,7 @@ The one-off audit that produced this list is in `docs/plans/public-repo-audit.md
 | --- | --- | --- |
 | `test/noRealPhones.test.ts` | Real-looking Indian mobile numbers and non-example emails in tracked files | `bun run check`, so pre-commit and CI `check` |
 | `scripts/pii-scan.ts` | The same scan, runnable by hand (`bun scripts/pii-scan.ts`); prints path, line and kind, never the value | by hand |
-| `.gitleaks.toml` with the default rules | API keys, tokens, private keys, in the tree and in all history | CI `secrets` job; by hand with the commands below |
+| `.gitleaks.toml` with the default rules | API keys, tokens, private keys. CI scans the tree and the commits each PR or push adds; the full history scan is by hand | CI `secrets` job; by hand with the commands below |
 | `.gitignore` `data/**/*.sqlite*` | Database files | git |
 
 By hand, with gitleaks 8.30.1 installed:

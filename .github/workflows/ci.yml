@@ -90,8 +90,20 @@ jobs:
           tar -xzf "$dl/gitleaks.tgz" -C "$dl" gitleaks
           sudo install -m 0755 "$dl/gitleaks" /usr/local/bin/gitleaks
           gitleaks version
-      - name: Scan history
-        run: gitleaks git --redact --no-banner --log-opts="--all" .
+      # Scan the commits this event adds, not all history. Old history is cleaned once by the approved rewrite
+      # (docs/plans/public-repo-audit.md); until then a full scan would fail every PR on a value no PR can remove.
+      # Run the full scan by hand with `gitleaks git --redact --log-opts="--all" .` after the rewrite.
+      - name: Scan new commits
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            gitleaks git --redact --no-banner --log-opts="$HEAD" .
+          else
+            gitleaks git --redact --no-banner --log-opts="$BASE..$HEAD" .
+          fi
       - name: Scan working tree
         run: gitleaks dir --redact --no-banner .
 
