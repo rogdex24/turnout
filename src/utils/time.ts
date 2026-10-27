@@ -66,18 +66,23 @@ export function toIstOffset(iso: string): string {
   );
 }
 
-/** Human-facing date for a listing card, e.g. "Sat, 12 Sep, 7:00 PM". */
+const IST_WHEN = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/**
+ * Human-facing date for a listing card, e.g. "Sat, 12 Sep, 7:00 PM". Built from the parts, because the
+ * joining literal (", " or " at ") differs between ICU versions and so between machines.
+ */
 export function formatIst(iso: string): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  })
-    .format(new Date(iso))
-    .replace(/\s*([ap])m\b/i, (_, x: string) => ` ${x.toUpperCase()}M`);
+  const part = Object.fromEntries(IST_WHEN.formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
+  return `${part.weekday}, ${part.day} ${part.month}, ${part.hour}:${part.minute} ${(part.dayPeriod ?? "").toUpperCase()}`;
 }
 
 /** "2026-10-18T19:30" read as Hyderabad wall clock, to ISO UTC. Null when it is not a real date. */

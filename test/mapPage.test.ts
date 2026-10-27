@@ -36,7 +36,9 @@ test("/map works without JavaScript: events grouped by type, pills as links, esc
   expect(html).toContain("Jazz &lt;night&gt;");
   expect(html).toContain('href="/map?when=tonight"');
   expect(html).toContain("event=a");
-  expect(html).not.toContain('<script type="module"');
+  // The page links the bundle only once it is built, and mapBundle.test.ts may build it first in the same
+  // process. The list above is in the HTML either way, which is what works without JavaScript means.
+  expect(html.includes('<script type="module"')).toBe(mapAssetsNow() !== null);
   expect(html).toContain("OpenStreetMap");
   expect(html).toContain("OpenFreeMap");
 });
@@ -79,7 +81,8 @@ test("a date-only start prints no time and a timed one does", async () => {
   expect(formatWhen("2026-10-21T18:30:00.000Z", "date-only")).toBe("Thu 22 Oct");
   expect(formatWhen("2026-10-22T13:30:00.000Z", "timed")).toMatch(/^Thu 22 Oct · 7:00 PM$/);
   const { formatIst } = await import("../src/utils/time.js");
-  expect(formatIst("2026-10-22T03:30:00.000Z")).toBe("Thu, 22 Oct at 9:00 AM");
+  expect(formatIst("2026-10-22T03:30:00.000Z")).toBe("Thu, 22 Oct, 9:00 AM");
+  expect(formatIst("2026-10-22T13:30:00.000Z")).toBe("Thu, 22 Oct, 7:00 PM");
 });
 
 test("the rating component renders nothing without a real rating", async () => {
