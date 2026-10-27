@@ -5,4 +5,6 @@
  */
 
 export * from "./eligibility.js";
+export * from "./matchable.js";
+export * from "./phone.js";
 export * from "./tunables.js";

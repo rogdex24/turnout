@@ -100,7 +100,7 @@ other people in a group.
 | --- | --- | --- | --- | --- |
 | `rate_bucket.bucket_key` | Keyed hash of a scope and a subject (a phone, an IP, a member) | Counts requests without storing the subject | Server only | One window |
 | `rate_bucket.window_start` | Start of the window, epoch seconds | Fixed-window counting | Server | One window |
-| `rate_bucket.window_seconds` | Length of the window | Tells the sweep when the row is dead | Server | One window |
+| `rate_bucket.window_seconds` | Length of the window | Tells the sweep when the row is dead | Server | One window; the `otp:sends` counter rows are kept 62 days for the monthly spend alert |
 | `rate_bucket.count` | Requests in the window | The limit check | Server | One window |
 
 ## Object store

@@ -9,6 +9,18 @@ import {
   profilePatchSchema,
   proofKindForSource,
 } from "@turnout/contract";
+import {
+  otpChallengeResponseSchema,
+  otpRequestSchema,
+  otpStatusResponseSchema,
+  otpVerifyRequestSchema,
+  refreshRequestSchema,
+  tokenPairSchema,
+} from "@turnout/contract/app/auth";
+import { compareVersions } from "@turnout/contract/app/config";
+import { ERROR_CODES, errorBodySchema, errorCodeSchema } from "@turnout/contract/app/errors";
+import { consentRequestSchema, handleResponseSchema, MAX_PHOTO_BYTES, meResponseSchema } from "@turnout/contract/app/me";
+import { NOTICE_PARAGRAPHS, NOTICE_TEXT, NOTICE_VERSION } from "@turnout/contract/app/notice";
 
 describe("women-only rule", () => {
   test("women-only is open to women and non-binary people, not men", () => {
@@ -115,5 +127,81 @@ describe("events query", () => {
   test("is strict, so lat and lng are refused", () => {
     expect(eventListQuerySchema.safeParse({ group_eligible: "1", area: "madhapur" }).success).toBe(true);
     expect(eventListQuerySchema.safeParse({ lat: "17.4", lng: "78.4" }).success).toBe(false);
+  });
+});
+
+describe("app contract: sign-in and sessions", () => {
+  test("requests are strict and check their fields", () => {
+    expect(otpRequestSchema.safeParse({ phone: "+12025550100", purpose: "sign_in" }).success).toBe(true);
+    expect(otpRequestSchema.safeParse({ phone: "+12025550100", purpose: "sign_in", role: "admin" }).success).toBe(false);
+    expect(otpRequestSchema.safeParse({ phone: "1", purpose: "sign_in" }).success).toBe(false);
+    expect(otpRequestSchema.safeParse({ phone: "+12025550100", purpose: "delete_account" }).success).toBe(false);
+    const verify = { challengeId: "abc", phone: "+12025550100", code: "123456", noticeVersion: NOTICE_VERSION };
+    expect(otpVerifyRequestSchema.safeParse(verify).success).toBe(true);
+    for (const code of ["12345", "1234567", "12345a", " 123456"])
+      expect(otpVerifyRequestSchema.safeParse({ ...verify, code }).success).toBe(false);
+    expect(otpVerifyRequestSchema.safeParse({ ...verify, extra: 1 }).success).toBe(false);
+    expect(refreshRequestSchema.safeParse({ refreshToken: "a".repeat(43) }).success).toBe(true);
+    expect(refreshRequestSchema.safeParse({ refreshToken: "short" }).success).toBe(false);
+  });
+
+  test("responses parse", () => {
+    expect(otpChallengeResponseSchema.safeParse({ challengeId: "x", expiresAt: "2026-10-27T06:10:00.000Z" }).success).toBe(true);
+    expect(otpStatusResponseSchema.safeParse({ deliveryStatus: "undeliverable" }).success).toBe(true);
+    expect(otpStatusResponseSchema.safeParse({ deliveryStatus: "pending" }).success).toBe(false);
+    expect(tokenPairSchema.safeParse({ accessToken: "a", accessExpiresAt: "b", refreshToken: "c", refreshExpiresAt: "d" }).success).toBe(
+      true,
+    );
+    expect(tokenPairSchema.safeParse({ accessToken: "a" }).success).toBe(false);
+  });
+});
+
+describe("app contract: errors, config and the notice", () => {
+  test("every error code is listed once and the body parses", () => {
+    expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
+    for (const code of [
+      "invalid_request",
+      "unauthorized",
+      "rate_limited",
+      "sign_in_unavailable",
+      "otp_cap_reached",
+      "women_only",
+      "bad_handle",
+      "handle_locked",
+    ]) {
+      expect(errorCodeSchema.safeParse(code).success).toBe(true);
+    }
+    expect(errorBodySchema.safeParse({ error: { code: "Not A Code", message: "x" } }).success).toBe(false);
+    expect(errorBodySchema.safeParse({ error: { code: "not_found", message: "nope" } }).success).toBe(true);
+  });
+
+  test("the notice has a date version, readable text, and none of the banned wording", () => {
+    expect(NOTICE_VERSION).toBe("2026-10-26");
+    expect(NOTICE_TEXT).toBe(NOTICE_PARAGRAPHS.join("\n\n"));
+    for (const word of [/\bverified\b/i, /ID.?check/i, /\bKYC\b/i, /—/]) expect(NOTICE_TEXT).not.toMatch(word);
+  });
+
+  test("version comparison goes by number", () => {
+    expect(compareVersions("1.2.3", "1.10.0")).toBe(-1);
+    expect(compareVersions("2.0.0", "1.99.99")).toBe(1);
+    expect(compareVersions("1.0.0", "1.0.0")).toBe(0);
+    expect(compareVersions("junk", "0.0.0")).toBe(0);
+  });
+
+  test("the /me shape needs every field", () => {
+    const me = {
+      status: "active",
+      phoneLast4: "0100",
+      profile: { firstName: null, gender: null, groupPref: "open", photo: null },
+      handle: { state: "missing", kind: null, handle: null, rejectReason: null },
+      matchable: { ok: false, missing: ["name"] },
+      consent: { noticeVersion: null, current: false },
+    };
+    expect(meResponseSchema.safeParse(me).success).toBe(true);
+    expect(meResponseSchema.safeParse({ ...me, status: "banned" }).success).toBe(false);
+    expect(meResponseSchema.safeParse({ ...me, matchable: { ok: false, missing: ["selfie"] } }).success).toBe(false);
+    expect(consentRequestSchema.safeParse({ noticeVersion: NOTICE_VERSION, extra: 1 }).success).toBe(false);
+    expect(handleResponseSchema.safeParse({ state: "approved" }).success).toBe(false);
+    expect(MAX_PHOTO_BYTES).toBe(10 * 1024 * 1024);
   });
 });

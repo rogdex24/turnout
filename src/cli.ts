@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { startAdmin } from "./admin/start.js";
-import { APP_PREFIX, appResponse, createAppContext, startTicker } from "./app-api/index.js";
+import { APP_PREFIX, type AppContext, appResponse, ConfigError, createAppContext, startTicker } from "./app-api/index.js";
 import { addMuteRule, countMuted, isMuteField, listMuteRules, MUTE_FIELDS, removeMuteRule } from "./curation/mute.js";
 import { nominatimGeocoder } from "./ingestion/geocode/nominatim.js";
 import { runGeocode } from "./ingestion/geocode/runGeocode.js";
@@ -151,12 +151,27 @@ async function main(): Promise<void> {
     await buildMapAssets();
     const siteDb = openDb(dbPath, { readonly: true });
     // The app API is the one writer in this process; it gets its own handle (WAL, busy_timeout, foreign keys).
-    const app = createAppContext({ db: openDb(dbPath), env: process.env });
+    let app: AppContext;
+    try {
+      app = await createAppContext({ db: openDb(dbPath), env: process.env });
+    } catch (error) {
+      if (!(error instanceof ConfigError)) throw error;
+      console.error(error.message);
+      process.exitCode = 1;
+      return;
+    }
+    if (app.config.ephemeral.length > 0) {
+      console.warn(`Not set, so random for this run (sessions end at a restart): ${app.config.ephemeral.join(", ")}`);
+    }
     const stopTicker = rest.includes("--no-ticker") ? undefined : startTicker(app);
     const server = Bun.serve({
       port,
-      fetch: (request) =>
-        new URL(request.url).pathname.startsWith(APP_PREFIX) ? appResponse(app, request) : siteResponse(siteDb, request, app.now),
+      // A photo is at most 10 MB; the app API refuses bigger ones itself, and this stops a bigger body being buffered at all.
+      maxRequestBodySize: 12 * 1024 * 1024,
+      fetch: (request, bunServer) =>
+        new URL(request.url).pathname.startsWith(APP_PREFIX)
+          ? appResponse(app, request, bunServer.requestIP(request)?.address ?? null)
+          : siteResponse(siteDb, request, app.now),
     });
     process.once("SIGTERM", () => {
       stopTicker?.();

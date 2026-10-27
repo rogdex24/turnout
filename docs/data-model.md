@@ -537,7 +537,7 @@ column is added to a table here and not there.
 | `profile` | `first_name`, `gender`, `group_pref`, `photo_key` | Until deletion |
 | `social_handle` | `kind`, normalised handle, `status` (`pending`, `approved`, `rejected`), `reject_reason`, review fields, `submissions_today` and `submissions_day` | Until deletion or ban |
 | `consent_record` | Notice version, purpose, given and withdrawn times | 1 year after the account ends, under the tombstone id |
-| `rate_bucket` | Keyed-hash key, window, count | One window |
+| `rate_bucket` | Keyed-hash key, window, count | One window (the `otp:sends` counter: 62 days, for the monthly spend alert) |
 
 Rules the schema encodes:
 
