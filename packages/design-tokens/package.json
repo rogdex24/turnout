@@ -1,0 +1,13 @@
+{
+  "name": "@turnout/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Turnout mobile design tokens. Data only: generated from DESIGN.md by scripts/build-mobile-tokens.ts, plus native.ts.",
+  "exports": {
+    ".": "./index.ts",
+    "./native": "./native.ts",
+    "./tokens": "./tokens.generated.ts",
+    "./theme.css": "./theme.generated.css"
+  }
+}

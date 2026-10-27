@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Home</title>
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:44px;left:0;right:0;bottom:148px;overflow:hidden}
+.top{display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 20px;height:52px}
+.wordmark{font-family:var(--display);font-weight:900;font-size:28px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:baseline;gap:3px}
+.wordmark b{width:7px;height:7px;border-radius:1px;background:var(--ink);display:inline-block;transform:rotate(45deg) translateY(-2px)}
+.city{min-height:44px;padding:0 12px 0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:500}
+.city i{font-size:18px;color:var(--muted)}
+.head{display:flex;align-items:baseline;justify-content:space-between;padding:8px 20px 0}
+.areas{display:flex;gap:8px;padding:12px 20px 0;overflow:hidden}
+.strip{margin:14px 16px 0;align-items:center}
+.strip .link{min-height:44px;margin:-12px 0;flex:none}
+.daylabel{display:flex;justify-content:space-between;align-items:baseline;padding:18px 20px 10px}
+.feat{margin:0 16px}
+.feat-card{border-radius:20px;overflow:hidden;background:var(--s1);border:1px solid var(--line);display:block}
+.feat .poster{height:180px;padding:14px 16px 16px;display:flex;flex-direction:column;justify-content:flex-end}
+.feat h3{font-size:42px;max-width:280px}
+.feat .cat-line{margin-top:6px}
+.date{position:absolute!important;top:12px;right:14px;text-align:center;font-family:var(--display);font-weight:800;text-transform:uppercase;line-height:.85}
+.date small{display:block;font-size:14px;letter-spacing:.12em;opacity:.85}
+.date b{display:block;font-size:46px;font-weight:900}
+.stub{padding:12px 16px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stub p{font-size:15px;line-height:20px}
+.stub .where{color:var(--muted);font-size:13px;line-height:18px}
+.price{font-family:var(--display);font-weight:800;font-size:24px;line-height:1;text-align:right;white-space:nowrap}
+.price small{font-family:Inter,sans-serif;font-size:12px;font-weight:500;color:var(--muted);display:block;margin-bottom:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.tile .poster{height:196px;border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:flex-end}
+.tile h3{font-size:30px}
+.tile .meta{margin-top:8px;font-size:13px;line-height:18px;color:var(--muted)}
+.tile .meta b{color:var(--ink);font-weight:600;display:block}
+.planbar .thumb{background-size:cover;background-position:center}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<div class="scroll">
+  <header class="top">
+    <div class="wordmark" role="img" aria-label="Turnout">Turnout<b aria-hidden="true"></b></div>
+    <button class="city" data-component-id="city" aria-label="City, Hyderabad"><i class="ph-fill ph-map-pin" aria-hidden="true"></i>Hyderabad<i class="ph ph-caret-down" aria-hidden="true"></i></button>
+  </header>
+  <div class="head">
+    <h1 class="t-display">Shows this week</h1>
+    <span class="t-meta tnum">30 Oct to 5 Nov</span>
+  </div>
+  <div class="areas" role="group" aria-label="Area">
+    <button class="chip" aria-pressed="true" data-component-id="area-all">All areas</button>
+    <button class="chip" aria-pressed="false" data-component-id="area-hitec">HITEC City</button>
+    <button class="chip" aria-pressed="false" data-component-id="area-jubilee">Jubilee Hills</button>
+    <button class="chip" aria-pressed="false" data-component-id="area-banjara">Banjara Hills</button>
+  </div>
+  <div class="note strip" role="status" data-component-id="profile-check-strip">
+    <i class="ph ph-hourglass-medium" aria-hidden="true"></i>
+    <span style="flex:1">We're checking your profile. Usually within a day. You can add a ticket in the meantime.</span>
+  </div>
+  <div class="daylabel"><h2 class="t-title-l">Tonight</h2><span class="t-meta tnum">Fri 30 Oct, 2 shows</span></div>
+  <div class="feat">
+    <a href="#" class="feat-card" data-component-id="show-card-monsoon" aria-label="The Monsoon Theory, live music. Friday 30 October, 8:00 PM at Phoenix Arena, HITEC City. From 1,499 rupees.">
+      <div class="poster music" aria-hidden="true">
+        <div class="date"><small>Fri</small><b class="tnum">30</b><small>Oct</small></div>
+        <h3 class="d">The Monsoon Theory</h3>
+        <p class="cat-line">Live music</p>
+      </div>
+      <div class="perf" aria-hidden="true"></div>
+      <div class="stub">
+        <div><p class="tnum">Fri 8:00 PM</p><p class="where">Phoenix Arena, HITEC City</p></div>
+        <p class="price tnum"><small>From</small>₹1,499</p>
+      </div>
+    </a>
+  </div>
+  <div class="daylabel"><h2 class="t-title-l">This weekend</h2><span class="t-meta tnum">9 shows</span></div>
+  <ul class="grid">
+    <li class="tile"><a href="#" data-component-id="show-card-biryani" aria-label="The Biryani Wars, theatre. Saturday 31 October, 7:30 PM at Ravindra Bharathi. From 500 rupees.">
+      <div class="poster theatre" aria-hidden="true"><h3 class="d">The Biryani Wars</h3><p class="cat-line">Theatre</p></div>
+      <p class="meta tnum"><b>Sat 7:30 PM</b>Ravindra Bharathi<br>From ₹500</p></a></li>
+    <li class="tile"><a href="#" data-component-id="show-card-telugu" aria-label="Telugu Stand-up Night, stand-up comedy. Saturday 31 October, 9:00 PM at The Moonshine Project. From 599 rupees.">
+      <div class="poster ph comedy" aria-hidden="true"><h3 class="d">Telugu Stand-up Night</h3><p class="cat-line">Stand-up comedy</p></div>
+      <p class="meta tnum"><b>Sat 9:00 PM</b>The Moonshine Project<br>From ₹599</p></a></li>
+  </ul>
+</div>
+<a href="#" class="planbar pressable" data-component-id="active-plan" aria-label="Your plan, Traffic Jam Tales, Saturday 7:00 PM. Finding your group.">
+  <span class="thumb poster comedy" aria-hidden="true"></span>
+  <span class="tx">
+    <span class="ttl tnum" style="display:block">Traffic Jam Tales, Sat 7:00 PM</span>
+    <span class="status-text"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>Finding your group</span>
+  </span>
+  <i class="ph ph-caret-right" aria-hidden="true" style="font-size:18px;color:var(--muted);width:44px;text-align:center"></i>
+</a>
+<!-- @tabbar shows plans -->
+<!-- @gesture -->
+</div>
+</body>
+</html>

@@ -21,6 +21,7 @@
     "admin": "bun run src/cli.ts admin",
     "design:lint": "design.md lint DESIGN.md",
     "icons": "bun scripts/build-category-sprite.ts",
+    "tokens:mobile": "bun scripts/build-mobile-tokens.ts",
     "e2e": "bun e2e/run.ts",
     "lint": "biome check .",
     "prepare": "lefthook install"

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Your phone number</title>
+<meta name="description" content="Sign in, phone entry: a +91 field with a 10 digit number in focus, the WhatsApp code line, Send code docked above the number keyboard.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:96px;left:0;right:0;bottom:336px;overflow:hidden;padding:4px 20px 0}
+.scroll .lead{margin-top:8px;color:var(--muted)}
+.form{margin-top:28px}
+/* Phone field: fixed +91 prefix, then the number */
+.phone{padding:0}
+.phone .cc{height:100%;min-height:54px;padding:0 14px 0 16px;display:flex;align-items:center;border-right:1px solid var(--line);color:var(--muted);flex:none}
+.phone .num{padding:0 0 0 16px;display:flex;align-items:center;letter-spacing:.02em}
+.caret{width:2px;height:24px;background:var(--ink);margin-left:2px}
+.dock.kb{bottom:256px;padding-bottom:12px}
+/* Number keyboard stand-in: neutral blocks, not an OS keyboard image */
+.keys{position:absolute;left:0;right:0;bottom:0;height:256px;background:var(--s1);border-top:1px solid var(--line);padding:8px 6px 0;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:46px;gap:7px 6px;z-index:21}
+.keys span{border-radius:8px;background:var(--s2);display:grid;place-items:center;font-size:24px;line-height:1;font-weight:400}
+.keys span.blank{background:transparent}
+.keys span i{font-size:24px}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<header class="navbar">
+  <a href="#" class="iconbtn" data-component-id="back" aria-label="Back"><i class="ph ph-caret-left" aria-hidden="true"></i></a>
+  <h1></h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<main class="scroll">
+  <h2 class="t-display">Your phone number</h2>
+  <p class="lead t-body">We'll send a code on WhatsApp.</p>
+  <div class="form">
+    <p class="label" id="phone-label">Phone number</p>
+    <div class="field focus phone" data-component-id="phone-field">
+      <span class="cc tnum" aria-label="Country code plus 91">+91</span>
+      <span class="num tnum" id="phone" role="textbox" aria-labelledby="phone-label" tabindex="0">55501 00123</span><span class="caret" aria-hidden="true"></span>
+    </div>
+    <p class="help">It can be on another phone.</p>
+  </div>
+</main>
+<div class="dock kb">
+  <button class="btn" data-component-id="send-code">Send code</button>
+</div>
+<div class="keys" aria-hidden="true">
+  <span>1</span><span>2</span><span>3</span>
+  <span>4</span><span>5</span><span>6</span>
+  <span>7</span><span>8</span><span>9</span>
+  <span class="blank"></span><span>0</span><span class="blank"><i class="ph ph-backspace"></i></span>
+</div>
+<!-- @gesture -->
+</div>
+</body>
+</html>

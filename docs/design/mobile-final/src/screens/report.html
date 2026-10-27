@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Report someone</title>
+<meta name="description" content="Turnout report screen pushed from the meet card: call 112 always visible, choose the person, pick a reason, optional details and Send report.">
+<!-- @head -->
+<style>
+.sos{position:absolute;top:96px;left:16px;right:16px;z-index:10;align-items:center}
+.sos i{color:var(--ink)}
+.sos p{flex:1;font-size:15px;line-height:20px;font-weight:600}
+.sos .btn2{width:auto;min-height:44px;padding:0 16px;flex:none;border-color:var(--ink)}
+.wrap{position:absolute;top:168px;left:0;right:0;bottom:99px;padding:18px 16px 0;overflow:hidden}
+.people{display:flex;justify-content:space-between;margin-top:12px}
+.pick{width:62px;min-height:44px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--muted)}
+.pick .face.sm{position:relative;overflow:visible}
+.pick .face img{border-radius:11px}
+.pick[aria-checked="true"]{color:var(--ink);font-weight:600}
+.pick[aria-checked="true"] .face{border:0;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+.pick .tick{position:absolute;right:-6px;bottom:-6px;width:20px;height:20px;border-radius:99px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:12px;box-shadow:0 0 0 2px var(--bg)}
+.reasons{margin-top:20px}
+.reasons .card{margin-top:12px}
+.reasons .row{width:100%;text-align:left;min-height:52px}
+.rd{width:22px;height:22px;border-radius:99px;border:2px solid var(--outline);flex:none}
+.row[aria-checked="true"] .rd{border-color:var(--ink);background:radial-gradient(var(--ink) 0 5px,transparent 5.5px)}
+.row .tx b{font-weight:500}
+.row[aria-checked="true"] .tx b{font-weight:600}
+.details{margin-top:20px}
+.details .field{min-height:80px;align-items:flex-start;padding-top:14px;font-size:15px;line-height:22px;color:var(--muted)}
+.fine{margin-top:12px}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 5:14 -->
+<header class="navbar">
+  <button class="iconbtn" aria-label="Back" data-component-id="back"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+  <h1>Report</h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<div class="note sos" role="region" aria-label="Emergency">
+  <i class="ph ph-phone" aria-hidden="true"></i>
+  <p class="tnum">In danger now? Call 112</p>
+  <a href="tel:112" class="btn2" data-component-id="call-112" aria-label="Call 112"><span class="tnum">Call 112</span></a>
+</div>
+<main class="wrap">
+  <section aria-labelledby="who-h">
+    <h2 class="t-title" id="who-h">Who is this about?</h2>
+    <div class="people" role="radiogroup" aria-labelledby="who-h">
+      <button class="pick" role="radio" aria-checked="false" data-component-id="pick-priya"><span class="face sm"><img src="img/face-priya.jpg" alt=""></span>Priya</button>
+      <button class="pick" role="radio" aria-checked="false" data-component-id="pick-sana"><span class="face sm"><img src="img/face-sana.jpg" alt=""></span>Sana</button>
+      <button class="pick" role="radio" aria-checked="false" data-component-id="pick-meera"><span class="face sm"><img src="img/face-meera.jpg" alt=""></span>Meera</button>
+      <button class="pick" role="radio" aria-checked="false" data-component-id="pick-arjun"><span class="face sm"><img src="img/face-arjun.jpg" alt=""></span>Arjun</button>
+      <button class="pick" role="radio" aria-checked="true" data-component-id="pick-rahul"><span class="face sm"><img src="img/face-rahul.jpg" alt=""><span class="tick" aria-hidden="true"><i class="ph-bold ph-check"></i></span></span>Rahul</button>
+    </div>
+  </section>
+  <section class="reasons" aria-labelledby="why-h">
+    <h2 class="t-title" id="why-h">What happened?</h2>
+    <div class="card" role="radiogroup" aria-labelledby="why-h">
+      <button class="row" role="radio" aria-checked="true" data-component-id="reason-unsafe"><span class="rd" aria-hidden="true"></span><span class="tx"><b>Made me feel unsafe</b></span></button>
+      <button class="row" role="radio" aria-checked="false" data-component-id="reason-harassment"><span class="rd" aria-hidden="true"></span><span class="tx"><b>Harassment or unwanted contact</b></span></button>
+      <button class="row" role="radio" aria-checked="false" data-component-id="reason-not-who"><span class="rd" aria-hidden="true"></span><span class="tx"><b>Not who they said</b></span></button>
+      <button class="row" role="radio" aria-checked="false" data-component-id="reason-other"><span class="rd" aria-hidden="true"></span><span class="tx"><b>Something else</b></span></button>
+    </div>
+  </section>
+  <section class="details">
+    <label class="label" for="details">Details (optional)</label>
+    <div class="field" id="details" role="textbox" aria-multiline="true" aria-label="Details, optional" tabindex="0" data-component-id="report-details">Tell us what happened, if you want to.</div>
+  </section>
+  <p class="t-meta fine tnum">We read every report within 24 hours. They won't know who reported them.</p>
+</main>
+<div class="dock">
+  <button class="btn" data-component-id="send-report">Send report</button>
+</div>
+<!-- @gesture -->
+</div>
+</body>
+</html>

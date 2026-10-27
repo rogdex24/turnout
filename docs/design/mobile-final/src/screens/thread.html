@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Group chat</title>
+<meta name="description" content="Turnout group chat for Traffic Jam Tales, open: text messages with first names and times, one message held with a Report menu, quick message chips and the composer.">
+<!-- @head -->
+<style>
+.navbar .ttl{flex:1;text-align:center;min-width:0}
+.navbar .ttl h1{font-size:17px;line-height:22px}
+.navbar .ttl p{font-size:13px;line-height:18px;color:var(--muted);white-space:nowrap}
+.list{position:absolute;top:96px;left:0;right:0;bottom:147px;padding:0 16px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:14px}
+.msg{display:flex;gap:10px;align-items:flex-start;max-width:340px;position:relative}
+.msg .face.sm{margin-top:2px}
+.msg .who{font-size:13px;line-height:18px;color:var(--muted)}
+.msg .who b{color:var(--ink);font-weight:600;margin-right:6px}
+.bubble{margin-top:4px;display:inline-block;padding:9px 13px;border-radius:16px;border-top-left-radius:6px;background:var(--s1);border:1px solid var(--line);font-size:15px;line-height:22px}
+.msg.me{align-self:flex-end;flex-direction:column;align-items:flex-end;max-width:280px}
+.msg.me .bubble{background:var(--s2);border-color:var(--s2);border-top-left-radius:16px;border-top-right-radius:6px}
+.msg.cont{margin-top:-8px;padding-left:50px}
+.msg.cont .bubble{border-top-left-radius:16px}
+.dim{position:absolute;top:96px;left:0;right:0;bottom:147px;z-index:25;background:var(--scrim)}
+.msg.held{z-index:26}
+.msg.held .who{color:var(--ink)}
+.msg.held .bubble{transform:scale(1.02);transform-origin:left top}
+.menu{position:absolute;left:50px;top:calc(100% + 8px);z-index:26;min-width:180px;border-radius:14px;background:var(--s1);border:1px solid var(--outline);overflow:hidden}
+.menu .row{min-height:48px;padding:0 16px}
+.menu .row b{font-size:15px;font-weight:600}
+.menu .row .ic{color:var(--ink)}
+.dock{padding:8px 0 30px}
+.quick{display:flex;gap:6px;padding:0 12px;overflow:hidden}
+.quick .chip{padding:0 12px;font-size:14px}
+.composer{display:flex;align-items:center;gap:8px;padding:8px 12px 0 16px}
+.composer .field{flex:1;min-height:48px;border-radius:999px;font-size:15px;color:var(--muted)}
+.send{background:var(--btn-bg);color:var(--btn-ink);font-size:20px}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 5:12 -->
+<header class="navbar">
+  <button class="iconbtn" aria-label="Back" data-component-id="back"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+  <div class="ttl"><h1>Traffic Jam Tales</h1><p class="tnum">Group chat, open until Sun 7:00 PM</p></div>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<ol class="list" aria-label="Messages">
+  <li class="msg" aria-label="Sana, 4:01 PM: Hi! Sana. Excited for this one.">
+    <span class="face sm" aria-hidden="true"><img src="img/face-sana.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Sana</b><span class="tnum">4:01 PM</span></p><p class="bubble">Hi! Sana. Excited for this one.</p></div>
+  </li>
+  <li class="msg" aria-label="Rahul, 4:02 PM: Hey everyone. Rahul here.">
+    <span class="face sm" aria-hidden="true"><img src="img/face-rahul.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Rahul</b><span class="tnum">4:02 PM</span></p><p class="bubble">Hey everyone. Rahul here.</p></div>
+  </li>
+  <li class="msg" aria-label="Priya, 4:06 PM: Hi all, I'll get there a bit early.">
+    <span class="face sm" aria-hidden="true"><img src="img/face-priya.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Priya</b><span class="tnum">4:06 PM</span></p><p class="bubble">Hi all, I'll get there a bit early.</p></div>
+  </li>
+  <li class="msg" aria-label="Arjun, 4:20 PM: First time doing this. See you at 6.">
+    <span class="face sm" aria-hidden="true"><img src="img/face-arjun.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Arjun</b><span class="tnum">4:20 PM</span></p><p class="bubble">First time doing this. See you at 6.</p></div>
+  </li>
+  <li class="msg me" aria-label="You, 4:31 PM: Same here. I'll be in a green kurta.">
+    <p class="who" aria-hidden="true"><span class="tnum">4:31 PM</span></p><p class="bubble" aria-hidden="true">Same here. I'll be in a green kurta.</p>
+  </li>
+  <li class="msg held" aria-label="Meera, 4:52 PM: Does anyone want to split a cab back after? Message held, actions open." data-component-id="msg-held">
+    <span class="face sm" aria-hidden="true"><img src="img/face-meera.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Meera</b><span class="tnum">4:52 PM</span></p><p class="bubble">Does anyone want to split a cab back after?</p></div>
+    <div class="menu" role="menu" aria-label="Message actions">
+      <a href="#" class="row" role="menuitem" data-component-id="msg-report"><span class="ic" aria-hidden="true"><i class="ph ph-flag"></i></span><span class="tx"><b>Report</b></span></a>
+    </div>
+  </li>
+  <li class="msg" aria-label="Priya, 5:10 PM: Got the big table near the window">
+    <span class="face sm" aria-hidden="true"><img src="img/face-priya.jpg" alt=""></span>
+    <div aria-hidden="true"><p class="who"><b>Priya</b><span class="tnum">5:10 PM</span></p><p class="bubble">Got the big table near the window</p></div>
+  </li>
+</ol>
+<div class="dim" aria-hidden="true" data-component-id="held-scrim"></div>
+<div class="dock">
+  <div class="quick" role="group" aria-label="Quick messages">
+    <button class="chip" data-component-id="quick-late">Running 10 min late</button>
+    <button class="chip" data-component-id="quick-onmyway">On my way</button>
+    <button class="chip" data-component-id="quick-atcafe">At the cafe</button>
+  </div>
+  <div class="composer">
+    <label class="field" data-component-id="composer-field"><span class="sr">Message</span><span aria-hidden="true">Message</span></label>
+    <button class="iconbtn send" aria-label="Send" data-component-id="send"><i class="ph-fill ph-paper-plane-right" aria-hidden="true"></i></button>
+  </div>
+</div>
+<!-- @gesture -->
+</div>
+</body>
+</html>

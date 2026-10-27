@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Your plans</title>
+<meta name="description" content="Plans tab: upcoming plans in checking, finding and needs-ticket states, and past plans that happened or were called off.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:44px;left:0;right:0;bottom:84px;overflow:hidden}
+.head{padding:16px 20px 0}
+.sec{display:flex;justify-content:space-between;align-items:baseline;padding:24px 20px 10px}
+.list{margin:0 16px}
+.prow{display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 8px 12px 14px}
+.prow+.prow{border-top:1px solid var(--line)}
+.prow .thumb{width:40px;height:40px;border-radius:10px;flex:none;background-size:cover;background-position:center}
+.prow .tx{flex:1;min-width:0}
+.prow .ttl{display:block;font-size:15px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .when{display:block;font-size:13px;line-height:18px;color:var(--muted)}
+.prow .status-text{margin-top:2px}
+.prow .status-text .ph-caret-right{font-size:12px;margin-left:-4px}
+.prow .go{font-size:18px;color:var(--muted);width:32px;text-align:center;flex:none}
+.prow.past .thumb{opacity:.6}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<main class="scroll">
+  <div class="head"><h1 class="t-display">Your plans</h1></div>
+  <div class="sec"><h2 class="t-title">Upcoming</h2><span class="t-meta tnum">3 plans</span></div>
+  <div class="card list">
+    <a href="#" class="prow pressable" data-component-id="plan-monsoon" aria-label="The Monsoon Theory, Friday 30 October, 8:00 PM. Checking your ticket."><span class="thumb poster music" aria-hidden="true"></span><span class="tx"><span class="ttl">The Monsoon Theory</span><span class="when tnum">Fri 30 Oct, 8:00 PM</span><span class="status-text quiet"><i class="ph ph-hourglass-medium" aria-hidden="true"></i>Checking your ticket</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="prow pressable" data-component-id="plan-traffic" aria-label="Traffic Jam Tales, Saturday 31 October, 7:00 PM. Finding your group."><span class="thumb poster comedy" aria-hidden="true"></span><span class="tx"><span class="ttl">Traffic Jam Tales</span><span class="when tnum">Sat 31 Oct, 7:00 PM</span><span class="status-text"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>Finding your group</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="prow pressable" data-component-id="plan-biryani" aria-label="The Biryani Wars, Saturday 7 November, 7:30 PM. Add your ticket."><span class="thumb poster theatre" aria-hidden="true"></span><span class="tx"><span class="ttl">The Biryani Wars</span><span class="when tnum">Sat 7 Nov, 7:30 PM</span><span class="status-text ok">Add your ticket<i class="ph-bold ph-caret-right" aria-hidden="true"></i></span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+  </div>
+  <div class="sec"><h2 class="t-title">Past</h2></div>
+  <div class="card list">
+    <a href="#" class="prow pressable past" data-component-id="plan-past-telugu" aria-label="Telugu Stand-up Night, Saturday 17 October. You went with 5 others."><span class="thumb poster ph comedy" aria-hidden="true"></span><span class="tx"><span class="ttl">Telugu Stand-up Night</span><span class="when tnum">Sat 17 Oct, 9:00 PM</span><span class="status-text ok tnum">You went with 5 others</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+    <a href="#" class="prow pressable past" data-component-id="plan-past-qawwali" aria-label="Sufi Qawwali Evening, Saturday 10 October. Called off, no group formed."><span class="thumb poster ph music" aria-hidden="true"></span><span class="tx"><span class="ttl">Sufi Qawwali Evening</span><span class="when tnum">Sat 10 Oct, 8:00 PM</span><span class="status-text quiet">Called off, no group formed</span></span><i class="ph ph-caret-right go" aria-hidden="true"></i></a>
+  </div>
+</main>
+<!-- @tabbar plans badge -->
+<!-- @gesture -->
+</div>
+</body>
+</html>
