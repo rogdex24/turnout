@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, After the show</title>
+<meta name="description" content="After the show, the morning after: the group with first names and photos, nothing to do by default, the inline I didn't feel comfortable confirm for Arjun, when it closes, Report and Call 112.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:96px;left:0;right:0;bottom:22px;overflow:hidden;padding:4px 16px 0}
+.intro{padding:0 4px}
+.intro .t-body{margin-top:6px;color:var(--muted)}
+.intro .t-meta{margin-top:16px}
+.group{margin-top:12px}
+.group .row{padding:6px 4px 6px 12px;min-height:56px}
+.group .row .face.sm{border-radius:12px}
+.group .tx b{font-size:15px;line-height:20px;font-weight:600}
+.group .iconbtn{color:var(--muted)}
+.group .note+.row{border-top:1px solid var(--line)}
+.ask{margin:0 12px 12px;flex-direction:column;gap:0}
+.ask p{display:flex;gap:10px}
+.ask .acts{display:flex;gap:8px;align-items:center;margin-top:12px}
+.ask .btn2{width:auto;flex:1}
+.ask .btn3{flex:none}
+.foot{padding:16px 4px 0}
+.foot .line{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:15px;line-height:22px}
+.foot .btn2{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:10 -->
+<header class="navbar">
+  <a href="#" class="iconbtn" data-component-id="back" aria-label="Back"><i class="ph ph-caret-left" aria-hidden="true"></i></a>
+  <h1>After the show</h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<main class="scroll">
+  <div class="intro">
+    <h2 class="t-title-l">Traffic Jam Tales, last night</h2>
+    <p class="t-body">Nothing to do here if it went fine.</p>
+    <p class="t-meta">If someone made you uncomfortable, tap their name. Only we see it.</p>
+  </div>
+  <ul class="card group" aria-label="Your group">
+    <li class="row"><span class="face sm"><img src="img/face-priya.jpg" alt=""></span><span class="tx"><b>Priya</b></span><button class="iconbtn" data-component-id="options-priya" aria-label="Options for Priya"><i class="ph ph-dots-three" aria-hidden="true"></i></button></li>
+    <li class="row"><span class="face sm"><img src="img/face-sana.jpg" alt=""></span><span class="tx"><b>Sana</b></span><button class="iconbtn" data-component-id="options-sana" aria-label="Options for Sana"><i class="ph ph-dots-three" aria-hidden="true"></i></button></li>
+    <li class="row"><span class="face sm"><img src="img/face-meera.jpg" alt=""></span><span class="tx"><b>Meera</b></span><button class="iconbtn" data-component-id="options-meera" aria-label="Options for Meera"><i class="ph ph-dots-three" aria-hidden="true"></i></button></li>
+    <li class="row"><span class="face sm"><img src="img/face-arjun.jpg" alt=""></span><span class="tx"><b>Arjun</b></span><button class="iconbtn" data-component-id="options-arjun" aria-label="Options for Arjun" aria-expanded="true"><i class="ph ph-dots-three" aria-hidden="true"></i></button></li>
+    <li class="note ask" role="group" aria-label="Confirm for Arjun" data-component-id="confirm-arjun">
+      <p><i class="ph ph-eye-slash" aria-hidden="true"></i><span>Tell us you didn't feel comfortable with Arjun? He won't know. You won't be grouped together again.</span></p>
+      <div class="acts">
+        <button class="btn2" data-component-id="confirm-uncomfortable">Yes, tell Turnout</button>
+        <button class="btn3" data-component-id="cancel-uncomfortable">Cancel</button>
+      </div>
+    </li>
+    <li class="row"><span class="face sm"><img src="img/face-rahul.jpg" alt=""></span><span class="tx"><b>Rahul</b></span><button class="iconbtn" data-component-id="options-rahul" aria-label="Options for Rahul"><i class="ph ph-dots-three" aria-hidden="true"></i></button></li>
+  </ul>
+  <div class="foot">
+    <p class="t-meta tnum">This closes on Tue 3 Nov.</p>
+    <p class="line"><span class="muted">Something serious?</span><a href="#" class="link" data-component-id="report">Report</a></p>
+    <a href="tel:112" class="btn2" data-component-id="call-112" aria-label="Call 112, emergency"><i class="ph ph-phone" aria-hidden="true"></i>Call 112</a>
+  </div>
+</main>
+<!-- @gesture -->
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+/** Generated from DESIGN.md by scripts/build-mobile-tokens.ts (bun run tokens:mobile): do not edit. */
+
+export const colors = {
+  light: {
+    bg: "#ede8e1",
+    surface: "#f6f2ed",
+    surfaceRaised: "#e2dcd3",
+    line: "#cfc8be",
+    outline: "#87827b",
+    ink: "#181818",
+    muted: "#645f59",
+    signal: "#94400a",
+    signalSoft: "#94400a14",
+    primary: "#181818",
+    onPrimary: "#ede8e1",
+    scrim: "#18181873",
+    onPhoto: "#f3eee7",
+    marquee: "#181818",
+    pressed: "#18181814",
+    skeleton: "#e2dcd3",
+    posterComedy: "#6b2a0c",
+    posterMusic: "#2a2826",
+    posterTheatre: "#3a2c22",
+  },
+  dark: {
+    bg: "#121212",
+    surface: "#1a1a1a",
+    surfaceRaised: "#232323",
+    line: "#2f2f2f",
+    outline: "#6b665f",
+    ink: "#ede8e1",
+    muted: "#9a958e",
+    signal: "#ea6e12",
+    signalSoft: "#ea6e1224",
+    primary: "#ede8e1",
+    onPrimary: "#121212",
+    scrim: "#00000099",
+    onPhoto: "#f3eee7",
+    marquee: "#1a1a1a",
+    pressed: "#ede8e114",
+    skeleton: "#232323",
+    posterComedy: "#6b2a0c",
+    posterMusic: "#2a2826",
+    posterTheatre: "#3a2c22",
+  },
+} as const;
+
+export const typography = {
+  display: {
+    fontFamily: "Inter",
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "600",
+    letterSpacing: -0.28,
+  },
+  "title-large": {
+    fontFamily: "Inter",
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "600",
+    letterSpacing: -0.11,
+  },
+  title: {
+    fontFamily: "Inter",
+    fontSize: 17,
+    lineHeight: 24,
+    fontWeight: "600",
+  },
+  body: {
+    fontFamily: "Inter",
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "400",
+  },
+  control: {
+    fontFamily: "Inter",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  meta: {
+    fontFamily: "Inter",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "400",
+  },
+  label: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+  },
+  badge: {
+    fontFamily: "Inter",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+  },
+  "display-hero": {
+    fontFamily: "Big Shoulders Display",
+    fontSize: 116,
+    lineHeight: 90,
+    fontWeight: "900",
+    letterSpacing: -1.16,
+  },
+  "display-band": {
+    fontFamily: "Big Shoulders Display",
+    fontSize: 28,
+    lineHeight: 28,
+    fontWeight: "800",
+    letterSpacing: 1.68,
+  },
+} as const;
+
+export type ColorRole = keyof typeof colors.light;
+export type TypographyToken = keyof typeof typography;

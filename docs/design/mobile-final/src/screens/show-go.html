@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Show, Go with a group sheet</title>
+<meta name="description" content="Turnout show page for Traffic Jam Tales dimmed under the Go with a group sheet: first-use line, group type choice, Next: add your ticket and Not now.">
+<!-- @head -->
+<style>
+.hero{position:absolute;top:0;left:0;right:0;height:336px;padding:96px 20px 22px;display:flex;flex-direction:column;justify-content:flex-end}
+.hero h1{font-size:70px;line-height:.86;max-width:330px}
+.hero .cat-line{font-size:15px;line-height:20px;margin-top:10px}
+.back{position:absolute;top:48px;left:12px;z-index:20}
+.marquee{position:absolute;top:336px;left:0;right:0;z-index:5}
+.body{position:absolute;top:392px;left:0;right:0;bottom:99px;padding:14px 16px 0;overflow:hidden}
+.facts{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px 14px}
+.facts b{display:block;font-size:15px;line-height:20px;font-weight:600}
+.facts .where{font-size:13px;line-height:18px;color:var(--muted)}
+.price{font-family:var(--display);font-weight:800;font-size:28px;line-height:1;text-align:right;white-space:nowrap}
+.price small{font-family:Inter,sans-serif;font-size:12px;font-weight:500;color:var(--muted);display:block;margin-bottom:2px}
+.buy{padding:12px 14px 14px}
+.look{display:flex;align-items:baseline;gap:8px;margin-top:14px;font-size:15px;line-height:22px;font-weight:500}
+.look .n{font-size:32px;font-weight:800}
+.how{margin-top:14px}
+.how p{margin-top:4px}
+.credit{display:flex;align-items:center;gap:4px;margin-top:2px}
+.credit .link{font-size:13px}
+.opts{display:grid;gap:10px;margin-top:18px}
+.opt{display:flex;align-items:flex-start;gap:12px;width:100%;min-height:56px;padding:15px 16px;border-radius:14px;border:1px solid var(--outline);text-align:left}
+.opt[aria-checked="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.opt b{display:block;font-size:15px;line-height:22px;font-weight:600}
+.opt span.h{display:block;font-size:13px;line-height:18px;color:var(--muted);margin-top:2px}
+.rd{width:22px;height:22px;border-radius:99px;border:2px solid var(--outline);flex:none;margin-top:0}
+.opt[aria-checked="true"] .rd{border-color:var(--ink);background:radial-gradient(var(--ink) 0 5px,transparent 5.5px)}
+.acts{display:grid;gap:8px;margin-top:22px}
+.gesture{z-index:90}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status-photo 9:41 -->
+<div class="page" aria-hidden="true" inert>
+<header class="hero poster comedy" role="img" aria-label="Traffic Jam Tales, stand-up comedy. Photo of a comedian on stage.">
+  <h1 class="d" aria-hidden="true">Traffic Jam Tales</h1>
+  <p class="cat-line" aria-hidden="true">Stand-up comedy</p>
+</header>
+<button class="iconbtn on-photo back" aria-label="Back" data-component-id="back"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+<div class="marquee" role="text" aria-label="Saturday 31 October, 7:00 PM" data-component-id="marquee">
+  <span class="bulbs t" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  <span class="when tnum" aria-hidden="true">Sat 31 Oct <em>·</em> 7:00 PM</span>
+  <span class="bulbs b" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+</div>
+<main class="body">
+  <section class="card" aria-label="Ticket" data-component-id="ticket-stub">
+    <div class="facts">
+      <div><b>Shilpa Kala Vedika</b><p class="where">Madhapur</p></div>
+      <p class="price tnum"><small>From</small>₹499</p>
+    </div>
+    <div class="perf" aria-hidden="true"></div>
+    <div class="buy">
+      <a href="#" class="btn2" data-component-id="buy-bms" aria-label="Buy on BookMyShow, opens in your browser">Buy on BookMyShow<i class="ph ph-arrow-square-out" aria-hidden="true"></i></a>
+    </div>
+  </section>
+  <p class="look" data-component-id="looking-count"><span class="n d tnum">12</span><span>people are looking for a group</span></p>
+  <section class="how" aria-labelledby="how-h">
+    <h2 class="t-title" id="how-h">How it works</h2>
+    <p class="t-body">Add your BookMyShow ticket. See your group 3 hours before. Meet at a cafe, go in together.</p>
+  </section>
+  <p class="credit t-meta">Listing from <a href="#" class="link" data-component-id="source-bms" aria-label="Listing from BookMyShow, opens in your browser">BookMyShow</a></p>
+</main>
+<div class="dock">
+  <button class="btn" data-component-id="go-with-group"><i class="ph-bold ph-users-three" aria-hidden="true"></i>Go with a group</button>
+</div>
+</div>
+<div class="scrim" aria-hidden="true" data-component-id="scrim"></div>
+<section class="sheet" role="dialog" aria-modal="true" aria-labelledby="go-h" data-component-id="go-sheet">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="go-h">Go with a group</h2>
+  <p class="lead">We put you in a group of 4 to 6 people with tickets to the same show. You meet at a cafe an hour before.</p>
+  <div class="opts" role="radiogroup" aria-label="Group type">
+    <button class="opt" role="radio" aria-checked="true" data-component-id="group-any"><span class="rd" aria-hidden="true"></span><span><b>Any group</b></span></button>
+    <button class="opt" role="radio" aria-checked="false" aria-describedby="wonly-h" data-component-id="group-women"><span class="rd" aria-hidden="true"></span><span><b>Women and non-binary only</b><span class="h" id="wonly-h">Only women and non-binary people who chose this.</span></span></button>
+  </div>
+  <div class="acts">
+    <button class="btn" data-component-id="next-add-ticket">Next: add your ticket</button>
+    <button class="btn2" data-component-id="not-now">Not now</button>
+  </div>
+</section>
+<!-- @gesture -->
+</div>
+</body>
+</html>

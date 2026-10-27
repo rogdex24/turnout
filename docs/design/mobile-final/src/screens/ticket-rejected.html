@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Ticket not accepted</title>
+<meta name="description" content="Ticket rejected (ticket_rejected): a neutral note with the reason and what to do, the screenshot thumbnail and Choose another screenshot.">
+<!-- @head -->
+<style>
+.scroll{position:absolute;top:96px;left:0;right:0;bottom:150px;overflow:hidden;padding:4px 20px 0}
+.scroll.d1{bottom:98px}
+.scroll .lead{margin-top:8px;color:var(--muted)}
+.stack>*+*{margin-top:16px}
+.stack>h2+.lead{margin-top:8px}
+/* Neutral screenshot mock made of blocks: no brand, no real screenshot. */
+.mock{width:64px;height:112px;border-radius:10px;background:var(--s2);border:1px solid var(--line);padding:8px 7px;display:flex;flex-direction:column;gap:5px;flex:none}
+.mock i{display:block;height:5px;border-radius:2px;background:var(--line)}
+.mock .pic{height:28px;border-radius:4px}
+.mock .k{background:var(--outline)}
+.mock .gap{background:transparent;border:1px dashed var(--outline);height:7px}
+.mock.lg{width:92px;height:150px;padding:10px 9px;gap:7px;border-radius:12px}
+.mock.lg i{height:7px}
+.mock.lg .pic{height:36px}
+.pick{min-height:132px;border-radius:16px;border:1.5px dashed var(--outline);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:16px;width:100%}
+.pick i{font-size:32px}
+.sample{display:flex;gap:16px;align-items:center;padding:16px}
+.sample ul{display:flex;flex-direction:column;gap:10px}
+.sample li{display:flex;align-items:center;gap:8px;font-size:15px;line-height:20px}
+.sample li::before{content:"";width:14px;height:5px;border-radius:2px;background:var(--outline);flex:none}
+.sample .t-meta{margin-bottom:10px}
+.del{display:flex;align-items:center;gap:8px}
+.del i{font-size:18px}
+.shot{display:flex;gap:14px;align-items:center;padding:12px}
+.shot .tx{flex:1;min-width:0}
+.shot .tx b{display:block;font-size:15px;line-height:20px;font-weight:600}
+.shot .t-meta{margin-top:2px}
+.sent{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:600;margin-top:6px}
+.sent i{font-size:16px}
+.ask{padding:16px}
+.ask .acts{display:flex;gap:8px;margin-top:12px;align-items:center}
+.ask .btn2{width:auto;flex:1}
+.ask .btn3{flex:1}
+.dock .btn3{display:flex;margin:4px auto 0}
+.note b{display:block;font-weight:600}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status 9:41 -->
+<header class="navbar">
+  <a href="#" class="iconbtn" data-component-id="back" aria-label="Back"><i class="ph ph-caret-left" aria-hidden="true"></i></a>
+  <h1>Traffic Jam Tales</h1>
+  <span class="spacer" aria-hidden="true"></span>
+</header>
+<main class="scroll d1 stack" style="bottom:126px">
+  <h2 class="t-display">Add your BookMyShow ticket</h2>
+  <div class="card shot" data-component-id="rejected-screenshot">
+    <div class="mock" aria-hidden="true"><i class="pic"></i><i class="k" style="width:80%"></i><i class="gap" style="width:60%"></i><i style="width:90%"></i><i class="k" style="width:40%"></i><i style="width:70%"></i></div>
+    <div class="tx">
+      <b>Your screenshot</b>
+      <p class="t-meta">We couldn't use this one</p>
+    </div>
+  </div>
+  <div class="note" role="status" data-component-id="reject-reason"><i class="ph ph-info" aria-hidden="true"></i>
+    <span><b>We couldn't read the date on this screenshot.</b>Take the screenshot from the booking page in BookMyShow so the show, date and seats are visible.</span></div>
+</main>
+<div class="dock">
+  <p class="hint del" style="justify-content:center"><i class="ph ph-trash" aria-hidden="true"></i>We delete it after the show</p>
+  <button class="btn" data-component-id="choose-another">Choose another screenshot</button>
+</div>
+<!-- @gesture -->
+</div>
+</body>
+</html>

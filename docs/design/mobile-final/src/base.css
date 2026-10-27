@@ -1,0 +1,183 @@
+/* Turnout mobile, final Nightlife system. Shared by every screen.
+   Tokens and rules: see ../spec.md. Screen files add only layout for that screen. */
+*{box-sizing:border-box;margin:0;padding:0}
+body{margin:0;background:#000;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+ul,ol{list-style:none}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+img{display:block;max-width:100%}
+.tnum{font-variant-numeric:tabular-nums}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Gallery Night, dark */
+:root{
+  --bg:#121212;--s1:#1a1a1a;--s2:#232323;--line:#2f2f2f;--outline:#6b665f;
+  --ink:#ede8e1;--muted:#9a958e;
+  --sig:#ea6e12;--sig-soft:rgba(234,110,18,.14);
+  --btn-bg:#ede8e1;--btn-ink:#121212;
+  --scrim:rgba(0,0,0,.6);
+  --on-photo:#f3eee7;
+  --map-bg:#1a1a1a;--map-road:#2f2f2f;--map-case:#232323;--map-water:#1e1f21;--map-park:#1f1f1c;
+  --display:"Big Shoulders Display","Inter",sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --press:100ms;
+}
+/* Gallery Night, light. Signal darkened to #94400a for 4.5:1 on every surface. */
+:root[data-theme="light"]{
+  --bg:#ede8e1;--s1:#f6f2ed;--s2:#e2dcd3;--line:#cfc8be;--outline:#87827b;
+  --ink:#181818;--muted:#645f59;
+  --sig:#94400a;--sig-soft:rgba(148,64,10,.08);
+  --btn-bg:#181818;--btn-ink:#ede8e1;
+  --scrim:rgba(24,24,24,.45);
+  --map-bg:#e2dcd3;--map-road:#f6f2ed;--map-case:#cfc8be;--map-water:#d7d4ce;--map-park:#dcd7ca;
+}
+
+/* Frame, status bar, gesture bar */
+.frame{width:390px;height:844px;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);isolation:isolate}
+.status{position:absolute;top:0;left:0;right:0;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 28px;z-index:50;color:var(--ink);font-size:15px;font-weight:600}
+.status.on-photo{color:var(--on-photo)}
+.status .sys{display:flex;gap:6px;align-items:center}
+.gesture{position:absolute;left:0;right:0;bottom:0;height:22px;display:flex;justify-content:center;align-items:center;z-index:55;pointer-events:none}
+.gesture i{width:134px;height:5px;border-radius:99px;background:var(--ink);opacity:.85}
+
+/* Type. Display face only for: wordmark, show titles on posters, the marquee band,
+   the giant meet time and single data numerals. Everything else is Inter. */
+.d{font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:.005em;line-height:.9}
+.t-display{font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.01em}
+.t-title-l{font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.005em}
+.t-title{font-size:17px;line-height:24px;font-weight:600}
+.t-section{font-size:17px;line-height:24px;font-weight:600}
+.t-body{font-size:15px;line-height:22px}
+.t-control{font-size:15px;line-height:20px;font-weight:500}
+.t-meta{font-size:13px;line-height:18px;color:var(--muted)}
+.muted{color:var(--muted)}
+.sig{color:var(--sig)}
+
+/* Pressed state: opacity .85 for rows and links, scale .97 for buttons, both within 100ms.
+   .is-pressed shows the pressed look in a still mockup. */
+.pressable,.row,.link,.tab,.chip,.iconbtn,.btn,.btn2,.feat-card,.tile>a{transition:opacity var(--press) linear,transform var(--press) var(--ease)}
+.pressable:active,.row:active,.link:active,.tab:active,.feat-card:active,.tile>a:active,.is-pressed{opacity:.85}
+.btn:active,.btn2:active,.chip:active,.iconbtn:active,.btn.is-pressed,.btn2.is-pressed{transform:scale(.97)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* Controls. Every hit area is 44pt or more. */
+.chip{min-height:44px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:15px;font-weight:500;color:var(--ink);border:1px solid var(--outline);background:transparent}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.iconbtn{width:44px;height:44px;border-radius:999px;display:grid;place-items:center;font-size:22px;color:var(--ink);flex:none}
+.iconbtn.ring{border:1px solid var(--outline)}
+.iconbtn.on-photo{color:var(--on-photo);background:rgba(10,8,6,.42);border:1px solid rgba(243,238,231,.28)}
+.labelbtn{min-height:44px;padding:0 14px 0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:600;border:1px solid var(--outline);color:var(--ink)}
+.labelbtn i{font-size:20px}
+.btn{height:56px;width:100%;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;background:var(--btn-bg);color:var(--btn-ink);position:relative}
+.btn i{font-size:20px}
+.btn[disabled]{opacity:.4}
+.btn2{min-height:48px;width:100%;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:600;color:var(--ink);border:1px solid var(--outline);background:transparent}
+.btn2 i{font-size:20px}
+.btn3{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;font-size:15px;font-weight:600;color:var(--ink)}
+.link{display:inline-flex;align-items:center;min-height:44px;color:var(--ink);font-weight:500;text-decoration:underline;text-decoration-color:var(--muted);text-underline-offset:3px}
+.field{display:block;width:100%;min-height:56px;border-radius:14px;border:1px solid var(--outline);background:var(--s1);padding:0 16px;font-size:17px;line-height:24px;color:var(--ink);display:flex;align-items:center}
+.field.focus{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.label{font-size:15px;line-height:20px;font-weight:600;margin-bottom:8px;display:block}
+.help{font-size:13px;line-height:18px;color:var(--muted);margin-top:8px}
+
+/* Surfaces */
+.card{border-radius:16px;background:var(--s1);border:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px}
+.row+.row{border-top:1px solid var(--line)}
+.row .ic{width:24px;font-size:22px;color:var(--muted);flex:none;display:grid;place-items:center}
+.row .tx{flex:1;min-width:0}
+.row .tx b{display:block;font-size:15px;line-height:20px;font-weight:600}
+.row .tx span{display:block;font-size:13px;line-height:18px;color:var(--muted)}
+.row .go{font-size:18px;color:var(--muted)}
+.note{display:flex;gap:10px;padding:12px 14px;border-radius:14px;background:var(--s2);font-size:14px;line-height:20px}
+.note i{font-size:20px;flex:none;color:var(--muted);margin-top:0}
+
+/* Header for pushed screens. Back is CaretLeft. Titles are Inter. */
+.navbar{position:absolute;top:44px;left:0;right:0;height:52px;display:flex;align-items:center;gap:4px;padding:0 8px;z-index:20;background:var(--bg)}
+.navbar h1{flex:1;font-size:17px;line-height:24px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navbar .spacer{width:44px;flex:none}
+
+/* Poster: a real photo as a one-hue duotone per category (baked into the image),
+   a bottom scrim for text and a fine grain. No glyph art, no category pill. */
+.poster{position:relative;overflow:hidden;color:var(--on-photo);background:#1a1a1a center/cover no-repeat;isolation:isolate}
+.poster.comedy{background-image:url(img/poster-comedy.jpg)}
+.poster.music{background-image:url(img/poster-music.jpg)}
+.poster.theatre{background-image:url(img/poster-theatre.jpg)}
+.poster::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(10,8,6,.15) 0%,rgba(10,8,6,0) 30%,rgba(10,8,6,.78) 100%)}
+.poster>*{position:relative;z-index:2}
+/* Placeholder poster: the default while image_url is null. Flat category tone, same type. */
+.poster.ph{background-image:radial-gradient(rgba(243,238,231,.07) 1px,transparent 1.4px);background-size:5px 5px}
+.poster.ph.comedy{background-color:#6b2a0c}.poster.ph.music{background-color:#2a2826}.poster.ph.theatre{background-color:#3a2c22}
+.poster .cat-line{font-size:13px;line-height:18px;font-weight:500;opacity:.9}
+
+/* Ticket stub with perforation */
+.perf{height:0;border-top:1.5px dashed var(--line);margin:0 14px;position:relative}
+.perf::before,.perf::after{content:"";position:absolute;top:-9px;width:18px;height:18px;border-radius:99px;background:var(--bg);border:1px solid var(--line)}
+.perf::before{left:-24px;clip-path:inset(0 0 0 50%)}.perf::after{right:-24px;clip-path:inset(0 50% 0 0)}
+
+/* Marquee date band: loud moment one. Decorative bulbs are hidden from screen readers. */
+.marquee{position:relative;height:56px;background:#1a1a1a;color:#ede8e1;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line)}
+:root[data-theme="light"] .marquee{background:#181818;border-bottom-color:#181818}
+.marquee .when{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.marquee .when em{font-style:normal;color:#9a958e}
+.bulbs{position:absolute;left:10px;right:10px;height:6px;display:flex;justify-content:space-between}
+.bulbs.t{top:6px}.bulbs.b{bottom:6px}
+.bulbs i{width:4px;height:4px;border-radius:99px;background:#f3e6cf;box-shadow:0 0 5px 1px rgba(243,226,196,.5);opacity:.9;animation:bulb 1.4s steps(1) 2 both}
+.bulbs i:nth-child(2n){animation-delay:.7s}
+@keyframes bulb{0%{opacity:.3;box-shadow:none}50%{opacity:.9;box-shadow:0 0 5px 1px rgba(243,226,196,.5)}100%{opacity:.9}}
+
+/* Giant meet time: loud moment two. Fixed size, does not scale with text size. */
+.bigtime{font-family:var(--display);font-weight:900;font-size:116px;line-height:.78;letter-spacing:-.01em}
+.bigtime-pm{font-family:var(--display);font-weight:800;font-size:34px;line-height:.9;text-transform:uppercase}
+
+/* Live signal: orange has this one job. */
+.live{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:999px;background:var(--sig-soft);color:var(--sig);font-size:13px;font-weight:600;white-space:nowrap}
+.live i{font-size:15px}
+.live-dot{width:8px;height:8px;border-radius:99px;background:var(--sig);position:relative;flex:none}
+.live-dot::after{content:"";position:absolute;inset:-4px;border-radius:99px;border:2px solid var(--sig);opacity:0;animation:ping 2.2s var(--ease) 3}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.eq i{width:3px;border-radius:2px;background:var(--sig);height:5px;animation:eq 1.3s ease-in-out 3}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+.status-text{display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:18px;font-weight:600;color:var(--sig)}
+.status-text.quiet{color:var(--muted)}
+.status-text.ok{color:var(--ink)}
+
+/* Faces. Real photos only from T-3h. Before that, the pre-reveal tile. */
+.face{width:62px;height:76px;border-radius:14px;overflow:hidden;background:var(--s2);border:1px solid var(--line);flex:none}
+.face img{width:100%;height:100%;object-fit:cover}
+.face.sm{width:40px;height:40px;border-radius:12px}
+.face.xs{width:28px;height:28px;border-radius:99px;border:2px solid var(--s1)}
+.facepile{display:flex}
+.facepile .face{margin-left:-8px}.facepile .face:first-child{margin-left:0}
+
+/* Bottom tab bar: solid, no blur, no shadow. */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;z-index:30;background:var(--bg);border-top:1px solid var(--line);display:flex;padding:4px 8px 22px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;font-size:12px;line-height:16px;font-weight:500;color:var(--muted);position:relative}
+.tab i{font-size:26px}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab .badge{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:99px;background:var(--ink);box-shadow:0 0 0 2px var(--bg)}
+
+/* Plan bar: solid s2 strip docked on top of the tab bar. The list above it gets
+   a bottom inset of 84 + 64. */
+.planbar{position:absolute;left:0;right:0;bottom:84px;height:64px;z-index:29;background:var(--s2);border-top:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 8px 0 16px}
+.planbar .thumb{width:40px;height:40px;border-radius:10px;flex:none}
+.planbar .tx{flex:1;min-width:0}
+.planbar .ttl{font-size:15px;line-height:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Docked action area above the gesture bar: solid background, top rule. */
+.dock{position:absolute;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);padding:12px 16px 30px}
+.dock .hint{text-align:center;font-size:13px;line-height:18px;color:var(--muted);margin-bottom:10px}
+
+/* Bottom sheet */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:80}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:81;background:var(--s1);border-top-left-radius:24px;border-top-right-radius:24px;border-top:1px solid var(--line);padding:8px 16px 30px}
+.sheet .grab{width:36px;height:5px;border-radius:99px;background:var(--outline);margin:0 auto 14px}
+.sheet h2{font-size:22px;line-height:28px;font-weight:600}
+.sheet .lead{font-size:15px;line-height:22px;color:var(--muted);margin-top:6px}
+
+/* Motion: plays a few times, then stops. Reduced motion turns it off. */
+@keyframes ping{0%{transform:scale(.5);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes eq{0%,100%{height:5px}50%{height:14px}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.in{animation:rise .5s var(--ease) both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

@@ -5,7 +5,10 @@ export const DESIGN_URL = new URL("../../DESIGN.md", import.meta.url);
 
 export interface DesignFront {
   colors: Record<string, string>;
-  typography: Record<string, { fontFamily: string; fontSize: string; fontWeight: number; lineHeight: string; fontFeature?: string }>;
+  typography: Record<
+    string,
+    { fontFamily: string; fontSize: string; fontWeight: number; lineHeight: string; letterSpacing?: string; fontFeature?: string }
+  >;
   components: Record<string, Record<string, string | number>>;
 }
 

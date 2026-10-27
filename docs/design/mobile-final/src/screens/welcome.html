@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turnout, Welcome</title>
+<meta name="description" content="Welcome, card 1 of 3: a duotone show photo, the wordmark, the headline, a short line on how it works, the trust line, page dots, Next and Skip.">
+<!-- @head -->
+<style>
+.hero{position:absolute;top:0;left:0;right:0;height:440px;padding:0 20px 20px;display:flex;flex-direction:column;justify-content:flex-end}
+.skip{position:absolute!important;top:48px;right:8px;z-index:60;color:var(--on-photo)}
+.wordmark{font-family:var(--display);font-weight:900;font-size:36px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:baseline;gap:4px;line-height:1}
+.wordmark b{width:8px;height:8px;border-radius:1px;background:var(--on-photo);display:inline-block;transform:rotate(45deg) translateY(-2px)}
+.copy{position:absolute;top:440px;left:0;right:0;padding:24px 20px 0}
+.copy .t-body{margin-top:12px;color:var(--muted)}
+.trust{display:flex;gap:10px;align-items:flex-start;margin-top:20px;font-size:13px;line-height:18px}
+.trust i{font-size:20px;color:var(--muted);flex:none}
+.foot{position:absolute;left:0;right:0;bottom:0;padding:0 16px 30px}
+.dots{display:flex;justify-content:center;gap:8px;height:24px;align-items:center;margin-bottom:12px}
+.dots i{width:6px;height:6px;border-radius:99px;background:var(--outline)}
+.dots i.on{width:20px;background:var(--ink)}
+</style>
+</head>
+<body>
+<div class="frame" data-component-id="frame">
+<!-- @status-photo 9:41 -->
+<div class="hero poster music">
+  <div class="wordmark" role="img" aria-label="Turnout">Turnout<b aria-hidden="true"></b></div>
+</div>
+<button class="btn3 skip" data-component-id="skip">Skip</button>
+<main class="copy">
+  <h1 class="t-display">Go to the show.<br>Meet people there.</h1>
+  <p class="t-body">Join a small group with tickets to the same show. Meet at a cafe an hour before, then go in together.</p>
+  <p class="trust"><i class="ph ph-shield-check" aria-hidden="true"></i><span>Everyone signs in with a phone number, a real photo and a social profile we check.</span></p>
+</main>
+<div class="foot">
+  <div class="dots" role="img" aria-label="1 of 3"><i class="on"></i><i></i><i></i></div>
+  <button class="btn" data-component-id="next">Next</button>
+</div>
+<!-- @gesture -->
+</div>
+</body>
+</html>

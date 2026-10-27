@@ -1,0 +1,48 @@
+/* Generated from DESIGN.md by scripts/build-mobile-tokens.ts (bun run tokens:mobile): do not edit. */
+@layer theme {
+  :root {
+    @variant light {
+      --color-bg: #ede8e1;
+      --color-surface: #f6f2ed;
+      --color-surface-raised: #e2dcd3;
+      --color-line: #cfc8be;
+      --color-outline: #87827b;
+      --color-ink: #181818;
+      --color-muted: #645f59;
+      --color-signal: #94400a;
+      --color-signal-soft: #94400a14;
+      --color-primary: #181818;
+      --color-on-primary: #ede8e1;
+      --color-scrim: #18181873;
+      --color-on-photo: #f3eee7;
+      --color-marquee: #181818;
+      --color-pressed: #18181814;
+      --color-skeleton: #e2dcd3;
+      --color-poster-comedy: #6b2a0c;
+      --color-poster-music: #2a2826;
+      --color-poster-theatre: #3a2c22;
+    }
+
+    @variant dark {
+      --color-bg: #121212;
+      --color-surface: #1a1a1a;
+      --color-surface-raised: #232323;
+      --color-line: #2f2f2f;
+      --color-outline: #6b665f;
+      --color-ink: #ede8e1;
+      --color-muted: #9a958e;
+      --color-signal: #ea6e12;
+      --color-signal-soft: #ea6e1224;
+      --color-primary: #ede8e1;
+      --color-on-primary: #121212;
+      --color-scrim: #00000099;
+      --color-on-photo: #f3eee7;
+      --color-marquee: #1a1a1a;
+      --color-pressed: #ede8e114;
+      --color-skeleton: #232323;
+      --color-poster-comedy: #6b2a0c;
+      --color-poster-music: #2a2826;
+      --color-poster-theatre: #3a2c22;
+    }
+  }
+}
