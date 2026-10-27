@@ -512,3 +512,34 @@ an eligible future event.
 - Normalisation has property tests for the date parsing, since Indian event
   listings use `12th Sep`, `12/09`, `Sep 12, 7 PM onwards` and `Friday 7pm` in
   roughly equal measure.
+
+## 13. Social (Turnout, from M2)
+
+The people tables live in `src/social/schema.ts`, migrated last by `src/migrate.ts`. They follow section 1
+(ISO UTC `Z` times, lowercase ULID ids, `CHECK` enums) with one difference: `rate_bucket.window_start` is epoch
+seconds. Foreign keys are enforced (`openDb` turns `foreign_keys` on), so erasing a member is: delete the child
+rows, then reduce `member` to a tombstone (`status = 'deleted'`, `phone_e164` null). `consent_record` has no
+cascade: it outlives the member under the tombstone id for a year.
+
+`docs/data-map.md` lists every column with its purpose, who sees it and how long it is kept. A test fails when a
+column is added to a table here and not there.
+
+| Table | Holds | Kept |
+| --- | --- | --- |
+| `member` | ULID id, `phone_e164` unique, `status` (`active`, `suspended`, `stopped`, `banned`, `deleted`), reason, times | Until deletion, then a tombstone |
+| `auth_session` | Refresh token hash (never the token), expiry, `revoked_at`, `replaced_by`, `replaced_at` | Until expiry or sign-out; revoked or rotated rows 7 days |
+| `otp_challenge` | `phone_hash`, purpose (`sign_in`, `delete_account`), `code_hmac`, attempts, expiry, `wamid`, `delivery_status` | 1 day; no code and no raw phone |
+| `profile` | `first_name`, `gender`, `group_pref`, `photo_key` | Until deletion |
+| `social_handle` | `kind`, normalised handle, `status` (`pending`, `approved`, `rejected`), `reject_reason`, review fields, `submissions_today` and `submissions_day` | Until deletion or ban |
+| `consent_record` | Notice version, purpose, given and withdrawn times | 1 year after the account ends, under the tombstone id |
+| `rate_bucket` | Keyed-hash key, window, count | One window |
+
+Rules the schema encodes:
+
+- A member without a phone must be a tombstone (`CHECK`).
+- A handle has no row until it is submitted ("missing" is the absence of a row). `reject_reason` is only set on a
+  rejected row.
+- A challenge's `delivery_status` only moves up (`pending`, `sent`, `delivered`, `read`); `failed` and
+  `undeliverable` can follow any of them. The API reports `pending` as `sent` and `reviewer` as `delivered`.
+- Keys in `rate_bucket` are HMACs (scope plus subject, keyed with `OTP_PEPPER`), so the table holds no phone and no IP.
+- `phone_hash` is `HMAC-SHA256(OTP_PEPPER, "phone:" + e164)`.
