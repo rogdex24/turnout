@@ -91,7 +91,18 @@ export default function FiltersPopover({
             <Combobox
               items={options}
               value={category}
-              onValueChange={(value: CategoryOption | null) => setCategory(value)}
+              onValueChange={(value: CategoryOption | null, details) => {
+                if (!details.isCanceled) setCategory(value);
+              }}
+              onInputValueChange={(_value, details) => {
+                // With its list closed, Escape in the field clears the picked type and stops there, so the popover stayed
+                // open with the edit lost. Cancel the clear (the value change shares these details, so it is canceled too)
+                // and let Escape reach the popover, which closes it (DESIGN.md).
+                if (details.reason === "escape-key") {
+                  details.cancel();
+                  details.allowPropagation();
+                }
+              }}
               itemToStringLabel={(o: CategoryOption) => humanize(o.value)}
             >
               <ComboboxInput placeholder="All types" />
