@@ -1,6 +1,6 @@
-import { Database } from "bun:sqlite";
 import path from "node:path";
 import { markSvg } from "../utils/brandMark.js";
+import { openDb } from "../utils/openDb.js";
 import { createRunStarter } from "./runs.js";
 import { type AdminContext, apiResponse, guard, resolveBind } from "./server.js";
 import { withThemeBoot } from "./themeBoot.js";
@@ -21,10 +21,9 @@ export function startAdmin({ dbPath, port, env }: AdminOptions) {
   // Next to the database, where sync puts agent-runs/ (see ingestion/agent/agentSource.ts).
   const dataDir = path.dirname(path.resolve(dbPath));
 
-  const read = new Database(dbPath, { readonly: true, strict: true });
+  const read = openDb(dbPath, { readonly: true });
   // The only connection that writes, and only to mute_rule. It waits out a sync's write transaction instead of failing.
-  const write = new Database(dbPath, { strict: true });
-  write.exec("PRAGMA busy_timeout = 5000");
+  const write = openDb(dbPath, { create: false });
 
   const context: AdminContext = {
     read,

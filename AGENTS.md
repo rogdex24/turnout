@@ -56,8 +56,10 @@ The root is still the server package. `apps/*` and `packages/*` are Bun workspac
 ## Module map
 
 - `src/cli.ts`: composition root. Opens the DB, calls `migrate`, dispatches sync, serve, mute, geocode, admin.
-- `src/migrate.ts`: WAL pragma, then each module's `migrate` in order.
-- `src/utils/`: FetchLike, USER_AGENT, sleep, IST time helpers, sqlite helpers, and the cross-surface design helpers: `theme.ts` (the one theme preference protocol, used by `web` and by `admin/ui`; the admin's pre-paint script is `bootScript("class")` injected into its shell by `admin/themeBoot.ts`, not a copy), `design.ts` (reads DESIGN.md's front matter), `brandMark.ts` (the logo mark, colors from DESIGN.md).
+- `src/migrate.ts`: WAL pragma, then each module's `migrate` in order (`social` last: its foreign keys point at `event` and `venue`).
+- `src/social/`: the people tables and the DB layer over them (members, sessions, OTP challenges, profile, handle, rate buckets). `schema.ts` owns the tables. `model/` is pure: `tunables.ts` (every number the rules and rate limits use), `eligibility.ts` (`isEligible`), `handle.ts`, `matchable.ts`, `phone.ts`. No I/O in `model/`, and time comes in as an argument.
+- `src/app-api/`: the HTTP layer for the app, mounted at `/api/app/` by `cli.ts`. `index.ts` builds the `AppContext` (writable db, clock, env-derived config, senders, stores) and `appResponse`; `routes/` holds one file per area; `vendors/` holds the WhatsApp and push senders behind interfaces with fakes. Only `cli.ts` imports it.
+- `src/utils/`: FetchLike, USER_AGENT, sleep, IST time helpers, sqlite helpers, `openDb.ts` (the one place a SQLite file is opened: WAL, `busy_timeout`, `foreign_keys`), `clock.ts` (`Clock`, `fixedClock`, `adjustableClock`: time is injected, never read inline), and the cross-surface design helpers: `theme.ts` (the one theme preference protocol, used by `web` and by `admin/ui`; the admin's pre-paint script is `bootScript("class")` injected into its shell by `admin/themeBoot.ts`, not a copy), `design.ts` (reads DESIGN.md's front matter), `brandMark.ts` (the logo mark, colors from DESIGN.md).
 - `src/catalog/`: what an event and a venue are. Types, area (with area centres), category, venue (coordinate rules), dedupe, and the venue and event tables.
 - `src/ingestion/`: sync run, source health, run tables, `sources/` (one file per source plus registry), and `geocode/` (the `Geocoder` interface, one file per provider, `runGeocode.ts`).
 - `src/ingestion/agent/`: the `agent:grok` source. Opt-in, never delist on absence. A coding-agent CLI writes `events.jsonl` in `agent-runs/<syncRunId>-<harness>/` next to the `--db` file (the admin reads the same place); `verify.ts` re-fetches each record's page; `report.json` lists what was quarantined or rejected.
@@ -82,7 +84,7 @@ Enforced by dependency-cruiser (`.dependency-cruiser.json`, `bun run deps`).
 - `admin` imports `catalog`, `curation`, `utils` and, from `ingestion`, only `sources/registry.ts` and `schema.ts`. Never `web`. Nothing but `cli.ts` imports it. `admin/ui` imports `utils` and the types in `admin/api.ts` only.
 - `web/ui` imports `utils` and itself only, so it stays a leaf any page can use.
 - `packages/contract` imports itself and `zod` only (`contract-is-pure`). `packages/design-tokens` imports nothing outside itself (`design-tokens-is-data`). Nothing in `src/` imports `apps/` or `packages/design-tokens` (`src-not-to-apps`).
-- When the product modules arrive, these hold from the first file: `src/social/model` imports no `bun:`, `node:` or core module and nothing from the DB files of `src/social` (`social-model-pure`, `social-model-no-io`). `src/social` imports no `web`, `admin`, `app-api`, `ingestion` or `curation` (`social-layer`). `src/app-api` imports no `web` or `admin` (`app-api-layer`) and only `cli.ts` imports `src/app-api` (`only-cli-imports-app-api`). The rules match nothing while those directories are absent.
+- `src/social/model` imports no `bun:`, `node:` or core module and nothing from the DB files of `src/social` (`social-model-pure`, `social-model-no-io`, `social-model-no-bun`). `src/social` imports no `web`, `admin`, `app-api`, `ingestion` or `curation` (`social-layer`). `src/app-api` imports no `web` or `admin` (`app-api-layer`) and only `cli.ts` imports `src/app-api` (`only-cli-imports-app-api`). `src/web` imports from `src/social` only `model/eligibility.ts` and `model/tunables.ts` (`web-reads-social-model-rules-only`), so `group_eligible` has one definition. `catalog`, `curation`, `ingestion` and `utils` never import `social` or `app-api`. `test/dependencyRules.test.ts` proves the rules fail on a bad import.
 - `bun run deps` cruises `src` and `packages`.
 - `test/`, `e2e/` and `bench/` are exempt.
 
@@ -98,4 +100,6 @@ Lint rules that guard architecture: `lint/no-html-strings.grit` (no string-built
 - The admin's only write handle touches `mute_rule`. Syncs it starts run in a child process (`admin/runs.ts`).
 - `admin/reasons.ts` explains why an event is not in `listable_event`; `test/adminReasons.test.ts` fails if the view and the reasons disagree.
 - `NOT_MUTED`, `countMuted` and the admin's mute reasons all use `RULE_MATCHES_EVENT` (`curation/mute.ts`).
+- Every SQLite file is opened with `openDb` (`utils/openDb.ts`), so each handle has WAL, `busy_timeout = 5000` and `foreign_keys = ON`. Do not call `new Database` in `src` or `e2e`.
+- Product code takes a `Clock` and never calls `new Date()` for "now". The ticker, the rate limits and the staging `__test/clock` route depend on it.
 - A new source is one file in `ingestion/sources/` plus one line in `registry.ts` plus a fixture test.

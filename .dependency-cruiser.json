@@ -5,25 +5,25 @@
       "comment": "utils is the bottom layer: generic helpers only.",
       "severity": "error",
       "from": { "path": "^src/utils/" },
-      "to": { "path": "^src/(catalog|ingestion|curation|web)/" }
+      "to": { "path": "^src/(catalog|ingestion|curation|web|social|app-api)/" }
     },
     {
       "name": "catalog-imports-utils-only",
       "severity": "error",
       "from": { "path": "^src/catalog/" },
-      "to": { "path": "^src/(ingestion|curation|web)/" }
+      "to": { "path": "^src/(ingestion|curation|web|social|app-api)/" }
     },
     {
       "name": "curation-imports-catalog-and-utils-only",
       "severity": "error",
       "from": { "path": "^src/curation/" },
-      "to": { "path": "^src/(ingestion|web)/" }
+      "to": { "path": "^src/(ingestion|web|social|app-api)/" }
     },
     {
       "name": "ingestion-never-imports-web-or-curation",
       "severity": "error",
       "from": { "path": "^src/ingestion/" },
-      "to": { "path": "^src/(web|curation)/" }
+      "to": { "path": "^src/(web|curation|social|app-api)/" }
     },
     {
       "name": "web-never-imports-ingestion",
@@ -117,6 +117,20 @@
       "severity": "error",
       "from": { "path": "^src/social/model/" },
       "to": { "dependencyTypes": ["core"] }
+    },
+    {
+      "name": "social-model-no-bun",
+      "comment": "bun:sqlite and the other bun: modules are I/O too; depcruise may not class them as core, so name them.",
+      "severity": "error",
+      "from": { "path": "^src/social/model/" },
+      "to": { "path": "^bun:" }
+    },
+    {
+      "name": "web-reads-social-model-rules-only",
+      "comment": "The site may use the two pure rule files (eligibility and tunables) so group_eligible has one definition. It never reaches the DB layer or the rest of the model.",
+      "severity": "error",
+      "from": { "path": "^src/web/" },
+      "to": { "path": "^src/social/", "pathNot": "^src/social/model/(eligibility|tunables)\\.ts$" }
     },
     {
       "name": "social-layer",
