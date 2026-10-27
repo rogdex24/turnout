@@ -4,7 +4,7 @@
 
 Counts below include overlapping requirements; they are not a count of unique bugs. All 42 D/S IDs are present. The five QC rows cover the remaining mandatory checks. The original-review resolution tables are cross-references and are not counted again.
 
-Reviewed HEAD `fb18907010d8f185f071a559dc2283ea467eb2bb` in `/Users/abu/orca/workspaces/hydsocial/map-react`. The initial tracked and untracked working tree was clean. I read the verification brief and its five inputs in the requested order, then checked source, installed packages, tests, browser behavior and screenshots independently. Progress-note statements alone are not evidence.
+Reviewed HEAD `fb18907010d8f185f071a559dc2283ea467eb2bb` in `/Users/example/orca/workspaces/hydsocial/map-react`. The initial tracked and untracked working tree was clean. I read the verification brief and its five inputs in the requested order, then checked source, installed packages, tests, browser behavior and screenshots independently. Progress-note statements alone are not evidence.
 
 ## Fresh command results
 

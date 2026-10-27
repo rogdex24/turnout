@@ -1,0 +1,5 @@
+{
+  "emailDomains": ["example.com", "example.org", "example.net", "example", "test", "invalid", "localhost", "users.noreply.github.com"],
+  "emails": [{ "value": "noreply@anthropic.com", "reason": "Co-Authored-By trailer shown in the commit rules" }],
+  "phoneSha256": []
+}

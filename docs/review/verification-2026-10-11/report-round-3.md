@@ -4,7 +4,7 @@
 
 All 42 D/S IDs and five QC rows are assessed below. Original-review cross-references and R1–R4 are not counted again. The three round-two fixes are independently verified; the round-one failure, history, selection, theme, accessibility and polish checks also pass against the revised plan.
 
-Reviewed HEAD `73a9ba4167fa4b5fb418992ac301fcf8c81b5a02` in `/Users/abu/orca/workspaces/hydsocial/map-react`. The initial working tree was clean. I reread the verification brief, its research/review/plan/progress inputs, AGENTS.md and DESIGN.md, inspected the new commit and current ownership boundaries, and reran the full suites, every earlier probe, bundle measurement and my own screenshot matrix. Unchanged criteria below have fresh suite/source evidence; neither an implementer claim nor an earlier test result substitutes for this run. This report supersedes round two's verdict for this HEAD and R1–R4.
+Reviewed HEAD `73a9ba4167fa4b5fb418992ac301fcf8c81b5a02` in `/Users/example/orca/workspaces/hydsocial/map-react`. The initial working tree was clean. I reread the verification brief, its research/review/plan/progress inputs, AGENTS.md and DESIGN.md, inspected the new commit and current ownership boundaries, and reran the full suites, every earlier probe, bundle measurement and my own screenshot matrix. Unchanged criteria below have fresh suite/source evidence; neither an implementer claim nor an earlier test result substitutes for this run. This report supersedes round two's verdict for this HEAD and R1–R4.
 
 ## Fresh command results
 

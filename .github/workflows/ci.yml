@@ -1,0 +1,145 @@
+name: ci
+
+# Server and web CI. The mobile jobs arrive on day 6 (see the placeholder block below).
+# Rules for this file:
+#   - pull_request only, never pull_request_target, and no repository secrets in PR jobs.
+#   - Every action is pinned by full commit SHA with the version in a comment.
+#   - Required status checks should list only `ci-gate`, so jobs can be added or skipped without editing branch protection.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: "1.4.3"
+  GITLEAKS_VERSION: "8.30.1"
+  # sha256 of gitleaks_8.30.1_linux_x64.tar.gz, from the release's checksums file.
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'src/**'
+              - 'e2e/**'
+              - 'data/**'
+              - 'test/fixtures/**'
+              - 'playwright.config.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'apps/mobile/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # The binary is downloaded and checked against a pinned checksum. gitleaks-action is not used.
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          dl="$(mktemp -d)"
+          curl -fsSL --retry 3 -o "$dl/gitleaks.tgz" "$url"
+          echo "${GITLEAKS_SHA256}  $dl/gitleaks.tgz" | sha256sum -c -
+          tar -xzf "$dl/gitleaks.tgz" -C "$dl" gitleaks
+          sudo install -m 0755 "$dl/gitleaks" /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan history
+        run: gitleaks git --redact --no-banner --log-opts="--all" .
+      - name: Scan working tree
+        run: gitleaks dir --redact --no-banner .
+
+  e2e-web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: node_modules/.bin/playwright install --with-deps chromium
+      - run: bun run e2e
+
+  # Day 6 placeholders. Fill these in when apps/mobile exists, keep them behind `changes.outputs.mobile`,
+  # and add each job name to `needs` of `ci-gate`. They must not read repository secrets on pull requests.
+  #
+  # mobile-check:
+  #   needs: changes
+  #   if: needs.changes.outputs.mobile == 'true'
+  #   (typecheck, lint and unit tests for apps/mobile and packages/*)
+  #
+  # mobile-build:
+  #   needs: changes
+  #   if: needs.changes.outputs.mobile == 'true'
+  #   (Expo prebuild smoke check, no signing credentials)
+
+  # The one required check. It passes when every needed job passed or was skipped, and fails otherwise
+  # (failure, cancelled). `if: always()` makes it run, and report, even when a needed job failed.
+  ci-gate:
+    needs: [changes, check, secrets, e2e-web]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every needed job to pass or be skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needed job results: ${RESULTS}"
+          for r in ${RESULTS}; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "a needed job ended as: $r"; exit 1 ;;
+            esac
+          done

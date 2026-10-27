@@ -4,7 +4,7 @@
 
 Counts include overlapping requirements, not unique bugs. All 42 D/S IDs and five QC rows are assessed below. Original-review cross-references and R1–R4 are not counted again. There are three remaining fix items. The round-one architecture, startup, theme-replacement, history and keyboard-focus defects are resolved under the revised plan.
 
-Reviewed HEAD `2da47f67c44618226e6bfbbffc1dce0ecbdabb2d` in `/Users/abu/orca/workspaces/hydsocial/map-react`. The initial working tree was clean. I read the brief's inputs, original findings, current progress, AGENTS.md and DESIGN.md, inspected the implementation changes and formal rulings, and independently reran commands, browser probes and screenshots. The new evidence is against this checkout; progress-note claims and round-one results are not substituted for verification. This report supersedes round one's verdict for the revised plan.
+Reviewed HEAD `2da47f67c44618226e6bfbbffc1dce0ecbdabb2d` in `/Users/example/orca/workspaces/hydsocial/map-react`. The initial working tree was clean. I read the brief's inputs, original findings, current progress, AGENTS.md and DESIGN.md, inspected the implementation changes and formal rulings, and independently reran commands, browser probes and screenshots. The new evidence is against this checkout; progress-note claims and round-one results are not substituted for verification. This report supersedes round one's verdict for the revised plan.
 
 ## Fresh command results
 
