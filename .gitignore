@@ -18,3 +18,10 @@ agent-runs/
 # playwright
 test-results/
 playwright-report/
+
+# local secrets and per-developer config for the mobile app
+.env.local
+google-services.json
+
+# reference images for the design board: kept on the developer's machine
+docs/design/mobile-board/refs/
