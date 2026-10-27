@@ -1,0 +1,19 @@
+{
+  // The contract runs on the server (Bun) and in the app (Hermes), so it sees neither runtime's
+  // types nor the DOM: `types: []` and a bare ES2022 lib make a stray `Buffer`, `process` or
+  // `document` a compile error here.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["node_modules"]
+}
