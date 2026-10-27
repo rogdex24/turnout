@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnout mobile design board</title>
+<style>
+:root{--bg:#ede8e1;--surface:#f6f2ed;--raised:#e2dcd3;--line:#cfc8be;--outline:#87827b;--ink:#181818;--muted:#67625c;--signal:#94400a}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--surface:#1a1a1a;--raised:#232323;--line:#2f2f2f;--outline:#6b665f;--ink:#ede8e1;--muted:#9a958e;--signal:#ea6e12}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--ink);text-underline-offset:3px}
+a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+header,main,footer{max-width:960px;margin:0 auto;padding:24px 20px}
+h1{font-size:2rem;line-height:1.15;margin:0 0 8px}
+h2{font-size:1.4rem;line-height:1.2;margin:0 0 4px}
+h3{font-size:1rem;margin:20px 0 6px}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+.tabular{font-variant-numeric:tabular-nums}
+nav ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+nav a{display:inline-block;min-height:44px;line-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:24px;background:var(--surface);text-decoration:none}
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;margin:16px 0}
+.routes code,.mock code,td code{font:0.9rem ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--raised);padding:1px 6px;border-radius:6px}
+table{width:100%;border-collapse:collapse;margin:8px 0}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-top:1px solid var(--line)}
+th{font-weight:600;color:var(--muted);border-top:0}
+blockquote{margin:8px 0;padding:10px 14px;background:var(--raised);border-radius:14px;border-left:4px solid var(--outline)}
+ul.rules{margin:6px 0;padding-left:20px}
+ol.refs{margin:6px 0;padding-left:22px}
+ol.refs li{margin:0 0 14px}
+.take,.leave{margin:2px 0}
+.label{color:var(--muted);font-weight:600}
+.note{background:var(--raised);border-radius:14px;padding:10px 14px;margin:12px 0}
+@media (max-width:600px){th,td{display:block;border-top:0;padding:2px 0}tr{display:block;border-top:1px solid var(--line);padding:8px 0}thead{display:none}}
+</style>
+</head>
+<body>
+<header>
+<h1>Turnout mobile design board</h1>
+<p class="muted">Steps B1 to B16. Each step lists the screens, the Nightlife spec rules, the approved copy and public references with what we take and what we leave. References accessed 2026-10-27. See README.md for how to review and the sign-off line.</p>
+<nav aria-label="Steps"><ul>
+<li><a href="#B1">B1 Welcome</a></li>
+<li><a href="#B2">B2 Sign in, phone then code</a></li>
+<li><a href="#B3">B3 Profile with notice and consent</a></li>
+<li><a href="#B4">B4 Handle checking and rejected</a></li>
+<li><a href="#B5">B5 Home (Shows tab)</a></li>
+<li><a href="#B6">B6 Show page and go sheet</a></li>
+<li><a href="#B7">B7 Add your ticket (screenshot proof)</a></li>
+<li><a href="#B8">B8 Your plans tab</a></li>
+<li><a href="#B9">B9 Plan detail</a></li>
+<li><a href="#B10">B10 Leave this plan</a></li>
+<li><a href="#B11">B11 Meet card</a></li>
+<li><a href="#B12">B12 Group thread</a></li>
+<li><a href="#B13">B13 After the show</a></li>
+<li><a href="#B14">B14 Settings and safety</a></li>
+<li><a href="#B15">B15 Notifications</a></li>
+<li><a href="#B16">B16 Platform conventions</a></li>
+</ul></nav></header><main>
+<section class="step" id="B1">
+<h2>B1. Welcome</h2>
+<p class="routes muted">Routes: <code>(onboarding)/welcome.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/welcome.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B1.1"><td><code>B1.1</code></td><td>Welcome cards. Card 1 is mocked; cards 2 and 3 reuse the same layout and have no separate mockup.</td><td><code>final/welcome.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>Everyone signs in with a phone number, a real photo and a social profile we check.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Two loud moments only.</li><li>One-colour headlines in Big Shoulders Display.</li><li>Primary button is 56 high; hit targets are at least 44pt.</li><li>No in-app theme toggle. The screen follows the phone.</li></ul>
+<p class="note">Welcome says plainly what we check. It does not say the word for a passed check.</p>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://timeleft.com/blog/safety-starts-before-the-dinner/">Timeleft: Safety starts before the dinner</a><br><span class="muted">https://timeleft.com/blog/safety-starts-before-the-dinner/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Says the safety rules up front: public vetted venues, groups of 4 to 6, real names and photos, 18+. We say what we check on the first screen too.</p>
+<p class="leave"><span class="label">We leave:</span> Their page is long-form marketing. Our welcome is one sentence and one button.</p></li>
+<li><a href="https://apps.apple.com/us/app/222-find-your-people/id6450612690">222 on the App Store</a><br><span class="muted">https://apps.apple.com/us/app/222-find-your-people/id6450612690, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Group setting, public places, and members vetted before an experience, all stated in the first lines of the listing. We take the plain tone.</p>
+<p class="leave"><span class="label">We leave:</span> Their listing defines the app by a list of &#x27;this is not&#x27; lines. We say what we are and what we check.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/onboarding">Apple HIG: Onboarding</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/onboarding, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Keep onboarding fast and optional, and ask for things only when they are needed. Three cards at most.</p>
+<p class="leave"><span class="label">We leave:</span> We do not add a Skip button on every card. Sign in is the point of the screen, and the cards are short.</p></li>
+</ol></section>
+<section class="step" id="B2">
+<h2>B2. Sign in, phone then code</h2>
+<p class="routes muted">Routes: <code>(onboarding)/sign-in.tsx</code>, <code>(onboarding)/code.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/signin-phone.html</code>, <code>final/signin-code.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B2.1"><td><code>B2.1</code></td><td>Phone entry. 10 digits starting 6 to 9, one helper line.</td><td><code>final/signin-phone.html</code></td></tr>
+<tr id="B2.2"><td><code>B2.2</code></td><td>Code entry with Change number, Send again and Paste.</td><td><code>final/signin-code.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>We&#x27;ll send a code on WhatsApp. It can be on another phone.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Use the Field component for the phone number and the code.</li><li>Tabular figures on the phone number and the code.</li><li>One primary button per screen. Change number and Send again are secondary actions.</li><li>No SMS path. WhatsApp only, with one-tap autofill and a copy-code fallback.</li></ul>
+<p class="note">Sign-in errors use the neutral Note, not danger.</p>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://support.bumble.com/hc/en-us/articles/28949524382877-Verifying-your-phone-number">Bumble support: verifying your phone number</a><br><span class="muted">https://support.bumble.com/hc/en-us/articles/28949524382877-Verifying-your-phone-number, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A phone number is the first account step, with a code to confirm it. We use the same order.</p>
+<p class="leave"><span class="label">We leave:</span> We send on WhatsApp only, never SMS. (Page blocks scripted fetches, read through a search result.)</p></li>
+<li><a href="https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates/">Meta: WhatsApp autofill button authentication templates</a><br><span class="muted">https://developers.facebook.com/docs/whatsapp/business-management-api/authentication-templates/autofill-button-authentication-templates/, HTTP 400 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> The one-tap autofill button and the copy-code button are the two paths we build. This is the URL the plan cites.</p>
+<p class="leave"><span class="label">We leave:</span> Zero-tap is not in v1. (Blocks scripted fetches, plan cites it.)</p></li>
+<li><a href="https://www.twilio.com/docs/content/whatsappauthentication">Twilio: WhatsApp authentication templates</a><br><span class="muted">https://www.twilio.com/docs/content/whatsappauthentication, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Spells out copy code, one-tap autofill and zero-tap as the three delivery modes. Confirms copy code is the safe fallback.</p>
+<p class="leave"><span class="label">We leave:</span> We skip zero-tap, because it needs the app to hold extra permissions.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/entering-data">Apple HIG: Entering data</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/entering-data, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Fewer fields, helpful hints, and a keyboard that matches the data. Numeric keypad for the number and the code.</p>
+<p class="leave"><span class="label">We leave:</span> We do not add input masks that fight paste.</p></li>
+</ol></section>
+<section class="step" id="B3">
+<h2>B3. Profile with notice and consent</h2>
+<p class="routes muted">Routes: <code>(onboarding)/notice.tsx</code>, <code>(onboarding)/profile.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/profile.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B3.1"><td><code>B3.1</code></td><td>Notice and consent. No separate mockup yet, see the open question.</td><td><code>none yet</code></td></tr>
+<tr id="B3.2"><td><code>B3.2</code></td><td>Profile form: first name, gender, social handle, women-only toggle.</td><td><code>final/profile.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>Only women and non-binary people who chose this.</blockquote>
+<blockquote>So we can check you&#x27;re a real person. Others in your group never see it.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>First names only on group surfaces.</li><li>The women-only line sits with the toggle, not behind an info icon.</li><li>The handle &#x27;why we ask&#x27; line sits with the handle Field, always visible, not in a tooltip.</li><li>Use the Row and Field components.</li></ul>
+<p class="note">The notice screen has no mockup in final/. Sign-off in F6 should confirm whether it is a Sheet or a full screen.</p>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://support.bumbleforfriends.com/hc/en-us/articles/12277806094749-Bumble-For-Friends-inclusive-gender-options">Bumble for Friends: inclusive gender options</a><br><span class="muted">https://support.bumbleforfriends.com/hc/en-us/articles/12277806094749-Bumble-For-Friends-inclusive-gender-options, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Gender is a plain choice on the profile, with a non-binary option, and it can gate a women-only space. We take the same shape.</p>
+<p class="leave"><span class="label">We leave:</span> We do not ask for pronouns or any free-text gender field. (Page blocks scripted fetches, read through a search result.)</p></li>
+<li><a href="https://play.google.com/store/apps/details?id=com.timeleft.app">Timeleft on Google Play</a><br><span class="muted">https://play.google.com/store/apps/details?id=com.timeleft.app, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Lists Women-Only Dinners as their own format, so a gated space is a normal product line. Our women-only toggle is the same idea at the plan level.</p>
+<p class="leave"><span class="label">We leave:</span> Theirs is a separate event type. Ours is a choice on the profile that sets who can be in your group.</p></li>
+<li><a href="https://www.peanut-app.io/blog/why-we-use-selfie-verification">Peanut: why we use selfie checks</a><br><span class="muted">https://www.peanut-app.io/blog/why-we-use-selfie-verification, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A women&#x27;s community that says why it asks for a photo and that the photo is kept private. We explain each ask next to the field.</p>
+<p class="leave"><span class="label">We leave:</span> The page needs JavaScript, so the claims come from the search result summary. We do not copy their wording.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/privacy">Apple HIG: Privacy</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/privacy, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Ask for sensitive data with a short, honest purpose, in context. Our &#x27;why we ask&#x27; line is that purpose string on screen.</p>
+<p class="leave"><span class="label">We leave:</span> We do not front-load permission asks on the profile screen.</p></li>
+</ol></section>
+<section class="step" id="B4">
+<h2>B4. Handle checking and rejected</h2>
+<p class="routes muted">Routes: <code>(app)/(tabs)/index.tsx (strip)</code>, <code>(app)/settings/social.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/home.html (checking strip)</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B4.1"><td><code>B4.1</code></td><td>Checking. A strip on Home: we&#x27;re checking your profile, usually within a day, and you can add a ticket meanwhile.</td><td><code>final/home.html</code></td></tr>
+<tr id="B4.2"><td><code>B4.2</code></td><td>Rejected. The strip as a neutral Note with the short reason and a Change handle button, which opens settings/social. No mockup yet.</td><td><code>none yet</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>We&#x27;re checking your profile. Usually within a day. You can add a ticket in the meantime.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Rejected never uses danger. It uses the neutral Note.</li><li>The strip does not block the tab bar or the ticket flow, as the checking copy says.</li><li>No guilt copy. The reason is short and the next step is a single button.</li><li>The handle_rejected push opens settings/social.</li></ul>
+<p class="note">B4.2 has no mockup in final/. Flagged for F6.</p>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://help.hinge.co/hc/en-us/articles/10303221435539-What-is-Selfie-Verification">Hinge help: what is selfie checking</a><br><span class="muted">https://help.hinge.co/hc/en-us/articles/10303221435539-What-is-Selfie-Verification, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A pending state that tells you how long to wait (up to 24 hours) and lets you keep using the app. Matches our &#x27;usually within a day&#x27;.</p>
+<p class="leave"><span class="label">We leave:</span> Hinge shows a badge when passed. We show no badge to anyone. (Page blocks scripted fetches, read through a search result.)</p></li>
+<li><a href="https://support.bumble.com/hc/en-us/articles/28949738572829-Verifying-your-photos">Bumble support: verifying your photos</a><br><span class="muted">https://support.bumble.com/hc/en-us/articles/28949738572829-Verifying-your-photos, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Has a pending state and a retry after a miss. We take the retry as a single button.</p>
+<p class="leave"><span class="label">We leave:</span> We do not show the person a red failure screen. (Blocks scripted fetches, read through a search result.)</p></li>
+<li><a href="https://www.peanut-app.io/blog/why-we-use-selfie-verification">Peanut: why we use selfie checks</a><br><span class="muted">https://www.peanut-app.io/blog/why-we-use-selfie-verification, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Keeps the check private and off the public profile. Our result is only ever shown to the person it belongs to.</p>
+<p class="leave"><span class="label">We leave:</span> Their flow is a selfie. Ours is a social handle, so the copy names the handle.</p></li>
+</ol></section>
+<section class="step" id="B5">
+<h2>B5. Home (Shows tab)</h2>
+<p class="routes muted">Routes: <code>(app)/(tabs)/index.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/home.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B5.1"><td><code>B5.1</code></td><td>Home list of shows as Posters, with the tab bar (Shows, Plans, You).</td><td><code>final/home.html</code></td></tr>
+<tr id="B5.2"><td><code>B5.2</code></td><td>Plan bar above the tabs when you have an active plan.</td><td><code>final/home.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Poster is the main visual of each card.</li><li>Tabular figures on dates, times and prices.</li><li>No middle dots in meta strings.</li><li>No blur or shadow on the tab bar. 44pt hit targets.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://play.google.com/store/apps/details?id=com.application.zomato.district">District by Zomato on Google Play</a><br><span class="muted">https://play.google.com/store/apps/details?id=com.application.zomato.district, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> The closest Indian peer for browsing events by city. Poster-led cards and a short list are the baseline we are measured against.</p>
+<p class="leave"><span class="label">We leave:</span> They mix dining, movies and events on one feed. We show shows only.</p></li>
+<li><a href="https://play.google.com/store/apps/details?id=com.bt.bms">BookMyShow on Google Play</a><br><span class="muted">https://play.google.com/store/apps/details?id=com.bt.bms, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Where our users already buy tickets, so the show title and date format should read the same. We take the habit of date first.</p>
+<p class="leave"><span class="label">We leave:</span> We keep one list and no banners.</p></li>
+<li><a href="https://apps.apple.com/us/app/luma-events-invites/id1546150895">Luma on the App Store</a><br><span class="muted">https://apps.apple.com/us/app/luma-events-invites/id1546150895, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A calm events home: one list, big cover images, quiet text. Close to our Posters.</p>
+<p class="leave"><span class="label">We leave:</span> Luma serves hosts too. Ours is attendee only, so no host controls.</p></li>
+</ol></section>
+<section class="step" id="B6">
+<h2>B6. Show page and go sheet</h2>
+<p class="routes muted">Routes: <code>(app)/show/[publicId].tsx</code>, <code>(app)/show/[publicId]/go.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/show.html</code>, <code>final/show-go.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B6.1"><td><code>B6.1</code></td><td>Show page: Poster, date, place, from price, Buy on BookMyShow, and how many people are looking for a group.</td><td><code>final/show.html</code></td></tr>
+<tr id="B6.2"><td><code>B6.2</code></td><td>Go sheet: one-sentence explanation, Any group or Women and non-binary only, Next: add your ticket, Not now.</td><td><code>final/show-go.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Use the Sheet component for the go sheet.</li><li>Counts, not tiles. No faces before T-3h.</li><li>Orange has one job: live signal. It is never a button colour.</li><li>Meta strings have no middle dots.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://help.luma.com/p/event-guest-list">Luma help: event guest list</a><br><span class="muted">https://help.luma.com/p/event-guest-list, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Shows a count plus a few names and photos, and hosts can hide it. We take the count and leave the faces out until T-3h.</p>
+<p class="leave"><span class="label">We leave:</span> Luma shows names early. We never show names or photos before T-3h.</p></li>
+<li><a href="https://swmansion.com/case-studies/partiful/">Partiful case study by Software Mansion</a><br><span class="muted">https://swmansion.com/case-studies/partiful/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A native event app built with React Native, with RSVP in a sheet. Confirms the shape is workable in our stack.</p>
+<p class="leave"><span class="label">We leave:</span> Partiful centres on guest lists. We show a count and no list.</p></li>
+<li><a href="https://timeleft.com/dinners/">Timeleft: dinners</a><br><span class="muted">https://timeleft.com/dinners/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A single clear action to book, and the reveal is later. We take &#x27;reveal later&#x27; as the model.</p>
+<p class="leave"><span class="label">We leave:</span> We do not take payment. The ticket is bought on BookMyShow.</p></li>
+<li><a href="https://m3.material.io/components/bottom-sheets/guidelines">Material 3: Bottom sheets</a><br><span class="muted">https://m3.material.io/components/bottom-sheets/guidelines, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Modal sheets with a drag handle and one clear dismiss. Android users expect the back gesture to close it.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use a standard (non-modal) sheet. The go sheet is always modal.</p></li>
+</ol></section>
+<section class="step" id="B7">
+<h2>B7. Add your ticket (screenshot proof)</h2>
+<p class="routes muted">Routes: <code>(app)/plans/[planId]/ticket.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/ticket-add.html</code>, <code>final/ticket-checking.html</code>, <code>final/ticket-rejected.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B7.1"><td><code>B7.1</code></td><td>needs_ticket: add a screenshot of your BookMyShow ticket.</td><td><code>final/ticket-add.html</code></td></tr>
+<tr id="B7.2"><td><code>B7.2</code></td><td>checking_ticket: we&#x27;re looking at it. Notification pre-ask appears here, after the first submission only.</td><td><code>final/ticket-checking.html</code></td></tr>
+<tr id="B7.3"><td><code>B7.3</code></td><td>ticket_rejected: neutral Note with the reason and a way to send another screenshot.</td><td><code>final/ticket-rejected.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>We delete it after the show.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Screenshot only. HEIC is accepted.</li><li>Rejected states never use danger. They use the neutral Note.</li><li>We delete it after the show. Said on the add screen, in muted ink.</li><li>The photo picker is the system picker, so we need no photo library permission.</li><li>The notification pre-ask appears after the first submission only.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://www.airbnb.com/help/article/3033">Airbnb help: ID upload tips</a><br><span class="muted">https://www.airbnb.com/help/article/3033, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Practical upload tips next to the upload, such as good light and all four corners. We take the idea of tips on the same screen.</p>
+<p class="leave"><span class="label">We leave:</span> Airbnb asks for an ID document. We ask only for a ticket screenshot. (Page is script-rendered, read through a search result.)</p></li>
+<li><a href="https://dice.fm/help/article?id=18201556722961">Dice help: tickets</a><br><span class="muted">https://dice.fm/help/article?id=18201556722961, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Dice says a screenshot is not a ticket, so proof is the order details. That is why our copy calls it proof, not a ticket.</p>
+<p class="leave"><span class="label">We leave:</span> We are not the ticket. The venue scans the BookMyShow QR. (Script-rendered, read through a search result.)</p></li>
+<li><a href="https://developer.android.com/training/data-storage/shared/photo-picker">Android: Photo picker</a><br><span class="muted">https://developer.android.com/training/data-storage/shared/photo-picker, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A system picker that gives the app only the photos the person chooses, with no library permission.</p>
+<p class="leave"><span class="label">We leave:</span> We do not build our own gallery.</p></li>
+<li><a href="https://developer.apple.com/documentation/photokit/delivering-an-enhanced-privacy-experience-in-your-photos-app">Apple: enhanced privacy in your photos app</a><br><span class="muted">https://developer.apple.com/documentation/photokit/delivering-an-enhanced-privacy-experience-in-your-photos-app, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Same idea on iOS: the app sees only what the person picks.</p>
+<p class="leave"><span class="label">We leave:</span> We do not ask for full library access.</p></li>
+</ol></section>
+<section class="step" id="B8">
+<h2>B8. Your plans tab</h2>
+<p class="routes muted">Routes: <code>(app)/(tabs)/plans.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/plans.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B8.1"><td><code>B8.1</code></td><td>Plans list with the state of each: finding a group, confirmed, no group.</td><td><code>final/plans.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>TicketCard for each plan with a StatusLine.</li><li>A status line is words first, never a colour alone.</li><li>Plans are one list. Group chat and meet card steps say when they open.</li><li>Tab is never hidden or disabled, even with no plans.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://www.airbnb.com/help/article/2064">Airbnb help: find your reservation info</a><br><span class="muted">https://www.airbnb.com/help/article/2064, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> One Trips tab with upcoming and past, and every state in one list. We take the single list.</p>
+<p class="leave"><span class="label">We leave:</span> Our list has plans only, no messages. (Script-rendered, read through a search result.)</p></li>
+<li><a href="https://help.luma.com/p/luma-ios-app">Luma help: iOS app</a><br><span class="muted">https://help.luma.com/p/luma-ios-app, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A Your Events view split into Upcoming and Past. Simple, text-led.</p>
+<p class="leave"><span class="label">We leave:</span> We only have events you are going to.</p></li>
+<li><a href="https://sanasaab.com/projects/partiful-itineraries.html">Partiful itineraries by Sana Saab</a><br><span class="muted">https://sanasaab.com/projects/partiful-itineraries.html, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A design write-up on how a plans view can group upcoming items. We take the grouping idea.</p>
+<p class="leave"><span class="label">We leave:</span> Ours is a short list with no timeline.</p></li>
+</ol></section>
+<section class="step" id="B9">
+<h2>B9. Plan detail</h2>
+<p class="routes muted">Routes: <code>(app)/plans/[planId]/index.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/plan-finding.html</code>, <code>final/plan-confirmed.html</code>, <code>final/plan-three.html</code>, <code>final/plan-no-group.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B9.1"><td><code>B9.1</code></td><td>finding_group: No group yet, how many people with tickets are looking, and when groups are set (24 hours before).</td><td><code>final/plan-finding.html</code></td></tr>
+<tr id="B9.2"><td><code>B9.2</code></td><td>group_confirmed, before T-3h: a count, not faces.</td><td><code>final/plan-confirmed.html</code></td></tr>
+<tr id="B9.3"><td><code>B9.3</code></td><td>A group of 3.</td><td><code>final/plan-three.html</code></td></tr>
+<tr id="B9.4"><td><code>B9.4</code></td><td>no_group: Called off. Not enough people had tickets, your ticket is still yours, and Find another show.</td><td><code>final/plan-no-group.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Names and photos only from T-3h. Before that the pre-reveal state is a RevealCount.</li><li>No member name, photo or placeholder before T-3h.</li><li>Motion only on group confirmed. Reduced motion is respected.</li><li>no_group is not a failure. It uses the neutral Note, never danger.</li><li>Group chat shows Opens at a time, then Closed if the plan is called off.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://timeleft.com/blog/group-dinner-events/">Timeleft: group dinner events</a><br><span class="muted">https://timeleft.com/blog/group-dinner-events/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> The venue is revealed 12 hours before and a group preview shows on the day. We take &#x27;reveal late&#x27;.</p>
+<p class="leave"><span class="label">We leave:</span> We reveal at T-3h, and the preview is names and photos only from then.</p></li>
+<li><a href="https://www.airbnb.com/help/article/100">Airbnb help: check-in details</a><br><span class="muted">https://www.airbnb.com/help/article/100, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Details are held back and released about 48 hours before. A known pattern for &#x27;you will know more later&#x27;. (Script-rendered, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> Our window is hours, not days.</p></li>
+<li><a href="https://www.airbnb.com/help/article/90">Airbnb help: pending and confirmed</a><br><span class="muted">https://www.airbnb.com/help/article/90, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Pending and confirmed are two clear states with different next steps. We take that split.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use a pending request model. (Script-rendered, read through a search result.)</p></li>
+</ol></section>
+<section class="step" id="B10">
+<h2>B10. Leave this plan</h2>
+<p class="routes muted">Routes: <code>(app)/plans/[planId]/cancel.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/plan-cancel.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B10.1"><td><code>B10.1</code></td><td>Leave sheet: we take you out of the group search, your BookMyShow ticket is not affected, the group is told if it is within 3 hours of the show. Buttons: Leave plan, Stay.</td><td><code>final/plan-cancel.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>No guilt copy. Nothing like &#x27;Are you sure you want to let them down?&#x27;</li><li>Sheet component. Leave plan and Stay are plain peers. Stay is not styled as the guilt choice.</li><li>Say what happens to the group in one plain line.</li><li>Never danger. Leaving is allowed.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://timeleft.com/faq/">Timeleft FAQ</a><br><span class="muted">https://timeleft.com/faq/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Cancel in the app up to 4 hours before. A clear cutoff, stated up front.</p>
+<p class="leave"><span class="label">We leave:</span> They have a cutoff. We state what changes for the group, not a penalty.</p></li>
+<li><a href="https://www.airbnb.com/help/article/169">Airbnb help: cancel a reservation</a><br><span class="muted">https://www.airbnb.com/help/article/169, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Cancel in the app and see what happens before you confirm. We take &#x27;show the effect before the confirm&#x27;.</p>
+<p class="leave"><span class="label">We leave:</span> Airbnb shows a refund amount. We have no money in the app. (Script-rendered, read through a search result.)</p></li>
+<li><a href="https://help.luma.com/p/event-registration-process">Luma help: event registration</a><br><span class="muted">https://help.luma.com/p/event-registration-process, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Change Going to Not Going in place. Leaving is one control, not a support ticket.</p>
+<p class="leave"><span class="label">We leave:</span> We tell the group when it is within 3 hours of the show.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/alerts">Apple HIG: Alerts</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/alerts, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Alerts should be rare, and the safe choice should be easy to tell apart. We use a Sheet, not an alert.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use a destructive red button.</p></li>
+</ol></section>
+<section class="step" id="B11">
+<h2>B11. Meet card</h2>
+<p class="routes muted">Routes: <code>(app)/groups/[groupId]/meet.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/meet.html</code>, <code>final/meet-safety.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B11.1"><td><code>B11.1</code></td><td>Meet card live: Safety button, time and countdown, the cafe, walk to the venue, Open in Maps, optional location sharing, the group, group chat preview, I&#x27;m here.</td><td><code>final/meet.html</code></td></tr>
+<tr id="B11.2"><td><code>B11.2</code></td><td>Safety sheet opened from the labelled Safety button.</td><td><code>final/meet-safety.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>Your location stays on your phone.</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Motion only on the meet card going live and on I&#x27;m here. Reduced motion is respected.</li><li>Safety is a labelled button, not an icon alone.</li><li>Orange has one job: live signal. The live dot is the only orange here.</li><li>Names and photos only from T-3h. First names only.</li><li>Your location stays on your phone.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://timeleft.com/dinners/">Timeleft: dinners</a><br><span class="muted">https://timeleft.com/dinners/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> The icebreaker unlocks in the app 30 minutes before. Content that opens at the moment it is useful.</p>
+<p class="leave"><span class="label">We leave:</span> We do not have an icebreaker. The meet card is a place, a time and a group.</p></li>
+<li><a href="https://www.airbnb.com/help/article/41">Airbnb help: check-in details</a><br><span class="muted">https://www.airbnb.com/help/article/41, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Everything you need to arrive, on one card, close to the time. (Script-rendered, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> Theirs is for a host and a key. Ours is for a group at a cafe.</p></li>
+<li><a href="https://support.apple.com/guide/iphone/share-your-estimated-time-of-arrival-iph65c86df8c/ios">Apple: share your estimated time of arrival</a><br><span class="muted">https://support.apple.com/guide/iphone/share-your-estimated-time-of-arrival-iph65c86df8c/ios, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Sharing your estimated arrival is something the person chooses to do. We keep location on the phone.</p>
+<p class="leave"><span class="label">We leave:</span> We do not send location to the group.</p></li>
+<li><a href="https://support.google.com/maps/answer/15437054">Google Maps help: share your location</a><br><span class="muted">https://support.google.com/maps/answer/15437054, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Location sharing has a duration and a Stop. We take &#x27;the person is in control&#x27; as the rule.</p>
+<p class="leave"><span class="label">We leave:</span> Our meet card has an optional on-phone distance and no live map for others.</p></li>
+</ol></section>
+<section class="step" id="B12">
+<h2>B12. Group thread</h2>
+<p class="routes muted">Routes: <code>(app)/groups/[groupId]/thread.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/thread.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B12.1"><td><code>B12.1</code></td><td>Thread with quick messages: Running 10 min late, On my way, At the cafe.</td><td><code>final/thread.html</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>Running 10 min late</blockquote>
+<blockquote>On my way</blockquote>
+<blockquote>At the cafe</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Quick messages first, free text second.</li><li>First names only. No photos in the thread before T-3h.</li><li>Report is reachable from the thread and never tells who reported.</li><li>Mockup shows no read receipts or typing indicators. Keep it that way.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://help.timeleft.com/hc/en-150/articles/29193330963868-How-Are-Group-Chats-Moderated">Timeleft help: how group chats are moderated</a><br><span class="muted">https://help.timeleft.com/hc/en-150/articles/29193330963868-How-Are-Group-Chats-Moderated, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Says plainly that group chats are moderated. We read reports and say so on the Report screen. (Blocks scripted fetches, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> We say we read every report within 24 hours, and nothing more.</p></li>
+<li><a href="https://timeleft.com/safety-guidelines/">Timeleft: safety guidelines</a><br><span class="muted">https://timeleft.com/safety-guidelines/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Long-press a message, then Report, and the person who is reported is never told who reported. We take both.</p>
+<p class="leave"><span class="label">We leave:</span> Their guidelines are a long page. Ours is two lines on the Report screen.</p></li>
+<li><a href="https://bumble.com/en-us/the-buzz/bumble-for-friends">Bumble for Friends</a><br><span class="muted">https://bumble.com/en-us/the-buzz/bumble-for-friends, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A friends product from a dating company, with its own safety pages. We take the idea of one product line for friends, kept apart from dating.</p>
+<p class="leave"><span class="label">We leave:</span> Ours is one group thread per plan and no one to one chat.</p></li>
+</ol></section>
+<section class="step" id="B13">
+<h2>B13. After the show</h2>
+<p class="routes muted">Routes: <code>(app)/groups/[groupId]/after.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/after.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B13.1"><td><code>B13.1</code></td><td>After the show: nothing to do if it went fine; tap a name if someone made you uncomfortable (only we see it); Something serious? Report or Call 112.</td><td><code>final/after.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>No guilt copy. Nothing to do if it went fine, and the screen says so.</li><li>No star ratings and no scores. The only action is telling us about discomfort.</li><li>Tapping a name asks once, says the person will not know, and says you will not be grouped again.</li><li>The screen closes itself on a date, shown in plain words.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://help.hinge.co/hc/en-us/articles/360010692913-What-is-We-Met">Hinge help: We Met</a><br><span class="muted">https://help.hinge.co/hc/en-us/articles/360010692913-What-is-We-Met, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A private follow-up after meeting. We take &#x27;private and short&#x27;. (Blocks scripted fetches, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> Ours is only for telling us about discomfort. There is no score.</p></li>
+<li><a href="https://timeleft.com/post/timeleft-algorithm-the-maestro-of-your-dinners/">Timeleft: the algorithm</a><br><span class="muted">https://timeleft.com/post/timeleft-algorithm-the-maestro-of-your-dinners/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Explains how groups are put together. We take the idea of saying what an answer is used for: telling us about discomfort means you are not grouped with that person again.</p>
+<p class="leave"><span class="label">We leave:</span> We do not describe a matching model on this screen.</p></li>
+<li><a href="https://www.uber.com/us/en/ride/safety/tips/">Uber: ride safety tips</a><br><span class="muted">https://www.uber.com/us/en/ride/safety/tips/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Safety tools stay reachable after the trip, in the same place as before. Our Report stays on this screen.</p>
+<p class="leave"><span class="label">We leave:</span> We do not ask for a rating.</p></li>
+</ol></section>
+<section class="step" id="B14">
+<h2>B14. Settings and safety</h2>
+<p class="routes muted">Routes: <code>(app)/(tabs)/you.tsx</code>, <code>(app)/settings/*</code>, <code>(app)/report.tsx</code>, <code>(app)/settings/delete-account.tsx</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/you.html</code>, <code>final/report.html</code>, <code>final/delete-account.html</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B14.1"><td><code>B14.1</code></td><td>You tab: profile check state, Social profile, Women and non-binary groups (applies to plans you join from now on), Notifications, Blocked people, Safety and 112, Privacy notice, Grievance officer, Share usage data, Sign out, Delete account.</td><td><code>final/you.html</code></td></tr>
+<tr id="B14.2"><td><code>B14.2</code></td><td>Report: Call 112 first, who this is about, what happened, optional details, Send report. We read every report within 24 hours.</td><td><code>final/report.html</code></td></tr>
+<tr id="B14.3"><td><code>B14.3</code></td><td>Delete account: a WhatsApp code to confirm, what we delete, what we keep, Send code to delete, Keep my account.</td><td><code>final/delete-account.html</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Safety is a labelled button.</li><li>No in-app theme toggle. The phone decides.</li><li>Row component for every setting.</li><li>Delete account is in the app, not a web form, and asks for a WhatsApp code.</li><li>No danger colour on Delete account. It is a plain Row.</li><li>Call 112 sits at the top of Report.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://www.uber.com/us/en/ride/safety/tips/">Uber: ride safety tips</a><br><span class="muted">https://www.uber.com/us/en/ride/safety/tips/, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A named Safety Toolkit with Share My Trip and Emergency, easy to find. We take the named, labelled entry.</p>
+<p class="leave"><span class="label">We leave:</span> We link to Call 112 and Report, and have no trip sharing.</p></li>
+<li><a href="https://support.bumble.com/hc/en-us/articles/28783343585565-Reporting-someone">Bumble support: reporting someone</a><br><span class="muted">https://support.bumble.com/hc/en-us/articles/28783343585565-Reporting-someone, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Report from the profile and the chat, with reasons. (Blocks scripted fetches, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> We have no profile pages. Report is from the thread and the meet card.</p></li>
+<li><a href="https://support.bumble.com/hc/en-us/articles/28783893039389-Deleting-your-data">Bumble support: deleting your data</a><br><span class="muted">https://support.bumble.com/hc/en-us/articles/28783893039389-Deleting-your-data, HTTP 403 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Says what is removed and what stays for a while. We say the same in one short list. (Blocks scripted fetches, read through a search result.)</p>
+<p class="leave"><span class="label">We leave:</span> We do not offer a pause or a snooze. Delete is delete.</p></li>
+<li><a href="https://support.google.com/googleplay/android-developer/answer/13327111">Google Play: account deletion requirement</a><br><span class="muted">https://support.google.com/googleplay/android-developer/answer/13327111, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Apps that create accounts must offer deletion inside the app and on the web. This is a hard requirement for the Play release.</p>
+<p class="leave"><span class="label">We leave:</span> Nothing to leave. We build to it.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/managing-accounts">Apple HIG: Managing accounts</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/managing-accounts, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Let people delete an account from within the app, and say what is deleted.</p>
+<p class="leave"><span class="label">We leave:</span> We do not ask them to type a phrase to confirm.</p></li>
+</ol></section>
+<section class="step" id="B15">
+<h2>B15. Notifications</h2>
+<p class="routes muted">Routes: <code>cross-cutting</code></p>
+<p class="mock muted">Final mockups (outside git, linked by name only): <code>final/ticket-checking.html (pre-ask)</code>. Each has a -light variant.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B15.1"><td><code>B15.1</code></td><td>Pre-ask: Get told when your group is ready? Turn on, Not now. Shown after the first ticket submission only.</td><td><code>final/ticket-checking.html</code></td></tr>
+<tr id="B15.2"><td><code>B15.2</code></td><td>Push text rules: no names, no times of a person, nothing a lock screen should not say.</td><td><code>none, rule only</code></td></tr>
+</tbody></table>
+<h3>Approved copy, word for word</h3>
+<blockquote>Get told when your group is ready?</blockquote>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Push text carries no names.</li><li>Ask in context, once, after the first submission.</li><li>Not now is a real answer. We do not ask again on the next screen.</li><li>The handle_rejected push opens settings/social.</li></ul>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://developer.android.com/develop/ui/views/notifications/notification-permission">Android: notification runtime permission</a><br><span class="muted">https://developer.android.com/develop/ui/views/notifications/notification-permission, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> On Android 13 and up the permission is a runtime ask, so a pre-ask in our own words is what the platform expects.</p>
+<p class="leave"><span class="label">We leave:</span> We do not ask on first launch.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/managing-notifications">Apple HIG: Managing notifications</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/managing-notifications, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Ask for permission in context, when the value is clear. Our pre-ask appears with the ticket.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use provisional delivery in v1.</p></li>
+<li><a href="https://developer.apple.com/documentation/usernotifications/asking-permission-to-use-notifications">Apple: asking permission to use notifications</a><br><span class="muted">https://developer.apple.com/documentation/usernotifications/asking-permission-to-use-notifications, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> The system prompt shows once, so spend it after our own pre-ask. If the person says Not now we have not used it up.</p>
+<p class="leave"><span class="label">We leave:</span> We do not link to Settings from a nag.</p></li>
+</ol></section>
+<section class="step" id="B16">
+<h2>B16. Platform conventions</h2>
+<p class="routes muted">Routes: <code>cross-cutting</code></p>
+<p class="mock muted">No mockup. This step is a set of rules that apply to every screen.</p>
+<h3>Screens to review</h3>
+<table><thead><tr><th>ID</th><th>What to look at</th><th>Mockup</th></tr></thead><tbody>
+<tr id="B16.1"><td><code>B16.1</code></td><td>Navigation and tabs: bottom tab bar, system back, predictive back on Android.</td><td><code>none, rule only</code></td></tr>
+<tr id="B16.2"><td><code>B16.2</code></td><td>Sheets: grabber, drag to dismiss, back gesture closes.</td><td><code>none, rule only</code></td></tr>
+<tr id="B16.3"><td><code>B16.3</code></td><td>Text size and motion: dynamic type and font scaling, reduced motion.</td><td><code>none, rule only</code></td></tr>
+<tr id="B16.4"><td><code>B16.4</code></td><td>Pickers and permissions: system picker, permission asked in context, haptics.</td><td><code>none, rule only</code></td></tr>
+</tbody></table>
+<h3>Nightlife spec rules for this step</h3>
+<ul class="rules"><li>Tabs are never hidden or disabled.</li><li>Type scales with the phone settings. Tabular figures stay.</li><li>Reduced motion is respected everywhere. Motion exists in three places only.</li><li>Phosphor icons only. No blur or shadow on bars.</li></ul>
+<p class="note">This step cites Apple HIG and Material 3 only. Where they differ, the platform wins for navigation and gesture, the Nightlife spec wins for colour, type and shape.</p>
+<h3>References, accessed 2026-10-27</h3>
+<ol class="refs">
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/tab-bars">Apple HIG: Tab bars</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/tab-bars, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Do not hide or disable tabs. We keep all tabs visible even with no data.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use badges on tabs for marketing.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/sheets">Apple HIG: Sheets</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/sheets, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A grabber on resizable sheets, and Cancel or Done in a clear place.</p>
+<p class="leave"><span class="label">We leave:</span> We do not nest sheets.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/typography">Apple HIG: Typography</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/typography, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Support Dynamic Type and keep the hierarchy readable at large sizes.</p>
+<p class="leave"><span class="label">We leave:</span> We use Big Shoulders Display and Inter, not the system face.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/motion">Apple HIG: Motion</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/motion, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Make motion optional. We respect reduced motion and use motion in three places only.</p>
+<p class="leave"><span class="label">We leave:</span> No decorative motion.</p></li>
+<li><a href="https://developer.apple.com/design/human-interface-guidelines/playing-haptics">Apple HIG: Playing haptics</a><br><span class="muted">https://developer.apple.com/design/human-interface-guidelines/playing-haptics, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Use haptics consistently. We decide in F6 whether I&#x27;m here gets one.</p>
+<p class="leave"><span class="label">We leave:</span> No haptics on scroll or on tab change.</p></li>
+<li><a href="https://m3.material.io/components/navigation-bar/guidelines">Material 3: Navigation bar</a><br><span class="muted">https://m3.material.io/components/navigation-bar/guidelines, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> A bottom bar of 3 to 5 destinations with labels. Our three tabs fit.</p>
+<p class="leave"><span class="label">We leave:</span> We do not use the Material pill indicator colour. We follow the Nightlife palette.</p></li>
+<li><a href="https://m3.material.io/components/bottom-sheets/guidelines">Material 3: Bottom sheets</a><br><span class="muted">https://m3.material.io/components/bottom-sheets/guidelines, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Drag handle and a dismiss that matches the back gesture.</p>
+<p class="leave"><span class="label">We leave:</span> No side sheets.</p></li>
+<li><a href="https://developer.android.com/design/ui/mobile/guides/patterns/predictive-back">Android: predictive back</a><br><span class="muted">https://developer.android.com/design/ui/mobile/guides/patterns/predictive-back, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Back shows a preview of where you land. Sheets and stacks must handle it.</p>
+<p class="leave"><span class="label">We leave:</span> No custom back arrows that fight the system gesture.</p></li>
+<li><a href="https://developer.android.com/about/versions/14/features">Android 14: non-linear font scaling</a><br><span class="muted">https://developer.android.com/about/versions/14/features, HTTP 200 from the build host, accessed 2026-10-27</span>
+<p class="take"><span class="label">We take:</span> Font scaling goes up to 200 percent. Layouts must not clip at that size.</p>
+<p class="leave"><span class="label">We leave:</span> No fixed-height text containers.</p></li>
+</ol></section>
+</main><footer><p class="muted">Sources are also listed flat in sources.md. Final mockups live outside git.</p></footer></body></html>
