@@ -3,13 +3,17 @@
 # Skip once with LEFTHOOK=0 only when you know why; CI will run the same checks.
 
 pre-commit:
+  # check-server: types (five projects), lint, DESIGN.md lint, unit tests, dependency rules.
+  # check-mobile joins it when apps/mobile exists.
   jobs:
     - name: format staged files
       glob: "*.{ts,tsx,js,json,css}"
       run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true
-    - name: check (types, lint, design, tests, dependency rule)
-      run: bun run check
+    - name: check-server
+      run: bun run check:server
+    - name: gitleaks-staged
+      run: gitleaks git --staged --redact --no-banner
 
 pre-push:
   jobs:
