@@ -1,5 +1,5 @@
 import type { ReactNativeOptions } from "@sentry/react-native";
-import { scrubSentryEvent, scrubText, scrubUrl } from "./scrub";
+import { scrubBreadcrumb, scrubSentryEvent } from "./scrub";
 import type { SentryHandle } from "./telemetry";
 
 export interface SentrySettings {
@@ -29,12 +29,7 @@ export function sentryOptions({ dsn, environment, release }: SentrySettings): Re
     attachScreenshot: false,
     attachViewHierarchy: false,
     beforeSend: (event) => scrubSentryEvent(event),
-    beforeBreadcrumb: (crumb) => {
-      if (crumb.message !== undefined) crumb.message = scrubText(crumb.message);
-      const url = crumb.data?.url;
-      if (crumb.data !== undefined && typeof url === "string") crumb.data = { ...crumb.data, url: scrubUrl(url) };
-      return crumb;
-    },
+    beforeBreadcrumb: (crumb) => scrubBreadcrumb(crumb),
   };
 }
 

@@ -73,6 +73,16 @@ describe("scrubSentryEvent", () => {
     expect(JSON.stringify(event)).not.toContain("555");
   });
 
+  it("drops what a console breadcrumb logged and scrubs nested extra values", () => {
+    const event = scrubSentryEvent({
+      breadcrumbs: [{ category: "console", message: `sent ${PHONE}`, data: { arguments: ["sent", PHONE], logger: "console" } }],
+      extra: { form: { phone: PHONE, tries: [PHONE, 2] } },
+    });
+    expect(event.breadcrumbs?.[0]).toEqual({ category: "console", message: "sent [phone]", data: { logger: "console" } });
+    expect(event.extra).toEqual({ form: { phone: "[phone]", tries: ["[phone]", 2] } });
+    expect(JSON.stringify(event)).not.toContain("555");
+  });
+
   it("leaves an event with nothing to hide alone", () => {
     expect(scrubSentryEvent({ message: "boom" })).toEqual({ message: "boom" });
   });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appLinksFromEnv } from "../src/web/appLinks.js";
+import { appLinksFromEnv, rejectedAppLinkVars } from "../src/web/appLinks.js";
 import { siteResponse } from "../src/web/index.js";
 import { memoryDb } from "./helpers.js";
 
@@ -34,9 +34,36 @@ describe("appLinksFromEnv", () => {
   });
 
   test("iOS app ids are a trimmed comma list", () => {
-    expect(appLinksFromEnv({ APP_LINKS_IOS_APP_IDS: " TEAM12345.app.example.turnout , " }).iosAppIds).toEqual([
-      "TEAM12345.app.example.turnout",
+    expect(appLinksFromEnv({ APP_LINKS_IOS_APP_IDS: " TEAM123456.app.example.turnout , " }).iosAppIds).toEqual([
+      "TEAM123456.app.example.turnout",
     ]);
+  });
+
+  test("an iOS app id without a 10-character team id is dropped", () => {
+    expect(appLinksFromEnv({ APP_LINKS_IOS_APP_IDS: "TEAM1.app.example.turnout,app.example.turnout" }).iosAppIds).toEqual([]);
+  });
+});
+
+describe("rejectedAppLinkVars", () => {
+  test("names each set variable holding a value that is dropped", () => {
+    expect(
+      rejectedAppLinkVars({
+        APP_LINKS_ANDROID_PACKAGE: "not a package",
+        APP_LINKS_ANDROID_SHA256: `${FP_A},ZZ:11`,
+        APP_LINKS_IOS_APP_IDS: "app.example.turnout",
+      }),
+    ).toEqual(["APP_LINKS_ANDROID_PACKAGE", "APP_LINKS_ANDROID_SHA256", "APP_LINKS_IOS_APP_IDS"]);
+  });
+
+  test("is empty when nothing is set or everything is valid", () => {
+    expect(rejectedAppLinkVars({})).toEqual([]);
+    expect(
+      rejectedAppLinkVars({
+        APP_LINKS_ANDROID_PACKAGE: PACKAGE,
+        APP_LINKS_ANDROID_SHA256: FP_A,
+        APP_LINKS_IOS_APP_IDS: "TEAM123456.app.example.turnout",
+      }),
+    ).toEqual([]);
   });
 });
 
@@ -87,12 +114,12 @@ describe("/.well-known/apple-app-site-association", () => {
   });
 
   test("answers 200 JSON for the app ids once they are set", async () => {
-    const appLinks = appLinksFromEnv({ APP_LINKS_IOS_APP_IDS: "TEAM12345.app.example.turnout" });
+    const appLinks = appLinksFromEnv({ APP_LINKS_IOS_APP_IDS: "TEAM123456.app.example.turnout" });
     const response = get("/.well-known/apple-app-site-association", { appLinks });
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(await response.json()).toEqual({
-      applinks: { details: [{ appIDs: ["TEAM12345.app.example.turnout"], components: [{ "/": "/e/*" }] }] },
+      applinks: { details: [{ appIDs: ["TEAM123456.app.example.turnout"], components: [{ "/": "/e/*" }] }] },
     });
   });
 });

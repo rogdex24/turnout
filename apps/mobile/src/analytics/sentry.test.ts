@@ -27,6 +27,14 @@ describe("sentryOptions", () => {
     const crumb = options.beforeBreadcrumb?.({ message: "tapped +1 555-0142", data: { url: "https://a.example.com/x?t=1" } }, {});
     expect(crumb).toEqual({ message: "tapped [phone]", data: { url: "https://a.example.com/x" } });
   });
+
+  it("keeps only the logger of a console breadcrumb", () => {
+    const crumb = options.beforeBreadcrumb?.(
+      { category: "console", message: "otp +1 555-0142", data: { arguments: ["otp", "+1 555-0142"], logger: "console" } },
+      {},
+    );
+    expect(crumb).toEqual({ category: "console", message: "otp [phone]", data: { logger: "console" } });
+  });
 });
 
 describe("startSentry", () => {

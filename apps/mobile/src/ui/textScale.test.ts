@@ -1,5 +1,5 @@
 import { displayFaces, fontScaling } from "@turnout/design-tokens";
-import { fitDisplaySize, isLargeText, LARGEST_TEXT_SCALE, scaledMetrics, scaleFor } from "./textScale";
+import { displayFaceStyle, fitDisplaySize, isLargeText, LARGEST_TEXT_SCALE, scaledMetrics, scaleFor } from "./textScale";
 
 describe("scaleFor", () => {
   it("follows the person up to the cap", () => {
@@ -49,5 +49,14 @@ describe("fitDisplaySize", () => {
   it("allows more room when more lines are allowed", () => {
     const title = "Hyderabad Indie Music Night Live at the Lake";
     expect(fitDisplaySize(title, 240, "display-poster", 4)).toBeGreaterThanOrEqual(fitDisplaySize(title, 240, "display-poster", 2));
+  });
+});
+
+describe("displayFaceStyle", () => {
+  test("keeps the size inside the face's range and takes the face's line height", () => {
+    const { minFontSize, maxFontSize, lineHeightRatio } = displayFaces["display-numeral"];
+    expect(displayFaceStyle("display-numeral", 28)).toEqual({ fontSize: 28, lineHeight: Math.round(28 * lineHeightRatio) });
+    expect(displayFaceStyle("display-numeral", 99).fontSize).toBe(maxFontSize);
+    expect(displayFaceStyle("display-numeral", 1).fontSize).toBe(minFontSize);
   });
 });

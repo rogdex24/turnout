@@ -17,6 +17,7 @@ import { IconButton } from "@/ui/primitives/IconButton";
 import { dimOnPress } from "@/ui/primitives/press";
 import { Sheet } from "@/ui/primitives/Sheet";
 import { Text } from "@/ui/primitives/Text";
+import { displayFaceStyle } from "@/ui/textScale";
 import { lookingLine } from "./lookingLine";
 
 export type ShowDetailState =
@@ -99,7 +100,7 @@ function Facts({ show }: { show: ApiEvent }) {
             tabular
             allowFontScaling={false}
             className="font-display font-extrabold"
-            style={{ fontSize: 28, lineHeight: 28 }}
+            style={displayFaceStyle("display-numeral", 28)}
           >
             {price.amount}
           </Text>
@@ -156,7 +157,7 @@ function Looking({ count }: { count: number | null }) {
           tabular
           allowFontScaling={false}
           className="font-display font-extrabold"
-          style={{ fontSize: 32, lineHeight: 32 }}
+          style={displayFaceStyle("display-numeral", 32)}
         >
           {line.numeral}
         </Text>

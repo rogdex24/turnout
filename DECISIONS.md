@@ -390,7 +390,7 @@ Why. A patch release inside the SDK is what Expo tests against, and holding the 
 red until Renovate's 14-day window passes. The resolver keeps the contract valid ESM for the server
 without a build step for the app.
 
-## M2 app, A8 to A10
+## 2026-10-28: M2 app, A8 to A10
 
 - A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in
   `src/api/features.ts`) decides what it does. Off, which is the default, Go opens a Coming soon sheet. The show shows no "looking"
@@ -427,3 +427,7 @@ without a build step for the app.
   one typo does not hide the others. The one change in `src/cli.ts` reads the env and passes it to `siteResponse`.
 - `adb shell pm get-app-links` cannot be checked here: it needs the DNS host and the Play signing key. That step is listed in
   `docs/plans/mobile-accounts.md` as needs owner.
+- Review round. A console breadcrumb keeps only its `logger`: what the app logged never goes to Sentry, even scrubbed. The
+  scrubber now walks nested arrays and objects in breadcrumb data and `extra`. `serve` warns when an `APP_LINKS_*` value is set
+  but dropped, and an iOS app id needs a 10-character team id. The Show screen's price and step numerals use the
+  `display-numeral` face through `displayFaceStyle`, not raw sizes. `EXPO_PUBLIC_GROUPS_ENABLED` stays off until the A11 go route.

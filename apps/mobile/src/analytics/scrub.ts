@@ -32,8 +32,14 @@ export function scrubText(text: string): string {
     .replace(PHONE_RUN, (run) => (digitCount(run) >= 7 && !ISO_DATE.test(run.trim()) ? "[phone]" : run));
 }
 
+/** Scrubs a string, and every string inside an array or a plain object at any depth. */
 function scrubValue(value: unknown): unknown {
-  return typeof value === "string" ? scrubText(value) : value;
+  if (typeof value === "string") return scrubText(value);
+  if (Array.isArray(value)) return value.map(scrubValue);
+  if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+    return scrubRecord(value as Record<string, unknown>);
+  }
+  return value;
 }
 
 function scrubRecord(record: Record<string, unknown>): Record<string, unknown> {
@@ -44,13 +50,32 @@ function scrubRecord(record: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+export interface ScrubbableBreadcrumb {
+  category?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Scrubs a breadcrumb's message and data. A console breadcrumb keeps only its `logger`: its `arguments` are whatever the app
+ * logged, so they never leave the phone, even scrubbed.
+ */
+export function scrubBreadcrumb<B extends ScrubbableBreadcrumb>(crumb: B): B {
+  if (crumb.message !== undefined) crumb.message = scrubText(crumb.message);
+  if (crumb.data !== undefined) {
+    const { arguments: _logged, ...rest } = crumb.data;
+    crumb.data = scrubRecord(crumb.category === "console" ? rest : crumb.data);
+  }
+  return crumb;
+}
+
 /** The parts of a Sentry event this file reads. A real `ErrorEvent` fits it, and a test can pass a plain object. */
 export interface ScrubbableEvent {
   message?: string;
   user?: unknown;
   request?: { url?: string; data?: unknown; cookies?: unknown; headers?: unknown; query_string?: unknown };
   exception?: { values?: { value?: string }[] };
-  breadcrumbs?: { message?: string; data?: Record<string, unknown> }[];
+  breadcrumbs?: ScrubbableBreadcrumb[];
   extra?: Record<string, unknown>;
 }
 
@@ -65,10 +90,7 @@ export function scrubSentryEvent<E extends ScrubbableEvent>(event: E): E {
   for (const entry of event.exception?.values ?? []) {
     if (entry.value !== undefined) entry.value = scrubText(entry.value);
   }
-  for (const crumb of event.breadcrumbs ?? []) {
-    if (crumb.message !== undefined) crumb.message = scrubText(crumb.message);
-    if (crumb.data !== undefined) crumb.data = scrubRecord(crumb.data);
-  }
+  for (const crumb of event.breadcrumbs ?? []) scrubBreadcrumb(crumb);
   if (event.extra !== undefined) event.extra = scrubRecord(event.extra);
   return event;
 }
