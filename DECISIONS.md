@@ -574,3 +574,180 @@ patch name makes `bun install` fail loudly if the version moves under it.
   entitlement, the simulator keychain answered expo-secure-store with -34018 and the app opened on the start-failed screen.
   `ci/build-ios.sh` now signs to run locally (`CODE_SIGN_IDENTITY=-`, no team) and logs the entitlements. The native cache key
   gains `signed` so the unsigned cached build is not repacked again.
+
+## 2026-10-28: M3 server, where the build differs from the plan or fills a gap
+
+Context. The plan's section 4 M3 server tasks (S7 to S11, S15a, S19, S24) against the section 5
+contract and the section 6 rules. Each item below is a choice the plan did not settle or a place
+the build differs from it.
+
+1. **Alerts that must fire once use `alert_sent`.** The handle alert, the no-cafe alerts and the
+   other one-time operator alerts record a key in `alert_sent` with `INSERT OR IGNORE`, so a restart
+   or a second ticker does not repeat them. Notices use their own unique `dedupe_key`.
+2. **The `eligible_show` view holds no group rule.** It is `listable_event` with the operator's start
+   time and the venue's point. `isEligible` runs over each row with the tunables and the clock, so the
+   single 404 holds for a show past T-24h, free, not placed or unlisted. (Changed in the review round
+   below; the first version baked the default tunables into the view.)
+3. **A device is linked to the session that registered it.** `device.session_id` lets sign-out
+   remove that device's token. `revokeAllSessions` deletes the member's devices, so a reuse of a
+   refresh token also stops the pushes.
+4. **A plan needs only a pending or approved handle.** A member with a pending handle can make a
+   plan and send a ticket; the grouping pass skips anyone whose handle is not approved. A rejected
+   or missing handle is `handle_required`.
+5. **`plan_exists` carries `planId`,** so the app can open the plan it already has.
+6. **`lock_lapsed` picks its reason from where the plan stopped.** A plan with no group at T-24h
+   ends as `no_group`; the reason depends on the ticket and handle state at that moment, and the
+   ticker writes the `no_group` notice once (`dedupe_key` `no_group:<plan>`).
+7. **Never-pairs are stubbed until M4.** The grouping input has the field and the pass honors it; no
+   code fills it yet.
+8. **A ticket's `sha256` is of the original upload bytes,** with no re-encode, so the same file
+   sent for two plans is flagged as a duplicate in the admin queue.
+9. **A member who joins a group to refill it gets no notice to the existing members.** The size
+   shown in the group response changes; nothing is pushed about it.
+10. **A start-time change updates the plan and open-group snapshots** and is refused with 409
+    `too_late` inside T-24h and `group_locked` once a group has locked.
+11. **A withdrawn or called-off plan sets `group_id` to null,** so the plan stops pointing at a
+    group the member can no longer see. The `group_member` row keeps `left_at`.
+12. **The tick runs in a fixed order** (withdraw members who are gone, lock groups, lapse plans at
+    T-24h, grouping per show, reveal, head-over notices, finish shows, operator alerts) and the lease
+    is released after each pass (`finishLease`), not held across the 30 s gap, so a second process
+    can take over.
+13. **The pending-handle queue sorts by the earliest lock,** then by submit time.
+14. **Test tickets are built in code,** not read from a binary fixture file.
+15. **A member photo key is shared across groups.** The key is the profile's, so the same photo
+    link serves every group the member is in; links are still signed and short lived.
+16. **A ticket retry is idempotent.** Sending the same bytes again for a plan that already holds
+    that file answers 200 with the same ticket instead of a duplicate row.
+17. **`PUSH_SENDER` and `EXPO_ACCESS_TOKEN`.** `fake` or `expo`; production always uses `expo` and
+    refuses `fake`. The token is optional. Push goes after the commit that made the notice.
+18. **Housekeeping runs on each ticker pass** and each sweep is cheap and idempotent: expired OTP
+    rows, sessions, rate buckets, `push_delivery` and notices past retention, `alert_sent` and
+    `operator_action` past their windows. Ticket files due for deletion (T+24h) are dropped from the
+    store by the ticker, and the row keeps no key or hash. The orphan sweep now covers `tickets/` as well as
+    `photos/`.
+19. **`POST /__test/clock` takes an optional `tick`,** so a staging test can move time and run the
+    passes in one call.
+20. **`ErrorExtra`.** `app-api/errors.ts` lets an error body carry one extra field the app needs
+    next to `code` and `message` (for example `planId` on `plan_exists`).
+21. **`POST /plans` answers 201** and `GET /shows/:publicId` returns only a live plan in `plan`.
+22. **`/health` probes a write and reports the ticker's age,** so a stuck ticker is visible to the
+    uptime check without a separate route.
+23. **The app files route never serves `tickets/`.** A ticket file is for the operator only; the
+    key is a 404 there whatever the signature.
+24. **The admin opens ticket files and handle photos through its own signed routes.** The admin
+    cannot import `app-api` (dependency rules), so `src/admin/files.ts` signs and checks 5 minute
+    links with the same `FILE_LINK_SECRET` and opens the same store (`OBJECT_STORE`, `FILES_DIR` or
+    `S3_*`). A signed GET skips the bearer token but keeps the loopback Host check. Images are inline;
+    everything else is an attachment, with `nosniff` and a sandbox policy. With the secret unset or
+    `memory`, no link is made and the queues still work. The handle photo link opens only a pending
+    handle's photo.
+25. **The admin ticket and handle decisions use a two click confirm,** and a reject needs one of the
+    fixed reasons from the contract. A decision on something already decided, or past T-24h, shows
+    the server's 409 message.
+26. **Admin writes for tickets, handles, start times and cafes all go through `operator.ts`.** The
+    `operator_action` row is written in the same transaction. `AGENTS.md` now says "from M3" where
+    it said "from M4".
+
+Evidence. `test/socialPlans.test.ts`, `test/socialTick.test.ts`, `test/appPlans.test.ts`,
+`test/appTickets.test.ts`, `test/appGroups.test.ts`, `test/appNotices.test.ts`,
+`test/appPush.test.ts`, `test/appTicker.test.ts`, `test/appHousekeeping.test.ts`,
+`test/adminSocial.test.ts`, `test/appAuthz.test.ts`.
+
+Why. Each fills a gap the plan left, or applies a layering rule (item 24) that the plan did not
+foresee. None adds a package or a paid service.
+
+## 2026-10-28: M3 server, review round for PR 13
+
+Decision. A security review and a logic review of the M3 server each rated it medium risk. Each item
+below is fixed with a test.
+
+1. **Grouping looks at genders when it picks sizes.** It chose sizes first, so nine women and three
+   men placed six people instead of twelve. New groups now try every split of the waiting people into
+   groups of 4 to 6, largest total first, and keep the first split the caps allow. A property test
+   compares the placed count with a brute force search on mixed pools of up to 14.
+2. **Admin writes refuse another site.** The approve routes read no body, so a cross-site form POST to
+   the loopback panel passed. Without a token, every write needs a same-origin `Origin` or
+   `Sec-Fetch-Site`.
+3. **A signed admin file link passes in token mode,** and the admin and app links sign different
+   text, so one kind of link cannot be made from the other.
+4. **The reveal closes** `revealCloseHours` (24) after the start; the group route then answers the
+   single 404. `meetMinutesBefore` and `threadCloseHoursAfterStart` are tunables too.
+5. **Name, gender and photo are locked while the member is in a group** (409 `profile_locked`, as for
+   the handle), so the women-only rule and the photo review cannot be undone after placement.
+6. **Ticket uploads count attempts first.** `rate.ticketAttemptPerMemberHour` (60) is taken before the
+   body is read. The per-plan and per-day limits stay, so a retry of the same file is still free.
+7. **Notices are claimed before they are pushed,** so two passes cannot push one notice twice.
+8. **An operator alert is recorded as sent only after it went out,** and the handle alert is keyed by
+   show, so a failed send is retried and two shows do not share one alert.
+9. **`eligible_show` holds no group rule** (item 2 of the entry above).
+10. **`createPlan` and `addTicket` take the write lock first** (an immediate transaction). Two requests
+    for one show line up, and the one that loses answers `plan_exists` with the winner's `planId`.
+11. **`/health` checks the write lock at most every 5 seconds,** and device registration is limited to
+    20 an hour per member (`rate.deviceRegisterPerMemberHour`).
+
+Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminServer.test.ts`,
+`test/adminSocial.test.ts`, `test/appGroups.test.ts`, `test/schedule.test.ts`, `test/appProfile.test.ts`,
+`test/socialPlans.test.ts`, `test/socialPush.test.ts`, `test/socialTick.test.ts`,
+`test/appTicker.test.ts`, `test/appNotices.test.ts`, `test/eligibleShow.test.ts`.
+
+Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
+service.
+
+## 2026-10-28: M3 app (A11, A12, A13, A29), where the build differs from the plan or fills a gap
+
+No package was added. The server API and the contract schemas are used as they are.
+
+Plan page and Plans tab (A13)
+
+1. **No member name, photo or cafe is drawn on the plan page at any time.** The page shows counts and times from `groupFacts`
+   (the others in the group, the reveal time, the size). Names live on the meet card (A15). `PlanScreen.test.tsx` checks that no
+   member name is on the page before T-3h, and `loop-group.yaml` checks it on a device.
+2. **"No group yet" uses the show's `lookingCount`.** The contract has no `waitingCount`, so the finding card reads `lookingCount`
+   from GET /shows/:publicId and leaves the number out when it is unknown.
+3. **The reveal numeral is the others in the group** (`othersCount(size)`), with "plus you" after it. The size-3 note comes from
+   `belowPlan` and is hidden when `belowPlan` is null. The reveal time falls back to `revealFor(show.startsAt)` before the group
+   query answers.
+4. **The "How matching works" row is left out** because its destination does not exist yet. The Group chat row and the Ticket row
+   are information only; the thread is A19's.
+5. **The thumb and the Home bar use the category "other"**, since a plan carries no category.
+6. **Open meet card pushes `/groups/[groupId]/meet`**, A15's route. The group query is not persisted (`PERSISTED_PREFIXES` holds
+   only `plans`), so offline the page falls back to `plan.group.size`. Both A13 and A15 add a group query: whoever merges second
+   keeps one.
+7. **Cancel is a transparent modal with the Sheet inside**, like Go. A 409 `plan_closed` refetches the plan and closes the sheet.
+8. **The "group confirmed" moment is played once per plan**, tracked in prefs (`confirmedPlayed`).
+9. **The Plans tab badge counts plans that need the person** (add a ticket, send another ticket, open the meet card). The Home
+   bar prefers such a plan over one that is only waiting. `GET /plans` feeds the bar.
+
+Go, ticket and handle (A11, A12, A29)
+
+10. **The Go sheet is a transparent modal route** (`show/[publicId]/go.tsx`) with the Sheet inside, so the show stays behind the
+    scrim. `Sheet` actions gained `loading` and `testID`. "Go explained" and "ticket asked" are prefs, so the first-time line and
+    the notification ask show once.
+11. **The ticket page has a Send step after picking**, so a person sees the screenshot before it goes. A PDF is allowed through
+    the document picker only for `screenshot_or_pdf` (what the server accepts); BookMyShow is a screenshot. The reject-reason copy is
+    original.
+12. **The notification pre-ask only asks for permission.** Registering the token is A14's.
+13. **The handle strip is announced on iOS only** (`AccessibilityInfo.announceForAccessibility`); Android reads the live region.
+    `Field` gained an `inputRef` prop so Change handle can focus the field. Settings, Instagram or LinkedIn is Board B4.1.
+14. **`router.test.tsx` scripts `GET /plans` by default**, because Home now reads it for the bar.
+
+Maestro and the e2e server
+
+15. **The seven flows (`loop-join`, `ticket-rejected`, `loop-group`, `loop-no-group`, `group-shrinks`, `cancel`, `profile-check`)
+    have not run on a device.** No emulator or simulator is available where they were written, so they are checked only for valid
+    YAML, for the ids and words in the app's own tests, and for the server calls they make (below).
+16. **An operator sidecar, `e2e/mobile-operator.ts`, starts with `e2e/mobile-server.ts`** on the port after it. A flow cannot open
+    the admin app or sign in as the other members of a show, so the sidecar answers handles and tickets, sends a ticket for a member,
+    fills a show with members who have accepted tickets (then runs one grouping pass, since the server runs with `--no-ticker`),
+    and makes a member leave. It uses the server's own functions, the same `x-staging-test-token`, and the server's clock.
+    `test/mobileServer.test.ts` drives it against a real server: ticket sent, turned down, accepted, a group of four, the clock
+    moved past T-24h, and a leaver after the lock leaving three.
+17. **Ticket upload through the system picker is not covered by Maestro.** The sidecar sends the ticket; the upload path is
+    covered by the component tests.
+18. **The e2e build turns groups on** (`EXPO_PUBLIC_GROUPS_ENABLED=1` in `ci/env.sh` and the `e2e` profile). `browse.yaml` now
+    opens the Go sheet and closes it with Not now where it used to expect Coming soon.
+19. **The plan flows wait up to 80 seconds** for a change the operator made, because the plan page and Home ask once a minute.
+    The last two flows move the server's clock, so `config.yaml` runs them last.
+
+Why. Each keeps what the plan promises (no names before T-3h, no guilt copy, no step that is not needed) and fills the gaps the
+contract and the server left, without a new package or a paid service.
