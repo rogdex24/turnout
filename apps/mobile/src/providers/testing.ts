@@ -4,6 +4,7 @@ import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { memoryKv, PREF_KEYS } from "../api/prefs";
 import { memorySecretStore, SECRET_KEYS } from "../api/secureStorage";
 import { json, type RouteReply, routedTransport, testQueryClient, tokenPairBody } from "../api/testing";
+import type { WhatsAppOtp } from "../api/whatsappOtp";
 import { type AppDeps, createAppDeps } from "./deps";
 
 export const TEST_ORIGIN = "http://test.local";
@@ -37,6 +38,7 @@ export interface TestAppOptions {
   acceptedNotice?: string;
   routes?: Record<string, RouteReply | RouteReply[]>;
   now?: () => number;
+  whatsappOtp?: WhatsAppOtp;
 }
 
 export interface TestApp {
@@ -72,6 +74,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
     appVersion: "0.0.0-test",
     queryClient,
     now,
+    whatsappOtp: options.whatsappOtp,
   });
   return { deps, queryClient, transport, prefs, secure };
 }

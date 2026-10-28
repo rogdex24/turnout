@@ -51,6 +51,30 @@ describe("signed out", () => {
     await on("sign-in");
   });
 
+  test("the code screen opens over the phone screen and system back returns to it", async () => {
+    await launch({
+      welcomeSeen: true,
+      acceptedNotice: NOTICE_VERSION,
+      routes: {
+        "POST /auth/otp": json(200, { challengeId: "c-1", expiresAt: "2026-10-28T10:10:00.000Z" }),
+        "GET /auth/otp/c-1": json(200, { deliveryStatus: "sent" }),
+      },
+    });
+    await on("sign-in");
+    await fireEvent.changeText(screen.getByTestId("phone-input"), ["98", "765", "43210"].join(""));
+    await fireEvent.press(screen.getByTestId("send-code"));
+    await on("code");
+    expect(screen).toHavePathname("/code");
+    await act(() => router.back());
+    await on("sign-in");
+    expect(screen).toHavePathname("/sign-in");
+  });
+
+  test("a cold start on the code screen goes to the phone screen", async () => {
+    await launch({ welcomeSeen: true, acceptedNotice: NOTICE_VERSION }, "/code");
+    await on("sign-in");
+  });
+
   test("a notice version this phone has not stored asks again", async () => {
     await launch({ welcomeSeen: true, acceptedNotice: "2000-01-01" });
     await on("notice");

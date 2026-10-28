@@ -321,3 +321,13 @@ members out whenever a response was lost on a bad network.
 - Jest `roots` now include `modules`, so the config plugin test runs under `bun run check`.
 - The code screen's "Not there yet?" and the resend wait are two clocks: the prompt shows 60 seconds after the send, or when the
   resend wait ends if that is later, and Send again stays off until the resend wait ends.
+- The sign-in screens (A5) share one `SignInFlowProvider` in the `(onboarding)` layout: the typed number, and the code that was sent
+  (phone, challenge id, send time, when Send again opens). The code route sends a cold start back to the phone step, since there is
+  no challenge to enter. The phone step has no back button, because nothing sits before it in the sign-in step.
+- Sign-in polls `GET /auth/otp/:id` every 3 seconds from second 3 to second 117 (39 asks), then stops. `undeliverable` swaps the
+  boxes for the "not on WhatsApp" note with Change number only; `failed` says the code did not arrive and opens Send again early.
+- The same refusal sentence shows for any 403 on send or verify, so the screen never says why a number was turned away.
+- `BackBar` (a back arrow row) and the `icon` and `disabled` props on `TextButton` are new for the code screen; `allowSeedNumbers`
+  (`src/api/variant.ts`) lets the development and e2e builds type a full +1 202 555 01xx seed number, the production build never does.
+- Maestro `otp-errors.yaml` waits out the 30 second resend wait, so it takes about a minute. CI passes the server's token to the
+  flows as `TEST_TOKEN`, read from the seeded server's log and masked.

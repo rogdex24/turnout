@@ -1,6 +1,7 @@
 // Board: B2.1
-import { Stub } from "@/screens/boot/Stub";
+import { router } from "expo-router";
+import { PhoneScreen } from "@/screens/signin/PhoneScreen";
 
-export default function Screen() {
-  return <Stub name="sign-in" />;
+export default function SignIn() {
+  return <PhoneScreen onSent={() => router.push("/code")} />;
 }

@@ -8,3 +8,4 @@ executionOrder:
     - launch
     - smoke
     - onboarding
+    - otp-errors

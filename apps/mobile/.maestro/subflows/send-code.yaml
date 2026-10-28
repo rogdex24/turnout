@@ -1,0 +1,9 @@
+# Types PHONE on the phone step and sends the code. Expects the phone step to be open.
+appId: com.turnout.app.e2e
+name: send code
+---
+- tapOn:
+    id: phone-input
+- inputText: ${PHONE}
+- tapOn:
+    id: send-code

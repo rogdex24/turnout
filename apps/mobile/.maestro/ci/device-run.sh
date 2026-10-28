@@ -3,6 +3,7 @@
 #   device-run.sh <android-small|android-large|ios-small|ios-large>
 # Needs on PATH: maestro, jq, and adb (Android) or xcrun (iOS). Environment:
 #   SERVER_URL  the seeded server as the host sees it, for example http://localhost:3917 (the job starts the server)
+#   TEST_TOKEN  the server's STAGING_TEST_TOKEN (it prints one when it starts), for the flows that read sign-in codes
 #   SHOT_DIR    where the shots go, one folder per story: <story>/<theme>-<text>.png (the job uploads it as visual-shots-<target>)
 # Written for the pinned images in .github/workflows/ci.yml.
 set -euo pipefail
@@ -38,7 +39,7 @@ else
 fi
 
 echo "::group::flows"
-maestro test -e "SERVER_URL=$SERVER_URL" "$here"
+maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
 echo "::endgroup::"
 
 echo "::group::visual capture"
