@@ -515,6 +515,13 @@ launch on a missing `ExpoModulesJSI` symbol, so `expo` moved to 58.0.21 too and 
 Only `jest-expo` stays excluded. The onboarding flow now matches the step count as the end of the
 card's label (`.*1 of 3`), because Maestro compares `assertVisible` text with the whole label.
 
+`expo-modules-jsi` 58.0.21 does not compile under Xcode 26.2 (Swift 6.2): `withEncodedValue` in
+`JavaScriptObject.swift` captures a `nonisolated(unsafe) let` in an isolated closure, and the compiler
+reports "sending 'slot' risks causing data races". The package's own `UncheckedSendable` comment
+says to wrap such a capture, so `patches/expo-modules-jsi@58.0.21.patch` (a `bun patch`) wraps the
+slot and changes nothing else. Drop the patch when a newer `expo-modules-jsi` compiles; the pin in the
+patch name makes `bun install` fail loudly if the version moves under it.
+
 ## 2026-10-28: M2 app, A8 to A10
 
 - A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in

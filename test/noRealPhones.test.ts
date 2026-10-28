@@ -71,6 +71,6 @@ test("the scan skips binary files", () => {
 });
 
 test("the scan allows example addresses, file names with @ and the published takedown address", () => {
-  const text = `ana@example.com sprite@2x.png ${TAKEDOWN_EMAIL}`;
+  const text = `ana@example.com sprite@2x.png patches/expo-modules-jsi@58.0.21.patch ${TAKEDOWN_EMAIL}`;
   expect(scanText("a.txt", text, allow)).toEqual([]);
 });

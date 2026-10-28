@@ -1,0 +1,17 @@
+diff --git a/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift b/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
+index de76b9762d8f3cdd05a68fca7a01e8f1b0af973f..6d04206d5e5ef031cd95db31ee98a488380477d6 100644
+--- a/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
++++ b/apple/Sources/ExpoModulesJSI/Runtime/Values/JavaScriptObject.swift
+@@ -941,9 +941,11 @@ private func withEncodedValue(
+     }
+     // The runtime can't be deallocated during a call on its JavaScript thread, so it's borrowed without
+     // a retain.
++    // Swift 6.2 reports a data race for a captured `nonisolated(unsafe) let`, so the slot is wrapped.
++    let slotBox = UncheckedSendable(slot)
+     try runtime._withUnsafeGuaranteedRef { runtime in
+       try JavaScriptActor.assumeIsolated {
+-        try encode(JavaScriptValue.Slot(slot), runtime)
++        try encode(JavaScriptValue.Slot(slotBox.value), runtime)
+       }
+     }
+     body(slot.pointee)
