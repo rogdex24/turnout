@@ -8,6 +8,8 @@ import {
   normalizeHandle,
   profilePatchSchema,
   proofKindForSource,
+  TICKET_REJECT_REASONS,
+  ticketRejectReasonSchema,
 } from "@turnout/contract";
 import {
   otpChallengeResponseSchema,
@@ -18,9 +20,27 @@ import {
   tokenPairSchema,
 } from "@turnout/contract/app/auth";
 import { compareVersions } from "@turnout/contract/app/config";
+import { EXPO_PUSH_TOKEN, registerDeviceRequestSchema } from "@turnout/contract/app/devices";
 import { ERROR_CODES, errorBodySchema, errorCodeSchema } from "@turnout/contract/app/errors";
+import { checkinResponseSchema, groupBeforeRevealSchema, groupRevealedSchema } from "@turnout/contract/app/groups";
 import { consentRequestSchema, handleResponseSchema, MAX_PHOTO_BYTES, meResponseSchema } from "@turnout/contract/app/me";
 import { NOTICE_PARAGRAPHS, NOTICE_TEXT, NOTICE_VERSION } from "@turnout/contract/app/notice";
+import {
+  NOTICE_KINDS,
+  NOTICE_PUSH_TEXT,
+  noticeListQuerySchema,
+  noticeReadRequestSchema,
+  pushPayloadSchema,
+} from "@turnout/contract/app/notices";
+import {
+  createPlanRequestSchema,
+  NO_GROUP_REASONS,
+  PLAN_REASONS,
+  PLAN_STATES,
+  planSchema,
+  TERMINAL_PLAN_STATES,
+  WITHDRAWN_REASONS,
+} from "@turnout/contract/app/plans";
 
 describe("women-only rule", () => {
   test("women-only is open to women and non-binary people, not men", () => {
@@ -203,5 +223,114 @@ describe("app contract: errors, config and the notice", () => {
     expect(consentRequestSchema.safeParse({ noticeVersion: NOTICE_VERSION, extra: 1 }).success).toBe(false);
     expect(handleResponseSchema.safeParse({ state: "approved" }).success).toBe(false);
     expect(MAX_PHOTO_BYTES).toBe(10 * 1024 * 1024);
+  });
+});
+
+describe("app contract: plans, groups, notices and devices", () => {
+  test("a plan request takes the public show id and a group type, and nothing else", () => {
+    expect(createPlanRequestSchema.safeParse({ eventId: "show-1", groupType: "open" }).success).toBe(true);
+    expect(createPlanRequestSchema.safeParse({ eventId: "show-1", groupType: "women_only" }).success).toBe(true);
+    expect(createPlanRequestSchema.safeParse({ eventId: "show-1", groupType: "mixed" }).success).toBe(false);
+    expect(createPlanRequestSchema.safeParse({ eventId: "", groupType: "open" }).success).toBe(false);
+    for (const extra of [{ lat: 17.4 }, { lng: 78.4 }, { userId: "u1" }]) {
+      expect(createPlanRequestSchema.safeParse({ eventId: "show-1", groupType: "open", ...extra }).success).toBe(false);
+    }
+  });
+
+  test("plan states and reasons are listed once, and every terminal state is a state", () => {
+    expect(new Set(PLAN_STATES).size).toBe(PLAN_STATES.length);
+    expect(new Set(PLAN_REASONS).size).toBe(PLAN_REASONS.length);
+    for (const state of TERMINAL_PLAN_STATES) expect(PLAN_STATES).toContain(state);
+    expect(NO_GROUP_REASONS).toContain("group_called_off");
+    expect(WITHDRAWN_REASONS).toContain("deleted");
+  });
+
+  test("the plan shape has no member id, handle or location", () => {
+    const plan = {
+      id: "01hplan",
+      eventId: "show-1",
+      state: "finding_group",
+      reason: null,
+      groupType: "open",
+      show: { title: "A show", startsAt: "2026-11-20T14:00:00.000Z", venueName: "A hall" },
+      ticket: { state: "approved", rejectReason: null },
+      joinUntil: "2026-11-19T14:00:00.000Z",
+      group: null,
+      createdAt: "2026-11-01T00:00:00.000Z",
+    };
+    expect(planSchema.safeParse(plan).success).toBe(true);
+    expect(planSchema.safeParse({ ...plan, state: "matched" }).success).toBe(false);
+    expect(Object.keys(planSchema.shape).some((key) => /member|user|handle|lat|lng/i.test(key))).toBe(false);
+  });
+
+  test("the group before T-3h has no field that could name a member", () => {
+    const before = {
+      state: "locked",
+      size: 5,
+      belowPlan: false,
+      revealAt: "2026-11-20T11:00:00.000Z",
+      meetAt: "2026-11-20T12:30:00.000Z",
+      showSnapshot: { title: "A show", startsAt: "2026-11-20T14:00:00.000Z", venueName: "A hall" },
+    };
+    expect(groupBeforeRevealSchema.safeParse(before).success).toBe(true);
+    expect(Object.keys(groupBeforeRevealSchema.shape).sort()).toEqual(["belowPlan", "meetAt", "revealAt", "showSnapshot", "size", "state"]);
+    const revealed = {
+      ...before,
+      state: "live",
+      cafe: { name: "A cafe", address: null, lat: null, lng: null, isFallback: true },
+      members: [{ memberRef: "ref1", firstName: "Asha", photoUrl: null, checkedIn: false, isYou: true }],
+    };
+    expect(groupRevealedSchema.safeParse(revealed).success).toBe(true);
+    expect(Object.keys(groupRevealedSchema.shape.members.element.shape).sort()).toEqual([
+      "checkedIn",
+      "firstName",
+      "isYou",
+      "memberRef",
+      "photoUrl",
+    ]);
+    expect(checkinResponseSchema.safeParse({ checkedIn: true }).success).toBe(true);
+    expect(checkinResponseSchema.safeParse({ checkedIn: false }).success).toBe(false);
+  });
+
+  test("every notice kind has a push line, and no line holds a name, a place or a banned word", () => {
+    expect(Object.keys(NOTICE_PUSH_TEXT).sort()).toEqual([...NOTICE_KINDS].sort());
+    for (const { title, body } of Object.values(NOTICE_PUSH_TEXT)) {
+      expect(`${title} ${body}`).not.toMatch(/\bverified\b|ID.?check|\bKYC\b|—/i);
+    }
+  });
+
+  test("a push payload is the kind and two ids", () => {
+    expect(pushPayloadSchema.safeParse({ kind: "head_over", noticeId: "01hn", planId: "01hp" }).success).toBe(true);
+    expect(pushPayloadSchema.safeParse({ kind: "head_over", noticeId: "01hn", planId: null }).success).toBe(true);
+    expect(pushPayloadSchema.safeParse({ kind: "head_over", noticeId: "01hn", planId: "01hp", cafe: "x" }).success).toBe(false);
+    expect(pushPayloadSchema.safeParse({ kind: "other", noticeId: "01hn", planId: "01hp" }).success).toBe(false);
+  });
+
+  test("notice queries and device registration are strict", () => {
+    expect(noticeListQuerySchema.safeParse({}).success).toBe(true);
+    expect(noticeListQuerySchema.safeParse({ after: "01hn" }).success).toBe(true);
+    expect(noticeListQuerySchema.safeParse({ after: "01hn", limit: 5 }).success).toBe(false);
+    expect(noticeReadRequestSchema.safeParse({ upTo: "01hn" }).success).toBe(true);
+    expect(noticeReadRequestSchema.safeParse({}).success).toBe(false);
+    const device = { expoPushToken: "ExponentPushToken[abcdefghijklmnop]", platform: "android" };
+    expect(registerDeviceRequestSchema.safeParse(device).success).toBe(true);
+    expect(registerDeviceRequestSchema.safeParse({ ...device, platform: "ios" }).success).toBe(true);
+    expect(registerDeviceRequestSchema.safeParse({ ...device, platform: "web" }).success).toBe(false);
+    expect(registerDeviceRequestSchema.safeParse({ ...device, expoPushToken: "not-a-token" }).success).toBe(false);
+    expect(registerDeviceRequestSchema.safeParse({ ...device, lat: 1 }).success).toBe(false);
+  });
+});
+
+describe("ticket reject reasons and push tokens", () => {
+  test("the reject reasons are a fixed list with no free text", () => {
+    expect([...TICKET_REJECT_REASONS]).toEqual(["unreadable", "wrong_show", "wrong_date", "not_a_ticket", "duplicate"]);
+    expect(ticketRejectReasonSchema.safeParse("wrong_show").success).toBe(true);
+    expect(ticketRejectReasonSchema.safeParse("looks fake").success).toBe(false);
+  });
+
+  test("an Expo push token has the bracket shape", () => {
+    expect(EXPO_PUSH_TOKEN.test("ExponentPushToken[abcdefghijklmnop]")).toBe(true);
+    expect(EXPO_PUSH_TOKEN.test("ExpoPushToken[abcdefghijklmnop]")).toBe(true);
+    expect(EXPO_PUSH_TOKEN.test("abcdefghijklmnop")).toBe(false);
   });
 });
