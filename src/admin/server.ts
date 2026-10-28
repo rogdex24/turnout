@@ -185,7 +185,8 @@ export async function apiResponse(ctx: AdminContext, request: Request): Promise<
     SIGNED_FILE_PATH.test(pathname) &&
     ctx.files != null &&
     verifyAdminLink(ctx.files, pathname, url.searchParams, clock(ctx)());
-  const denied = guard(request, signed ? undefined : ctx.token);
+  // A valid signature is the whole credential for that one file, on any host, with or without a token.
+  const denied = signed ? null : guard(request, ctx.token);
   if (denied) return denied;
 
   let pathMatched = false;

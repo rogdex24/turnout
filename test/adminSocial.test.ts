@@ -4,6 +4,7 @@ import type { AdminFiles } from "../src/admin/files.js";
 import { adminFilesFromEnv, signAdminLink, verifyAdminLink } from "../src/admin/files.js";
 import type { AdminContext } from "../src/admin/server.js";
 import { apiResponse } from "../src/admin/server.js";
+import { signFileLink, verifyFileLink } from "../src/app-api/fileLinks.js";
 import { runGroupingPass } from "../src/social/groups.js";
 import { createPlan, type PlanRow } from "../src/social/plans.js";
 import { addTicket } from "../src/social/tickets.js";
@@ -113,6 +114,15 @@ describe("admin links", () => {
     expect(verifyAdminLink({ ...files, secret: "another-secret-0123456789abcdef0123" }, path, new URLSearchParams(query), NOW)).toBe(false);
   });
 
+  test("a signature made for an app file link is no admin link, even over the same text", () => {
+    const { files } = rig();
+    const path = "/api/tickets/t1/file";
+    const app = new URL(`http://x${signFileLink(SECRET, path, NOW, 300)}`);
+    expect(verifyAdminLink(files, path, app.searchParams, NOW)).toBe(false);
+    const admin = new URL(`http://x${signAdminLink(files, path, NOW)}`);
+    expect(verifyFileLink(SECRET, path, admin.searchParams.get("exp"), admin.searchParams.get("sig"), NOW)).toBe(false);
+  });
+
   test("the store comes from the same settings as the app API, and is off without the secret", () => {
     expect(adminFilesFromEnv({})).toBeNull();
     expect(adminFilesFromEnv({ FILE_LINK_SECRET: SECRET, OBJECT_STORE: "memory" })).toBeNull();
@@ -200,6 +210,16 @@ describe("ticket queue", () => {
     expect(download.headers.get("content-disposition")).toBe("attachment");
     expect(download.headers.get("content-type")).toBe("application/octet-stream");
     expect(await download.text()).toBe("%PDF-1.4 test");
+  });
+
+  test("a signed link opens on a host that is not loopback, which a token-protected panel may be served from", async () => {
+    const r = rig();
+    const show = seedShow(r.db, { id: "x" });
+    const a = await ticketed(r, show);
+    const own = signAdminLink(r.files, `/api/tickets/${a.ticketId}/file`, NOW);
+    expect((await apiResponse(r.ctx, new Request(`http://admin.example${own}`))).status).toBe(200);
+    // The signature opens only that file: a plain read from the same host still needs the token.
+    expect((await apiResponse(r.ctx, new Request("http://admin.example/api/tickets"))).status).toBe(401);
   });
 
   test("a bad, expired or borrowed signature is a 401, and a missing file a 404", async () => {

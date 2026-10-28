@@ -12,8 +12,9 @@ export interface AdminFiles {
   ttlSeconds: number;
 }
 
+/** The text is tagged "admin" so a signature made for an app file link (tagged "app" in the app API) never opens an admin route. */
 const signature = (secret: string, pathname: string, expiresAtSeconds: number): string =>
-  createHmac("sha256", secret).update(`${pathname}\n${expiresAtSeconds}`).digest("base64url");
+  createHmac("sha256", secret).update(`admin\n${pathname}\n${expiresAtSeconds}`).digest("base64url");
 
 /**
  * A link to one admin file route. A browser tab cannot send the bearer token, so the link carries its own proof: the path and the expiry
