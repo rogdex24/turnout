@@ -18,13 +18,13 @@ env:
       id: welcome
     timeout: 30000
 - assertVisible: "Everyone signs in with a phone number, a real photo and a social profile we check."
-- assertVisible: "1 of 3"
+- assertVisible: ".*1 of 3"
 - tapOn:
     id: welcome-next
-- assertVisible: "2 of 3"
+- assertVisible: ".*2 of 3"
 - swipe:
     direction: LEFT
-- assertVisible: "3 of 3"
+- assertVisible: ".*3 of 3"
 - assertVisible: "Get started"
 - tapOn:
     id: welcome-next

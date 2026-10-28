@@ -389,3 +389,9 @@ Bun map to the `.ts` file and Metro does not. `apps/mobile/metro.config.js` now 
 Why. A patch release inside the SDK is what Expo tests against, and holding the old pin leaves CI
 red until Renovate's 14-day window passes. The resolver keeps the contract valid ESM for the server
 without a build step for the app.
+
+The module patches also need the matching native core. With `expo` held at 58.0.11, iOS crashed at
+launch on a missing `ExpoModulesJSI` symbol, so `expo` moved to 58.0.21 too and left
+`expo.install.exclude`, so `expo install --check` now flags `expo` when it falls behind its modules.
+Only `jest-expo` stays excluded. The onboarding flow now matches the step count as the end of the
+card's label (`.*1 of 3`), because Maestro compares `assertVisible` text with the whole label.
