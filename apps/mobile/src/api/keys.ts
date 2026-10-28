@@ -10,6 +10,8 @@ export const queryKeys = {
   areas: () => ["areas"] as const,
   showsList: (area: string | null) => ["shows", "list", { area }] as const,
   showDetail: (publicId: string) => ["shows", "detail", publicId] as const,
+  /** The member's view of a show (GET /shows/:publicId): the proof kind, how many are looking and the caller's own plan. */
+  showMember: (publicId: string) => ["shows", "member", publicId] as const,
   plansList: () => ["plans", "list"] as const,
   planDetail: (planId: string) => ["plans", "detail", planId] as const,
   group: (groupId: string) => ["group", groupId] as const,
@@ -24,6 +26,7 @@ export const STALE_TIMES: readonly { prefix: QueryKey; staleTime: number }[] = [
   { prefix: ["config"], staleTime: HOUR },
   { prefix: ["shows", "list"], staleTime: 5 * MINUTE },
   { prefix: ["shows", "detail"], staleTime: MINUTE },
+  { prefix: ["shows", "member"], staleTime: 30_000 },
   { prefix: ["areas"], staleTime: 24 * HOUR },
   { prefix: ["plans", "list"], staleTime: 30_000 },
   { prefix: ["plans", "detail"], staleTime: 30_000 },
@@ -34,11 +37,12 @@ export const STALE_TIMES: readonly { prefix: QueryKey; staleTime: number }[] = [
 ];
 
 /**
- * Only these are written to disk, so an offline start shows the shows and the person's own state. Everything else (plans, the
- * group, the thread, the after-show screen, the blocked list) is added to this list by the task that builds its screen, with its
- * own rule for what is kept; a key that is not listed is never persisted.
+ * Only these are written to disk, so an offline start shows the shows and the person's own state. The plans are the person's own
+ * and carry no other member, so the list and each plan are kept. Everything else (the group, the thread, the after-show screen, the
+ * blocked list, the member view of a show) is added to this list by the task that builds its screen, with its own rule for what is
+ * kept; a key that is not listed is never persisted.
  */
-export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"]];
+export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"], ["plans"]];
 
 export function keyStartsWith(key: QueryKey, prefix: QueryKey): boolean {
   return prefix.length <= key.length && prefix.every((part, index) => part === key[index]);

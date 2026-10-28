@@ -30,6 +30,18 @@ describe("classifyFailure", () => {
     expect(error.code).toBeNull();
   });
 
+  test("carries the plan a plan_exists answer names and the items a not_matchable answer lists", () => {
+    const exists = classifyFailure(409, JSON.stringify({ error: { code: "plan_exists", message: "m", planId: "p1" } }), null);
+    expect(exists.detail).toEqual({ planId: "p1", missing: null });
+    const missing = classifyFailure(
+      409,
+      JSON.stringify({ error: { code: "not_matchable", message: "m", missing: ["photo", "handle"] } }),
+      null,
+    );
+    expect(missing.detail).toEqual({ planId: null, missing: ["photo", "handle"] });
+    expect(classifyFailure(409, body("plan_closed"), null).detail).toEqual({ planId: null, missing: null });
+  });
+
   test("carries Retry-After on a 429", () => {
     expect(classifyFailure(429, body("rate_limited"), "42").retryAfterSeconds).toBe(42);
   });

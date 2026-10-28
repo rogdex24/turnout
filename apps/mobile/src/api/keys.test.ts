@@ -8,6 +8,7 @@ describe("query keys", () => {
       queryKeys.areas(),
       queryKeys.showsList("Bandra"),
       queryKeys.showDetail("abc"),
+      queryKeys.showMember("abc"),
       queryKeys.plansList(),
       queryKeys.planDetail("p1"),
       queryKeys.group("g1"),
@@ -27,6 +28,7 @@ describe("query keys", () => {
     expect(staleFor(queryKeys.config())).toBe(60 * minute);
     expect(staleFor(queryKeys.showsList(null))).toBe(5 * minute);
     expect(staleFor(queryKeys.showDetail("x"))).toBe(minute);
+    expect(staleFor(queryKeys.showMember("x"))).toBe(30_000);
     expect(staleFor(queryKeys.areas())).toBe(24 * 60 * minute);
     expect(staleFor(queryKeys.plansList())).toBe(30_000);
     expect(staleFor(queryKeys.planDetail("x"))).toBe(30_000);
@@ -42,6 +44,10 @@ describe("query keys", () => {
     expect(isPersistedKey(queryKeys.areas())).toBe(true);
     expect(isPersistedKey(queryKeys.showsList("Bandra"))).toBe(true);
     expect(isPersistedKey(queryKeys.showDetail("abc"))).toBe(false);
+    expect(isPersistedKey(queryKeys.showMember("abc"))).toBe(false);
+    expect(isPersistedKey(queryKeys.plansList())).toBe(true);
+    expect(isPersistedKey(queryKeys.planDetail("p1"))).toBe(true);
+    expect(isPersistedKey(queryKeys.group("g1"))).toBe(false);
     expect(isPersistedKey(queryKeys.after("g1"))).toBe(false);
     expect(isPersistedKey(queryKeys.blocked())).toBe(false);
     expect(isPersistedKey(["something", "new"])).toBe(false);
