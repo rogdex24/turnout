@@ -1,0 +1,25 @@
+# EAS uploads the git repository root for a monorepo build. A build needs apps/mobile, packages/ (the contract and the design
+# tokens), the root package.json and bun.lock. Everything else stays out of the upload.
+/src
+/test
+/e2e
+/bench
+/data
+/docs
+/scripts
+/lint
+/.github
+/.playwright-mcp
+/DESIGN.md
+/playwright.config.ts
+
+# apps/mobile build outputs and test-only files
+apps/mobile/ios
+apps/mobile/android
+apps/mobile/.expo
+apps/mobile/dist
+apps/mobile/.maestro
+apps/mobile/jest
+apps/mobile/**/*.test.ts
+apps/mobile/**/*.test.tsx
+node_modules

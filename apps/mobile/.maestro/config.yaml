@@ -1,0 +1,9 @@
+# Maestro workspace config. Run from apps/mobile: `maestro test .maestro` runs the flows in flows/.
+# The visual capture flow in visual/ is run by path, one story at a time (see visual/README.md).
+flows:
+  - "flows/*.yaml"
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - launch
+    - smoke

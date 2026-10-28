@@ -108,3 +108,34 @@ Names only; no value is written here.
 | Staging token | Generate `STAGING_TEST_TOKEN` on the staging host only | `docs/deploy.md` | blocked: host slot |
 | Photo backup choice | Decide whether to back up the files directory, since photos are outside the Litestream backup | `docs/deploy.md` | pending: user |
 | HEIC check on a real phone | Upload an iPhone HEIC photo through the app. The server sniffs it and decodes with `Bun.Image`, which could not be exercised on the Linux build machine | `DECISIONS.md` | pending: user |
+
+## Needs owner: what the scaffold (F12 to F21) left open
+
+The mobile scaffold builds and tests without any account. Each item below is something only the
+owner can do, and what stays off until it is done. Status values are as above.
+
+| Item | What to do | Unlocks | Status |
+|---|---|---|---|
+| Expo organisation and project | Create the `turnout` organisation and an EAS project for `apps/mobile`. Run `eas init` once, from `apps/mobile`, as the `owner` login | `eas-update.yml` and `eas-build.yml` | needs owner |
+| `EAS_PROJECT_ID` | Add the project id as a GitHub repository variable (not a secret). `app.config.ts` reads it into `extra.eas.projectId`, and both EAS workflows are skipped while it is empty | The same two workflows | needs owner |
+| `EXPO_TOKEN` | Create an access token in the Expo account (a robot token for the organisation) and add it as a GitHub repository secret. Only `eas-update.yml` and `eas-build.yml` read it. No pull request job has it | The same two workflows | needs owner |
+| EAS environment variables | In the EAS project, set `EXPO_PUBLIC_API_URL` (plain text) and `GOOGLE_MAPS_ANDROID_API_KEY` (sensitive) for the `preview` and `production` environments, and `EXPO_PUBLIC_API_URL` for `development` | `preview` and `production` builds. The config throws without both | needs owner |
+| API host | Decide the API host name. It is the value of `EXPO_PUBLIC_API_URL`. The plan leaves it open until the host slot is found (S21) | The variable above | needs owner |
+| Maps key and SHA-1s | Create the restricted key as in "Maps key restriction", then add the SHA-1 rows after the first EAS build | A working map on the `dev`, `preview` and production builds | needs owner |
+| `google-services.json` | Create the Firebase project `turnout-push` when M3 starts and add the file as an EAS file variable | Android push | needs owner (M3) |
+| Sentry and PostHog | Open both accounts and give the engineer the project keys through EAS variables. The packages are installed and not initialised | Error reports and analytics | needs owner (M2) |
+| Icons and store assets | Provide the app icon, the adaptive icon foreground and the splash mark. The scaffold has none, so `expo prebuild` uses the Expo defaults | Preview and store builds. Play listing assets are F25 | needs owner |
+| Git LFS on the repository | Confirm Git LFS is enabled for the GitHub repository and that its bandwidth allowance covers the visual baselines | `visual-compare.sh` once baselines exist | needs owner |
+
+### First CI run
+
+The CI jobs for the device matrix, the repack step and the three new workflows were written
+against the documentation and checked with `actionlint` and `maestro check-syntax`. None of them
+has run on a GitHub runner, because the scaffold was built in a session with no GitHub runner. Expect the first run
+to need fixes. Do these in order, on a branch, and fix what fails before relying on the gate:
+
+1. Open a pull request that touches `apps/mobile`. `mobile-health`, `build-android` and `build-ios` should pass. `build-ios` is the longest and the likeliest to need an Xcode or runtime change; the runner image is `macos-26` and the simulator runtime is pinned as iOS 26.2.
+2. The four device jobs (`android-small`, `android-large`, `ios-small`, `ios-large`) then run the launch and smoke flows. The Android jobs need KVM; GitHub's standard Linux runners provide it.
+3. Run the visual capture once and read the artifact `visual-shots-<target>`. Accept the first set with `bun scripts/visual-accept.ts <run-id>` and commit the Git LFS files it writes. Until then `visual-compare.sh` prints a notice and passes. No baseline exists, and none could be made without an emulator.
+4. Start `mobile-canary.yml` by hand once (it also runs on Mondays at 03:00 UTC) and check that it passes.
+5. After the first green run, record the wall time of each job in `docs/plans/mobile-ci-budget.md`.

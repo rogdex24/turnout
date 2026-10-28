@@ -1,0 +1,10 @@
+// No color literals under apps/mobile/src (plan section 7, app rules).
+// Colors come from the design tokens: a role class such as bg-primary, or useColors() where a prop needs a value.
+// Matches hex colors, rgb(), rgba(), hsl(), hsla() and oklch() inside any string or template literal.
+or { `"$s"`, JsTemplateChunkElement() as $s, JsxString() as $s } as $hit where {
+  $s <: r".*(?:(?:^|[^&\w])#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\().*",
+  register_diagnostic(
+    span = $hit,
+    message = "No color literals in the app. Use a token class (bg-primary, text-ink) or useColors(); colors live in DESIGN.md."
+  )
+}

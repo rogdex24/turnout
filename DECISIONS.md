@@ -143,3 +143,69 @@ Evidence. Tests for each item: `test/auth.test.ts`, `test/appApi.test.ts`, `test
 
 Why. Each one is the smaller or safer choice that keeps the plan's behaviour for members. None adds a
 paid service or a package.
+
+## 2026-10-28: mobile scaffold; Uniwind kept, device checks pending
+
+Decision. `apps/mobile` is scaffolded (F12 to F21) and Uniwind 1.12.2 on Tailwind 4.3.3 is the
+styling layer. NativeWind stays the documented fallback and is not installed. The verdict holds
+at bundle level only: no emulator, Mac or Maps key was available, so the device checks in
+`docs/plans/mobile-stack.md` (F8) are pending and the maps checks are not run.
+
+Evidence. `bunx expo export` for android and ios succeeds with Uniwind; the bundle holds the token
+variables, the dark-theme values and both fonts. A release export drops Storybook (7.7 MB to
+4.2 MB). `bunx expo-doctor` passes 20 of 20. Jest, ESLint, Biome, the typecheck and the
+dependency rules pass. An Android debug APK build (JDK 17, Android SDK 37, x86_64) was started and
+the Gradle daemon disappeared in the Kotlin compile steps, so no APK exists. Android APK build
+pending. The iOS build needs a Mac, so it waits for the `build-ios` job. Maestro `check-syntax`
+passes on every flow. No CI job has run on a GitHub runner.
+
+Why. Uniwind needs no Tailwind v3 pin and no second Tailwind in the repo. The only gap found is
+that it has no Jest runtime: a unit test asserts the `className` prop, and the pixel check is the
+Storybook and visual-diff job.
+
+Deviations from the plan and choices made while scaffolding:
+
+- Version age. The 14-day rule was waived for the scaffold with `--minimum-release-age=0` on each
+  `bun add`. `bunfig.toml` is unchanged. Every package in `apps/mobile` has an exact pin.
+- `expo` stays at 58.0.11 and `jest-expo` at 58.0.11, though SDK 58 now expects 58.0.20 and 58.0.12.
+  `expo.install.exclude` lists those two so `expo-doctor` and `expo install --check` pass in CI.
+  Remove it when Renovate bumps them.
+- Fonts are embedded at build time through the `expo-font` plugin, so there is no splash wait on a
+  font download and the e2e build needs no network.
+- No color literal in `apps/mobile/src`. A Biome grit plugin (`lint/no-color-literals.grit`)
+  enforces it; colors come from token classes or `useColors()`.
+- Storybook is a route gated by the inlined `EXPO_PUBLIC_STORYBOOK`, so release bundles drop it.
+  The check was done once with an export, not in CI.
+- Config files import with `.ts` extensions (`config/variants.ts`), because `app.config.ts` is
+  loaded by Node's type stripping before Metro runs.
+- `preview` and `production` throw at config time without `EXPO_PUBLIC_API_URL` and
+  `GOOGLE_MAPS_ANDROID_API_KEY`. `e2e` and `development` do not need the key.
+- The router test is `src/router.test.tsx`, not under `src/app`, because Expo Router turns every
+  file in `src/app` into a route.
+- `.easignore` is at the repository root, because EAS archives from the git root in a monorepo.
+- The copy lint is a Jest test (`src/copy/copy.test.ts`), not a Biome rule, because it reads a
+  word list across all strings.
+- F20 uses the Home placeholder story (`screens-home--placeholder`) as the only visual story, since
+  the events list is an M2 screen. `visual-compare.sh` passes with a notice until a target has an
+  accepted baseline; none could be made without an emulator.
+- Device jobs are two matrix jobs, `android-device` and `ios-device`, whose run names are the four
+  targets. The one automatic re-run is `cmd || cmd` in the job script.
+- The iOS runner is `macos-26` instead of `macos-latest`, with the simulator runtime pinned to
+  iOS 26.2, so a runner image change cannot move the baselines. actionlint does not know the
+  `macos-26` label yet and reports it; the label is valid on GitHub.
+- The Maestro CLI sha256 in `install-maestro.sh` was computed from the 2.11.0 download, because the
+  release publishes no checksum file.
+- `eas-cli` 26.0.0 is newer than 14 days and is run with `bunx` in `eas-update.yml` and
+  `eas-build.yml`, not installed as a dependency. Both workflows are skipped while the repository
+  variable `EAS_PROJECT_ID` is empty.
+- The `mobile` paths filter in `ci.yml` is wider than `apps/mobile/**`: it also matches `packages/**`,
+  `src/**`, `e2e/**` and `data/**` (the e2e server serves the real API), `scripts/visual-*.ts`, the
+  LFS config, `package.json`, the lockfile and `ci.yml`.
+- The native cache key is the fingerprint taken before prebuild. A hit is repacked with
+  `@expo/repack-app` 0.10.4 (`apps/mobile/ci/repack.sh`); a miss builds from scratch.
+- Risk, not fixed. The root `prepare` script runs `lefthook install`, which may fail on an EAS build
+  machine that has no `.git` or no lefthook. If the first EAS build fails there, guard `prepare`
+  with a check for `.git`.
+
+Caveats. The Maps checks, the first baseline accept and every account-dependent step are listed in
+`docs/plans/mobile-accounts.md` under "Needs owner" and "First CI run".

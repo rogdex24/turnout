@@ -1,0 +1,49 @@
+name: eas-build
+
+# Starts an EAS Build by hand. One of the two workflows that use EXPO_TOKEN (the other is eas-update.yml). It runs only when
+# someone starts it on main, never for pull requests. Android only until an Apple Developer account exists (docs/plans/mobile-visual-testing.md).
+#
+# It does nothing until the owner has set up the Expo account (docs/plans/mobile-accounts.md): the repository variable
+# EAS_PROJECT_ID, the repository secret EXPO_TOKEN, and the EAS environment variables for each profile.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Build profile from apps/mobile/eas.json
+        type: choice
+        options: [development, e2e, preview, production]
+        default: preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-build-${{ inputs.profile }}
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: "1.4.3"
+  EAS_CLI_VERSION: "26.0.0"
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main' && vars.EAS_PROJECT_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      # --no-wait returns once the build is queued on EAS, so this job spends no more than a minute or two of runner time.
+      - name: Queue the build
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+          PROFILE: ${{ inputs.profile }}
+        run: bunx "eas-cli@${EAS_CLI_VERSION}" build --platform android --profile "$PROFILE" --non-interactive --no-wait

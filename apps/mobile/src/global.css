@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "uniwind";
+
+/* Colors, generated from DESIGN.md (bun run tokens:mobile). Light and dark follow the system. */
+@import "@turnout/design-tokens/theme.css";
+
+/* Type, radii and fonts: hand-written, pinned to @turnout/design-tokens by src/ui/theme.test.ts. */
+@import "./theme.css";

@@ -1,0 +1,14 @@
+# The first flow: a fresh install opens and shows the home screen.
+# Today that is the placeholder home. When the Welcome screen lands in M2, change the assertion to its heading.
+appId: com.turnout.app.e2e
+name: launch
+tags:
+  - launch
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 30000
+- assertVisible: "Turnout"

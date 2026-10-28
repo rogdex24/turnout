@@ -1,0 +1,85 @@
+import path from "node:path";
+import { colors } from "@turnout/design-tokens/tokens";
+import type { ConfigContext, ExpoConfig } from "expo/config";
+import { FONT_FAMILIES } from "./config/fonts.ts";
+import { assertReleaseEnv, parseVariant, resolveApiUrls, resolveMapsKey, VARIANT_CONFIG } from "./config/variants.ts";
+
+/** Font paths relative to the app folder, so the EAS fingerprint does not depend on where the repo is checked out. */
+const fontPath = (pkg: string, file: string) => path.relative(__dirname, require.resolve(`${pkg}/${file}`));
+
+/**
+ * One config, four variants (APP_VARIANT: development, e2e, preview, production). Each has its own bundle id, so they install side by
+ * side. Secrets never live in this file: the Maps key comes from the EAS variable GOOGLE_MAPS_ANDROID_API_KEY or from the git-ignored
+ * apps/mobile/.env.local, and the config throws when a release variant has none.
+ */
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const env = process.env;
+  const variant = parseVariant(env.APP_VARIANT);
+  const v = VARIANT_CONFIG[variant];
+  assertReleaseEnv(variant, env);
+  const apiUrl = resolveApiUrls(variant, env);
+  const mapsKey = resolveMapsKey(variant, env);
+
+  // EAS fills this in `eas init`. Without it the app builds and runs, it just cannot fetch updates.
+  const easProjectId = env.EAS_PROJECT_ID;
+  // The Sentry plugin uploads source maps, so it is added only when the build has an organisation and project to upload to.
+  const sentry =
+    env.SENTRY_ORG && env.SENTRY_PROJECT
+      ? [["@sentry/react-native/expo", { organization: env.SENTRY_ORG, project: env.SENTRY_PROJECT }]]
+      : [];
+
+  return {
+    ...config,
+    name: v.name,
+    slug: v.slug,
+    version: "0.1.0",
+    scheme: v.scheme,
+    orientation: "portrait",
+    userInterfaceStyle: "automatic",
+    runtimeVersion: { policy: "fingerprint" },
+    updates: easProjectId ? { url: `https://u.expo.dev/${easProjectId}`, checkAutomatically: "ON_LOAD" } : { enabled: false },
+    ios: {
+      bundleIdentifier: v.bundleId,
+      supportsTablet: false,
+      infoPlist: { ITSAppUsesNonExemptEncryption: false },
+    },
+    android: {
+      package: v.bundleId,
+      ...(env.GOOGLE_SERVICES_JSON ? { googleServicesFile: env.GOOGLE_SERVICES_JSON } : {}),
+      ...(mapsKey ? { config: { googleMaps: { apiKey: mapsKey } } } : {}),
+    },
+    plugins: [
+      ["expo-router", { origin: false }],
+      ["expo-splash-screen", { backgroundColor: colors.light.bg, dark: { backgroundColor: colors.dark.bg } }],
+      [
+        "expo-font",
+        {
+          android: {
+            fonts: FONT_FAMILIES.map((family) => ({
+              fontFamily: family.fontFamily,
+              fontDefinitions: family.faces.map((face) => ({ path: fontPath(family.pkg, face.file), weight: face.weight })),
+            })),
+          },
+          ios: { fonts: FONT_FAMILIES.flatMap((family) => family.faces.map((face) => fontPath(family.pkg, face.file))) },
+        },
+      ],
+      "expo-secure-store",
+      "expo-image",
+      [
+        "expo-build-properties",
+        {
+          android: { minSdkVersion: 24, usesCleartextTraffic: variant === "development" || variant === "e2e" },
+          ios: { deploymentTarget: "16.4" },
+        },
+      ],
+      ...sentry,
+    ] as NonNullable<ExpoConfig["plugins"]>,
+    experiments: { typedRoutes: true, reactCompiler: true },
+    extra: {
+      variant,
+      apiUrl,
+      storybook: v.storybook,
+      ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
+    },
+  };
+};

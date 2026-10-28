@@ -1,0 +1,38 @@
+/* Type, font and radius utilities for Uniwind. Values come from @turnout/design-tokens (typography, radii); src/ui/theme.test.ts
+   fails when they drift. Colors are not here: they are generated into theme.generated.css. */
+@theme {
+  --font-sans: "Inter";
+  --font-display: "Big Shoulders Display";
+
+  --text-display: 28px;
+  --text-display--line-height: 34px;
+  --text-display--letter-spacing: -0.28px;
+  --text-title-large: 22px;
+  --text-title-large--line-height: 28px;
+  --text-title-large--letter-spacing: -0.11px;
+  --text-title: 17px;
+  --text-title--line-height: 24px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-control: 15px;
+  --text-control--line-height: 20px;
+  --text-meta: 13px;
+  --text-meta--line-height: 18px;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-badge: 11px;
+  --text-badge--line-height: 14px;
+  --text-display-hero: 116px;
+  --text-display-hero--line-height: 90px;
+  --text-display-hero--letter-spacing: -1.16px;
+  --text-display-band: 28px;
+  --text-display-band--line-height: 28px;
+  --text-display-band--letter-spacing: 1.68px;
+
+  --radius-field: 14px;
+  --radius-face: 14px;
+  --radius-card: 16px;
+  --radius-featured: 20px;
+  --radius-sheet: 24px;
+  --radius-pill: 999px;
+}

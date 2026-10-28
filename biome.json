@@ -11,6 +11,7 @@
       "test/**",
       "e2e/**",
       "packages/**",
+      "apps/**",
       "scripts/**",
       "bench/**",
       "*.ts",
@@ -19,6 +20,13 @@
       "!test/fixtures",
       "!packages/**/node_modules",
       "!packages/design-tokens/*.generated.*",
+      "!apps/**/node_modules",
+      "!apps/mobile/ios",
+      "!apps/mobile/android",
+      "!apps/mobile/.expo",
+      "!apps/mobile/.rnstorybook/storybook.requires.ts",
+      "!apps/mobile/uniwind-types.d.ts",
+      "!apps/mobile/expo-env.d.ts",
       "!**/*.sqlite*"
     ]
   },
@@ -75,6 +83,10 @@
     {
       "path": "./lint/no-html-strings.grit",
       "includes": ["**/src/web/**"]
+    },
+    {
+      "path": "./lint/no-color-literals.grit",
+      "includes": ["**/apps/mobile/src/**"]
     },
     {
       "path": "./lint/no-history-writes.grit",

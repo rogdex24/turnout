@@ -1,0 +1,50 @@
+name: eas-update
+
+# Publishes the JS of main to the `preview` channel with EAS Update. One of the two workflows that use EXPO_TOKEN (the other is
+# eas-build.yml). It runs only for pushes to main and manual runs on main, never for pull requests, so a pull request can
+# never reach the token.
+#
+# It does nothing until the owner has set up the Expo account (docs/plans/mobile-accounts.md): the repository variable
+# EAS_PROJECT_ID, the repository secret EXPO_TOKEN, and the EAS environment variables for `preview`.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "bun.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-update
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: "1.4.3"
+  EAS_CLI_VERSION: "26.0.0"
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main' && vars.EAS_PROJECT_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - name: Publish to the preview channel
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+          APP_VARIANT: preview
+          MESSAGE: ${{ github.sha }}
+        run: bunx "eas-cli@${EAS_CLI_VERSION}" update --channel preview --environment preview --message "$MESSAGE" --non-interactive

@@ -3,8 +3,8 @@
 # Skip once with LEFTHOOK=0 only when you know why; CI will run the same checks.
 
 pre-commit:
-  # check-server: types (five projects), lint, DESIGN.md lint, unit tests, dependency rules.
-  # check-mobile joins it when apps/mobile exists.
+  # check-server: types (six projects, the mobile app is the last), lint, DESIGN.md lint, unit tests, dependency rules.
+  # check-mobile: the app's ESLint (React Compiler and Expo env rules) and Jest. It runs only when a mobile file is staged.
   jobs:
     - name: format staged files
       glob: "*.{ts,tsx,js,json,css}"
@@ -12,6 +12,9 @@ pre-commit:
       stage_fixed: true
     - name: check-server
       run: bun run check:server
+    - name: check-mobile
+      glob: "apps/mobile/**"
+      run: bun run check:mobile
     - name: gitleaks-staged
       run: gitleaks git --staged --redact --no-banner
 
