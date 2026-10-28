@@ -1,0 +1,75 @@
+# A seeded member with an approved handle browses the shows: the list loads, an area pill narrows it and All areas widens it, and
+# a card opens its show. Two more members check the handle strip. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: browse
+tags:
+  - browse
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MATCHABLE_MEMBER: "+12025550104"
+  PENDING_MEMBER: "+12025550102"
+  REJECTED_MEMBER: "+12025550103"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MATCHABLE_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# The list: the title, the area pills, and at least one show card. An approved handle shows no strip.
+- assertVisible: "Shows coming up"
+- assertVisible:
+    id: area-all
+- assertVisible:
+    id: "show-card-.*"
+- assertNotVisible:
+    id: profile-check-strip
+
+# An area narrows the list and All areas goes back to every show.
+- tapOn:
+    id: "area-(?!all).*"
+- assertVisible:
+    id: "show-card-.*"
+- tapOn:
+    id: area-all
+- assertVisible:
+    id: "show-card-.*"
+
+# A card opens its show, and the system back goes back to the list.
+- tapOn:
+    id: "show-card-.*"
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- back
+- assertVisible: "Shows coming up"
+
+# A handle in review shows the strip, and the list still works.
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${PENDING_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- assertVisible:
+    id: profile-check-strip
+- assertVisible: "We're checking your profile. Usually within a day. You can add a ticket in the meantime."
+- assertVisible:
+    id: "show-card-.*"
+
+# A handle that was turned down says why and offers Change handle, which opens the profile form.
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${REJECTED_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- assertVisible: "We couldn't find that account."
+- tapOn: "Change handle"
+- extendedWaitUntil:
+    visible:
+      id: profile
+    timeout: 10000

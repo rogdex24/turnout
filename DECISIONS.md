@@ -348,3 +348,28 @@ members out whenever a response was lost on a bad network.
 - The women-only switch is shown only for women and non-binary people, with the system `Switch` coloured from the tokens, and it is
   cleared (and never sent) when the gender becomes man. `PersonAvatar` gets a 96 dp `lg` size for the profile photo.
 - The Maestro onboarding flow stops at the photo: the system picker is not scripted, so the photo path is covered by Jest tests only.
+
+## A7 Home (M2)
+
+- The Home title is "Shows coming up" with no date range. The board's "Shows this week" would be wrong whenever the list holds more
+  or fewer than a week of shows, since the server pages by start time and not by week. The city label under the wordmark is static
+  and not a button: Hyderabad is the only city in v1, so there is nothing to choose.
+- The featured card leaves out the date block on the poster. The stub under the tear line already carries the day and time
+  ("Sat 7:00 PM") in text that scales, and a second copy on the picture added noise. Cards show no count of people, as the plan says.
+- `image_url` is null for every show today, so the flat category-tone poster is what ships. The photo poster path is already in
+  `Poster` and takes over once a show has an image.
+- The plan bar sits in the flow under the list (a flex column), not absolutely positioned over it. The list is then inset above
+  it without measuring anything, and it stays on top of the tab bar. There is no plan data until the plans arrive in M3, so
+  `HomeScreen` passes `plan={null}` and the bar is built and tested with props only (stories: Finding, Settled, LongTitle).
+- The handle check strip (A29) was built here, early, because Home is where it shows. It is the strip only: pending says the profile
+  is being checked, rejected gives a sentence per reject reason and Change handle opens the existing profile form at
+  `settings/profile`. There is no `settings/social` route in this build. `useMe` polls every 60 seconds while the handle is
+  pending, so the strip goes away on its own when the review finishes.
+- The area list schema lives in `src/api/shows.ts`, not in the contract package: `/tools/list_areas` is a web tool route, not part of
+  the app API contract. Areas with no shows are hidden from the pills so no pill leads to an empty list.
+- `useNow` moved from `screens/signin` to `providers`, since Home and the sign-in code step both read the clock.
+- Jest now compiles `@shopify/flash-list` (it ships ES modules) and loads the library's own `jestSetup`, which fixes the measured
+  window. FlashList's loaded timer fires outside `act` in a few Home tests and prints a warning; the tests pass and the warning is
+  the library's own timer.
+- Maestro `browse.yaml` uses the seeded members 0104 (approved handle), 0102 (pending) and 0103 (rejected). It is written for CI and
+  has not run on a device. The visual capture story moved from `screens-home--placeholder` to `screens-home--loaded`.

@@ -75,3 +75,11 @@ export function mergePages(pages: readonly { events: readonly ApiEvent[] }[]): A
   }
   return merged;
 }
+
+/** "hitec-city" as "Hitec City", the way the server labels it in the areas list. */
+export function areaLabel(slug: string): string {
+  return slug
+    .split("-")
+    .map((word) => (word ? word[0]?.toUpperCase() + word.slice(1) : word))
+    .join(" ");
+}

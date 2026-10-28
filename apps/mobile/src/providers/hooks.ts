@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { useSyncExternalStore } from "react";
-import { meQuery } from "../api/me";
+import { meQuery, meRefetchInterval } from "../api/me";
 import { type Gate, resolveGate } from "../model/gates";
 import { useDeps } from "./AppProviders";
 
@@ -24,7 +24,7 @@ export function useLocalFlags() {
 export function useMe() {
   const { api } = useDeps();
   const { status } = useSessionState();
-  return useQuery({ ...meQuery(api), enabled: status === "signed_in" });
+  return useQuery({ ...meQuery(api), enabled: status === "signed_in", refetchInterval: meRefetchInterval });
 }
 
 /** Where the router sends a person, from the keychain, the flags on this phone and `me`. */

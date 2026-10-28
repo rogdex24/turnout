@@ -10,7 +10,8 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `flows/smoke.yaml` | Checks the seeded server answers, then does the launch check |
 | `flows/onboarding.yaml` | The Welcome cards, the notice, sign-in with a code, and the profile form up to the photo |
 | `flows/otp-errors.yaml` | The code step when it goes wrong: a wrong code, too many tries, a refusal, a number not on WhatsApp |
-| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code |
+| `flows/browse.yaml` | Shows tab: the list, area pills, a card opening its show, and the handle check strip for a pending and a turned-down handle |
+| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code, sign in as a seeded member |
 | `visual/capture-story.yaml` | Opens one Storybook story and takes a screenshot (see `visual/README.md`) |
 | `scripts/expect-events.js` | Fails a flow when the seeded server does not answer |
 | `scripts/otp-code.js` | Reads the last sign-in code for a number from the server's test route (needs `TEST_TOKEN`) |

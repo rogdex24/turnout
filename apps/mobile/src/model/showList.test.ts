@@ -1,5 +1,5 @@
 import type { ApiEvent } from "@turnout/contract/events";
-import { dayGroups, istDate, listItems, mergePages } from "./showList";
+import { areaLabel, dayGroups, istDate, listItems, mergePages } from "./showList";
 
 function show(id: string, startsAtLocal: string): ApiEvent {
   return {
@@ -97,5 +97,12 @@ describe("mergePages", () => {
       { events: [show("b", "2026-10-31T19:00:00+05:30"), show("c", "2026-11-01T19:00:00+05:30")] },
     ]);
     expect(merged.map((s) => s.id)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("areaLabel", () => {
+  it("title-cases a slug", () => {
+    expect(areaLabel("hitec-city")).toBe("Hitec City");
+    expect(areaLabel("secunderabad")).toBe("Secunderabad");
   });
 });

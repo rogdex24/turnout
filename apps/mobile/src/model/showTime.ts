@@ -45,6 +45,15 @@ export function formatShowWhen(value: string): string {
   return time ? `${formatShowDay(value)}, ${time}` : formatShowDay(value);
 }
 
+/** "Sat 7:00 PM" for a card under a day label, or "Sat 7 Nov" for a show that only has a date. Falls back to the text as written. */
+export function formatShowShort(value: string): string {
+  const t = parseLocal(value);
+  if (!t) return value;
+  const time = formatShowTime(value);
+  if (!time) return formatShowDay(value);
+  return `${WEEKDAYS[new Date(Date.UTC(t.year, t.month - 1, t.day)).getUTCDay()]} ${time}`;
+}
+
 export interface PriceFields {
   is_free: boolean;
   price_min: number | null;
@@ -68,4 +77,14 @@ export function formatPrice(p: PriceFields): string | null {
   const high = p.price_max ?? low;
   const money = (n: number) => (p.currency === "INR" ? `₹${groupIndian(n)}` : `${p.currency} ${groupIndian(n)}`);
   return low === high ? money(low) : `${money(low)} to ${money(high)}`;
+}
+
+/** The price as a card shows it: the lowest price, and whether the show has a range ("From" goes before it). Null with no price. */
+export function priceFrom(p: PriceFields): { amount: string; isRange: boolean } | null {
+  if (p.is_free) return { amount: "Free", isRange: false };
+  const low = p.price_min ?? p.price_max;
+  if (low === null) return null;
+  const high = p.price_max ?? low;
+  const amount = formatPrice({ ...p, price_min: low, price_max: low });
+  return amount === null ? null : { amount, isRange: high !== low };
 }

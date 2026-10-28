@@ -10,9 +10,9 @@ module.exports = {
     // The contract package is TypeScript that imports its own files as `./x.js` (NodeNext style); Jest finds `./x.ts` without the suffix.
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
-  // jest-expo's pattern, plus uniwind, which ships TypeScript source for React Native.
+  // jest-expo's pattern, plus uniwind (TypeScript source) and FlashList (ES modules), which Jest has to compile.
   transformIgnorePatterns: [
-    "/node_modules/(?!(.pnpm/)?((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|uniwind|standard-navigation|@turnout/.*))",
+    "/node_modules/(?!(.pnpm/)?((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@shopify/flash-list|uniwind|standard-navigation|@turnout/.*))",
     "/node_modules/react-native-reanimated/plugin/",
   ],
 };

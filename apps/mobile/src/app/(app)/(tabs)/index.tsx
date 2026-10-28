@@ -1,6 +1,13 @@
-// Board: B5.1 (the events list lands in A7; until then the placeholder home)
-import { HomeView } from "@/screens/home/HomeView";
+// Board: B5.1
+import { useRouter } from "expo-router";
+import { HomeScreen } from "@/screens/home/HomeScreen";
 
 export default function Home() {
-  return <HomeView />;
+  const router = useRouter();
+  return (
+    <HomeScreen
+      onOpenShow={(publicId) => router.push({ pathname: "/show/[publicId]", params: { publicId } })}
+      onChangeHandle={() => router.push("/settings/profile")}
+    />
+  );
 }

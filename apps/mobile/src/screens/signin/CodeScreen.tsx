@@ -17,10 +17,10 @@ import {
 import { formatIndianMobile } from "@/model/phone";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi, useLocalFlags } from "@/providers/hooks";
+import { useNow } from "@/providers/useNow";
 import { CodeView } from "./CodeView";
 import { resendFailureText, verifyFailureText } from "./messages";
 import { type Challenge, useSignInFlow } from "./SignInFlow";
-import { useNow } from "./useNow";
 import { useSendCode } from "./useSendCode";
 
 /** A phone shown the way it was typed: +91 in two groups of five, or a seed number whole. */
