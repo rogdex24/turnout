@@ -482,6 +482,62 @@ Evidence. `test/appThread.test.ts`, `test/feedback.test.ts`, `test/reports.test.
 Why. Each is the narrower or safer behaviour. None adds a package or a paid service. Items 26 and 27 need
 the owner (legal review and a secret on the admin host), so they are recorded as owner steps.
 
+## 2026-10-28: M4 server, review round
+
+Decision. A security review and a logic review of the M4 server each found items. Each is fixed with a
+test, except where noted. The numbers match the review.
+
+1. **The admin's `BAN_PEPPER` is checked against a fingerprint the app writes at start.** This was
+   committed by another party (`2b09ce5`), not in this round.
+2. **A suspended member can request a delete code and erase their own account** while their access
+   token lasts (item 26 above). The gap that stays: `/auth/otp/verify` still answers a suspended member
+   403, so after the 15-minute token they cannot sign in to delete. It is an owner question in
+   `docs/plans/mobile-accounts.md`, not closed here.
+3. **Closing a report skips the contact rule when the reporter has deleted their account.** There is
+   nobody to phone, so the rule would block the close for good. The admin shows "reporter deleted their
+   account" in place of the contact step.
+4. **"I did not request this code" for a delete code revokes the member's sessions,** as well as
+   blocking the number, because someone else holding a session may have asked for it.
+5. **A delete code is refused at `/auth/otp/verify`** (400 `invalid_code`), now with a test.
+6. **Item 22 of the entry above says what it does:** a delete code is refused only for a number blocked
+   by "I did not request this code", and it does not read the ban list.
+7. **The `isPhoneBanned` comment** now says what it reads, and **8. the `AdminContext.write` comment**
+   says which writes it covers. Both are comment changes only.
+9. **A never-pair no longer keeps a group from forming.** `newGroups` searches in approval order for
+   another set of people when the first cannot be placed, instead of giving up on that size. The whole
+   call is capped at 60,000 steps (`SEARCH_STEPS`). Past the cap it forms no groups on that tick, and the
+   people stay waiting for the next one. The review's idea of skipping the later approver would not find
+   some placeable sets, so this is a backtracking search, not a skip.
+10. **The stop rule also runs for suspended members, and the reinstate baseline is on the member row.**
+    `member.stop_baseline_at` is set by an operator reinstate and cleared by erasure. The rule counts
+    downvotes after it. The baseline used to be read from the `member_reinstate` action, which the
+    one-year purge of `operator_action` deletes; keeping it on the member leaves that retention alone,
+    and an old reinstate no longer lets downvotes from before it count again. A dismissal restores
+    `stopped` when the number is still stop-listed.
+11. **A thread message gets an id above the group's newest.** The id was `ulid(now)` with `now` read before
+    the body arrived, so a slow post could be stored behind a cursor a reader already held, and the reader
+    skipped it. `postMessage` now takes `ulidAfter(newest id in the group, now)` inside its immediate
+    transaction. The cursor is still the id, so the contract is unchanged.
+12. **`notice(plan_id, kind, created_at)` has an index,** so the thread notice throttle looks up a plan's
+    recent notices instead of scanning the table. A test reads the query plan.
+
+Owner questions, unchanged by this round:
+
+- The stop rule counts distinct voters and distinct shows separately (at least 3 of each). Whether
+  that is the intended reading of "3 people, 3 shows" is for the owner to say.
+- A report's never-pair is read from the report row, so it ends when the one-year report purge deletes
+  the row (item 18 above). Whether it should last longer is for the owner to say.
+- Deleting an account deletes the downvotes the member gave or got. If that happens before the feedback
+  close, those downvotes never reach the stop rule or the met-edge check. Whether the mark should
+  survive until the close is for the owner to say.
+
+Evidence. `test/deletion.test.ts`, `test/appAuthz.test.ts`, `test/reports.test.ts`,
+`test/whatsappWebhook.test.ts`, `test/neverPairs.test.ts`, `test/feedback.test.ts`,
+`test/appThread.test.ts`, `test/ulid.test.ts`.
+
+Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
+service.
+
 ## 2026-10-28: M2 app (A1 to A10), where the build differs from the plan or fills a gap
 
 - `onboardingStep()` returns a fourth step, `sign_in`, between the notice and the profile, so a signed-out phone that has accepted the
