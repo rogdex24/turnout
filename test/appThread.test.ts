@@ -241,6 +241,14 @@ describe("the thread_message notice", () => {
     expect(noticesFor(s, away)).toBe(2);
   });
 
+  test("the throttle looks up a plan's recent notices by index, not by scanning the notice table", async () => {
+    const s = await setup();
+    const plan = s.t.db
+      .query("EXPLAIN QUERY PLAN SELECT 1 FROM notice WHERE plan_id = ? AND kind = 'thread_message' AND created_at > ? LIMIT 1")
+      .all("plan", "2026-01-01") as { detail: string }[];
+    expect(plan.map((row) => row.detail).join(" ")).toMatch(/SEARCH notice USING (COVERING )?INDEX idx_notice_plan_kind/);
+  });
+
   test("a notice holds no message text and no name", async () => {
     const s = await setup();
     await s.at(-3 * HOUR);

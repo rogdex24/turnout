@@ -244,6 +244,8 @@ CREATE TABLE IF NOT EXISTS notice (
 );
 CREATE INDEX IF NOT EXISTS idx_notice_member ON notice(member_id, id);
 CREATE INDEX IF NOT EXISTS idx_notice_push ON notice(push_state, created_at);
+-- The thread notice throttle asks for a plan's recent notices of one kind.
+CREATE INDEX IF NOT EXISTS idx_notice_plan_kind ON notice(plan_id, kind, created_at);
 
 CREATE TABLE IF NOT EXISTS push_delivery (
   id TEXT PRIMARY KEY,
