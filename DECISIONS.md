@@ -277,9 +277,10 @@ the build differs from it.
 1. **Alerts that must fire once use `alert_sent`.** The handle alert, the no-cafe alerts and the
    other one-time operator alerts record a key in `alert_sent` with `INSERT OR IGNORE`, so a restart
    or a second ticker does not repeat them. Notices use their own unique `dedupe_key`.
-2. **The `eligible_show` view is a superset.** It lists shows the join rules might allow; the route
-   still applies `isEligible` with the tunables and the clock, so the single 404 holds for a show
-   past T-24h, free, not placed or unlisted.
+2. **The `eligible_show` view holds no group rule.** It is `listable_event` with the operator's start
+   time and the venue's point. `isEligible` runs over each row with the tunables and the clock, so the
+   single 404 holds for a show past T-24h, free, not placed or unlisted. (Changed in the review round
+   below; the first version baked the default tunables into the view.)
 3. **A device is linked to the session that registered it.** `device.session_id` lets sign-out
    remove that device's token. `revokeAllSessions` deletes the member's devices, so a reuse of a
    refresh token also stops the pushes.
@@ -347,3 +348,40 @@ Evidence. `test/socialPlans.test.ts`, `test/socialTick.test.ts`, `test/appPlans.
 
 Why. Each fills a gap the plan left, or applies a layering rule (item 24) that the plan did not
 foresee. None adds a package or a paid service.
+
+## 2026-10-28: M3 server, review round for PR 13
+
+Decision. A security review and a logic review of the M3 server each rated it medium risk. Each item
+below is fixed with a test.
+
+1. **Grouping looks at genders when it picks sizes.** It chose sizes first, so nine women and three
+   men placed six people instead of twelve. New groups now try every split of the waiting people into
+   groups of 4 to 6, largest total first, and keep the first split the caps allow. A property test
+   compares the placed count with a brute force search on mixed pools of up to 14.
+2. **Admin writes refuse another site.** The approve routes read no body, so a cross-site form POST to
+   the loopback panel passed. Without a token, every write needs a same-origin `Origin` or
+   `Sec-Fetch-Site`.
+3. **A signed admin file link passes in token mode,** and the admin and app links sign different
+   text, so one kind of link cannot be made from the other.
+4. **The reveal closes** `revealCloseHours` (24) after the start; the group route then answers the
+   single 404. `meetMinutesBefore` and `threadCloseHoursAfterStart` are tunables too.
+5. **Name, gender and photo are locked while the member is in a group** (409 `profile_locked`, as for
+   the handle), so the women-only rule and the photo review cannot be undone after placement.
+6. **Ticket uploads count attempts first.** `rate.ticketAttemptPerMemberHour` (60) is taken before the
+   body is read. The per-plan and per-day limits stay, so a retry of the same file is still free.
+7. **Notices are claimed before they are pushed,** so two passes cannot push one notice twice.
+8. **An operator alert is recorded as sent only after it went out,** and the handle alert is keyed by
+   show, so a failed send is retried and two shows do not share one alert.
+9. **`eligible_show` holds no group rule** (item 2 of the entry above).
+10. **`createPlan` and `addTicket` take the write lock first** (an immediate transaction). Two requests
+    for one show line up, and the one that loses answers `plan_exists` with the winner's `planId`.
+11. **`/health` checks the write lock at most every 5 seconds,** and device registration is limited to
+    20 an hour per member (`rate.deviceRegisterPerMemberHour`).
+
+Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminServer.test.ts`,
+`test/adminSocial.test.ts`, `test/appGroups.test.ts`, `test/schedule.test.ts`, `test/appProfile.test.ts`,
+`test/socialPlans.test.ts`, `test/socialPush.test.ts`, `test/socialTick.test.ts`,
+`test/appTicker.test.ts`, `test/appNotices.test.ts`, `test/eligibleShow.test.ts`.
+
+Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
+service.
