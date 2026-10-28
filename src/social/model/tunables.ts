@@ -91,6 +91,8 @@ export interface Tunables {
     otpPerPhoneDay: RateRule;
     otpPerIpMinute: RateRule;
     otpPerIpDay: RateRule;
+    /** Every ticket upload counts, good or bad, taken before the body is read, so a flood of bad files costs almost nothing. */
+    ticketAttemptPerMemberHour: RateRule;
     ticketUploadPerPlanHour: RateRule;
     ticketUploadPerMemberDay: RateRule;
     reportPerDay: RateRule;
@@ -155,6 +157,7 @@ export const DEFAULT_TUNABLES: Tunables = {
     otpPerPhoneDay: { limit: 10, window: "ist_day" },
     otpPerIpMinute: { limit: 5, window: { seconds: 60 } },
     otpPerIpDay: { limit: 30, window: "ist_day" },
+    ticketAttemptPerMemberHour: { limit: 60, window: { seconds: 60 * 60 } },
     ticketUploadPerPlanHour: { limit: 5, window: { seconds: 60 * 60 } },
     ticketUploadPerMemberDay: { limit: 20, window: "ist_day" },
     reportPerDay: { limit: 5, window: "ist_day" },

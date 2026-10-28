@@ -89,6 +89,9 @@ export const planRoutes: Route[] = [
       const proofKind = proofKindForSource(source);
       if (now.getTime() >= Date.parse(planView(app, plan).joinUntil))
         throw new AppError(409, "too_late", "tickets can no longer be sent for this show");
+      // Reading, sniffing and checking a file costs the server something, so a member's attempts are counted first. The per-plan and
+      // per-day limits below stay for the files that get this far, and a retry of the same file does not use them.
+      enforce(app.db, app.config.otpPepper, "ticket:attempt", row.id, t.rate.ticketAttemptPerMemberHour, now);
       const bytes = await readBytes(request, MAX_TICKET_BYTES, "file_too_large");
       if (bytes.length === 0) throw invalidRequest("the file is empty");
       // What the file is comes from its bytes. The name and the content type the caller sent are never trusted.

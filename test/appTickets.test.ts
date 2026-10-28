@@ -176,6 +176,19 @@ describe("PUT /plans/:planId/ticket", () => {
     expect(tickets(t)).toHaveLength(5);
   });
 
+  test("sixty attempts an hour for a member of any kind, then 429 before the body is read", async () => {
+    const { t, a, plan } = await setup();
+    for (let i = 0; i < 60; i++) expect((await put(t, a, plan.id, new TextEncoder().encode("x"))).status).toBe(400);
+    // A file over the size limit would be 413 if it were read; the limit answers first.
+    const huge = await put(t, a, plan.id, new Uint8Array(MAX_TICKET_BYTES + 1));
+    expect(huge.status).toBe(429);
+    expect((await errorOf(huge)).code).toBe("rate_limited");
+    expect(huge.headers.get("retry-after")).not.toBeNull();
+    t.clock.set(new Date(t.clock().getTime() + HOUR));
+    const later = await memberSession(t, 0);
+    expect((await put(t, later, plan.id, new Uint8Array(MAX_TICKET_BYTES + 1))).status).toBe(413);
+  });
+
   test("twenty files a day for a member across plans, then 429", async () => {
     const t = await testApp();
     const a = await memberSession(t, 0);
