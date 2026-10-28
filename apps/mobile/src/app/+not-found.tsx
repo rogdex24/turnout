@@ -1,9 +1,9 @@
 // Board: B16.1
 import { useRouter } from "expo-router";
 import { Compass } from "phosphor-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { nav } from "@/copy/nav";
 import { EmptyState } from "@/ui/EmptyState";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 
 /** A link or a back stack that points nowhere: a plain sentence and the way to the shows. */
 export default function NotFound() {

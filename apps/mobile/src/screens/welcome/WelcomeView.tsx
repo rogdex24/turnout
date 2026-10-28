@@ -8,12 +8,13 @@ import {
   type ScrollViewInstance,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { common } from "@/copy/common";
 import { welcome } from "@/copy/welcome";
 import { cn } from "@/ui/cn";
 import { Button } from "@/ui/primitives/Button";
 import { Icon } from "@/ui/primitives/Icon";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
 import { useReduceMotion } from "@/ui/reduceMotion";

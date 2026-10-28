@@ -1,4 +1,4 @@
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 
 /** A screen that is not built yet, so the route exists and the guards can be tested. Each one is replaced by its task (A4 to A6). */

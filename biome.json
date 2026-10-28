@@ -95,6 +95,26 @@
   ],
   "overrides": [
     {
+      "includes": ["apps/mobile/src/**", "!apps/mobile/src/ui/primitives/SafeAreaView.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "react-native-safe-area-context": {
+                    "importNames": ["SafeAreaView"],
+                    "message": "Uniwind ignores className on it. Import SafeAreaView from @/ui/primitives/SafeAreaView."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/web/ui/rawBlock.tsx"],
       "linter": {
         "rules": {

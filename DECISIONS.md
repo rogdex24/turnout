@@ -563,3 +563,14 @@ patch name makes `bun install` fail loudly if the version moves under it.
   scrubber now walks nested arrays and objects in breadcrumb data and `extra`. `serve` warns when an `APP_LINKS_*` value is set
   but dropped, and an iOS app id needs a 10-character team id. The Show screen's price and step numerals use the
   `display-numeral` face through `displayFaceStyle`, not raw sizes. `EXPO_PUBLIC_GROUPS_ENABLED` stays off until the A11 go route.
+
+## 2026-10-28: second run of the mobile device jobs
+
+- Android. Uniwind 1.12.2 styles react-native's own components only. `className` on the safe-area-context `SafeAreaView` was
+  dropped without an error, so the notice screen lost `flex-1`, its ScrollView collapsed and Maestro saw only the button.
+  `src/ui/primitives/SafeAreaView.tsx` wraps it once with `withUniwind`, as the Uniwind docs show, and a Biome
+  `noRestrictedImports` override in `apps/mobile/src` refuses the bare import.
+- iOS. The simulator build was unsigned (`CODE_SIGNING_ALLOWED=NO`), so the binary had no `application-identifier`
+  entitlement, the simulator keychain answered expo-secure-store with -34018 and the app opened on the start-failed screen.
+  `ci/build-ios.sh` now signs to run locally (`CODE_SIGN_IDENTITY=-`, no team) and logs the entitlements. The native cache key
+  gains `signed` so the unsigned cached build is not repacked again.
