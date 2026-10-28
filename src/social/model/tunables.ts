@@ -1,3 +1,5 @@
+import type { NoticeKind } from "@turnout/contract/app/notices";
+
 /**
  * Every number the product rules and the rate limits turn on, in one place. Defaults match the plan (section 2);
  * a test or an operator can pass `tunables({ ... })` overrides. Pure data: no I/O.
@@ -48,6 +50,33 @@ export interface Tunables {
     /** A refresh token traded in this recently, whose replacement is still unused, is a retry and not a replay. */
     refreshGraceSeconds: number;
   };
+  /** Minutes around a show's start, and hours around the lock, for each milestone. All counted from the show's start unless said. */
+  plan: {
+    /** The meet card goes live and co-members are revealed this many hours before the start (T-3h). */
+    revealHoursBefore: number;
+    /** The "head over" notice goes out this many minutes before the start, and check-in opens then. */
+    headOverMinutes: number;
+    /** Check-in stays open this many minutes after the start. */
+    checkInCloseMinutes: number;
+    /** An unanswered rejected ticket file is deleted this many hours after the rejection. */
+    rejectedTicketDeleteHours: number;
+    /** Ticket files are deleted this many hours after the show starts, at the latest. */
+    ticketDeleteHoursAfterStart: number;
+    /** The operator is alerted when a pending handle belongs to a plan whose lock is this close. */
+    handleAlertHours: number;
+    /** Alert the operator about a missing cafe this many hours before the start (the second one, after the lock). */
+    cafeAlertHoursBefore: number;
+  };
+  ticker: {
+    intervalSeconds: number;
+    leaseSeconds: number;
+    /** Expo push receipts are read this many minutes after the send. */
+    receiptDelayMinutes: number;
+  };
+  /** A notice older than this many minutes is listed but no longer pushed. */
+  noticeStaleMinutes: Readonly<Record<NoticeKind, number>>;
+  /** `notice` and `push_delivery` rows are deleted after this many days. */
+  noticeRetentionDays: number;
   fileLinkMinutes: number;
   /** A profile photo with more pixels than this is refused before it is decoded. */
   photoMaxPixels: number;
@@ -85,6 +114,31 @@ export const DEFAULT_TUNABLES: Tunables = {
     spendAlertsInr: [500, 1000, 1500],
   },
   session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
+  plan: {
+    revealHoursBefore: 3,
+    headOverMinutes: 90,
+    checkInCloseMinutes: 60,
+    rejectedTicketDeleteHours: 24,
+    ticketDeleteHoursAfterStart: 24,
+    handleAlertHours: 12,
+    cafeAlertHoursBefore: 6,
+  },
+  ticker: { intervalSeconds: 30, leaseSeconds: 60, receiptDelayMinutes: 15 },
+  noticeStaleMinutes: {
+    ticket_approved: 6 * 60,
+    ticket_rejected: 6 * 60,
+    handle_rejected: 24 * 60,
+    group_confirmed: 2 * 60,
+    group_changed: 2 * 60,
+    group_smaller: 2 * 60,
+    group_called_off: 2 * 60,
+    no_group: 6 * 60,
+    meet_card_live: 60,
+    head_over: 20,
+    thread_message: 30,
+    morning_after: 12 * 60,
+  },
+  noticeRetentionDays: 30,
   fileLinkMinutes: 5,
   photoMaxPixels: 40_000_000,
   rate: {
@@ -111,6 +165,9 @@ export function tunables(overrides: DeepPartial<Tunables> = {}): Tunables {
     groupSize: { ...base.groupSize, ...overrides.groupSize },
     otp: { ...base.otp, ...(overrides.otp as Partial<Tunables["otp"]>) },
     session: { ...base.session, ...overrides.session },
+    plan: { ...base.plan, ...overrides.plan },
+    ticker: { ...base.ticker, ...overrides.ticker },
+    noticeStaleMinutes: { ...base.noticeStaleMinutes, ...(overrides.noticeStaleMinutes as Partial<Tunables["noticeStaleMinutes"]>) },
     rate: { ...base.rate, ...(overrides.rate as Partial<Tunables["rate"]>) },
   };
 }

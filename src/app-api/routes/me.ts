@@ -1,7 +1,6 @@
-import { consentRequestSchema, type FileLink, MAX_PHOTO_BYTES, type MeResponse } from "@turnout/contract/app/me";
+import { consentRequestSchema, MAX_PHOTO_BYTES, type MeResponse } from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { handleInputSchema, profilePatchSchema } from "@turnout/contract/profile";
-import { addMinutes } from "../../social/dates.js";
 import { getHandle, isInLockedGroup, resetApprovedHandle, submitHandle } from "../../social/handles.js";
 import { isPhoneBanned, latestConsent, type MemberRow, recordConsent } from "../../social/members.js";
 import { missingItems } from "../../social/model/matchable.js";
@@ -13,12 +12,9 @@ import { authed } from "../auth.js";
 import type { AppContext, Route } from "../context.js";
 import { AppError, notFound } from "../errors.js";
 import { ok, parseBody, readBytes, retryAfter } from "../http.js";
+import { fileLink } from "../presenters.js";
 import { enforce } from "../rateLimit.js";
 import { reencodePhoto, sniffImage } from "../upload.js";
-
-function photoLink(app: AppContext, key: string, now: Date): FileLink {
-  return { url: app.store.linkFor(key), expiresAt: addMinutes(now, app.config.tunables.fileLinkMinutes).toISOString() };
-}
 
 /** Everything the app shows about the signed-in member, and what is still missing before they can be matched. */
 export function buildMe(app: AppContext, member: MemberRow, now: Date): MeResponse {
@@ -41,7 +37,7 @@ export function buildMe(app: AppContext, member: MemberRow, now: Date): MeRespon
       firstName: profile?.first_name ?? null,
       gender: profile?.gender ?? null,
       groupPref: profile?.group_pref ?? "open",
-      photo: profile?.photo_key ? photoLink(app, profile.photo_key, now) : null,
+      photo: profile?.photo_key ? fileLink(app, profile.photo_key, now) : null,
     },
     handle: {
       state: handle?.status ?? "missing",
@@ -104,7 +100,7 @@ export const meRoutes: Route[] = [
       // A different face needs the handle looked at again.
       resetApprovedHandle(app.db, row.id, now);
       if (old !== null && old !== key) await app.store.delete(old).catch(() => {});
-      return ok({ photo: photoLink(app, key, now) });
+      return ok({ photo: fileLink(app, key, now) });
     },
   },
   {
@@ -114,7 +110,7 @@ export const meRoutes: Route[] = [
     handler: ({ app, member, now }) => {
       const key = getProfile(app.db, authed(member).member.id)?.photo_key;
       if (!key) throw notFound();
-      return ok({ photo: photoLink(app, key, now) });
+      return ok({ photo: fileLink(app, key, now) });
     },
   },
   {

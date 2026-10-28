@@ -58,9 +58,16 @@ export function resetApprovedHandle(db: Database, memberId: string, now: Date): 
 }
 
 /**
- * True while the member is in a confirmed or locked group, when the handle may not change. Groups arrive in M3 (the `group_member`
- * table); until then nobody is in one, so this is false. M3 replaces the body and the callers stay as they are.
+ * True while the member is in a group that has not met yet (confirmed, locked or live), when the handle may not change. The
+ * member's place in it is a `group_member` row with no `left_at`.
  */
-export function isInLockedGroup(_db: Database, _memberId: string): boolean {
-  return false;
+export function isInLockedGroup(db: Database, memberId: string): boolean {
+  return (
+    db
+      .query(
+        `SELECT 1 FROM group_member gm JOIN show_group g ON g.id = gm.group_id
+         WHERE gm.member_id = ? AND gm.left_at IS NULL AND g.state IN ('confirmed', 'locked', 'live') LIMIT 1`,
+      )
+      .get(memberId) !== null
+  );
 }

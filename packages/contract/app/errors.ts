@@ -1,14 +1,18 @@
 import { z } from "zod";
+import { matchableItemSchema } from "./me.js";
 
 /**
  * Every app API error is `{ error: { code, message } }`. `code` is a stable snake_case string
  * the app switches on; `message` is for logs and is never shown as is. The list of codes grows
- * with the endpoints (M2 onward).
+ * with the endpoints (M2 onward). Two codes carry one extra field the app needs to act on them:
+ * `not_matchable` lists what the member still has to add, and `plan_exists` names the plan to carry on with.
  */
 export const errorBodySchema = z.object({
   error: z.object({
     code: z.string().regex(/^[a-z][a-z0-9_]*$/),
     message: z.string(),
+    missing: z.array(matchableItemSchema).optional(),
+    planId: z.string().optional(),
   }),
 });
 
@@ -41,6 +45,14 @@ export const ERROR_CODES = [
   "handle_locked",
   "file_too_large",
   "unsupported_type",
+  // Plans, tickets, groups and check-in.
+  "plan_exists",
+  "not_matchable",
+  "plan_closed",
+  "too_late",
+  "screenshot_required",
+  "bad_ticket",
+  "outside_window",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);

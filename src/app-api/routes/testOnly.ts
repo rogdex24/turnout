@@ -4,6 +4,7 @@ import { normalizePhone } from "../../social/model/phone.js";
 import type { Route } from "../context.js";
 import { invalidRequest, notFound } from "../errors.js";
 import { ok, parseBody } from "../http.js";
+import { runTickerPass } from "../ticker.js";
 import type { FakeOtpSender } from "../vendors/otpSender.js";
 
 const otpBody = z.object({ phone: z.string().min(5).max(20) }).strict();
@@ -19,6 +20,8 @@ const clockBody = z
       .max(366 * 24 * 60 * 60 * 1000)
       .optional(),
     reset: z.literal(true).optional(),
+    /** Run one ticker pass after the clock moved, so a test sees the locks, the reveals and the pushes without waiting. */
+    tick: z.literal(true).optional(),
   })
   .strict();
 
@@ -66,6 +69,7 @@ export const testOnlyRoutes: Route[] = [
       if (body.reset) app.adjustClock.reset();
       if (body.set !== undefined) app.adjustClock.set(body.set);
       if (body.advanceMs !== undefined) app.adjustClock.advance(body.advanceMs);
+      if (body.tick) await runTickerPass(app, "test-clock");
       return ok({ now: app.adjustClock().toISOString() });
     },
   },

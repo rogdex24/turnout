@@ -106,9 +106,43 @@ describe("PUT /me/handle", () => {
   });
 
   test("it is locked with 409 handle_locked while the member is in a locked group", async () => {
-    // Groups arrive with M3. Until then nobody is in one; the route's seam is `isInLockedGroup`, which the M3 tests cover.
     const { t, token } = await signedIn();
-    expect((await t.call("PUT", "/me/handle", { token, body: { kind: "instagram", handle: "free.to.change" } })).status).toBe(200);
+    const put = (handle: string) => t.call("PUT", "/me/handle", { token, body: { kind: "instagram", handle } });
+    expect((await put("free.to.change")).status).toBe(200);
+    const stamp = t.clock().toISOString();
+    const memberId = (t.db.query("SELECT id FROM member").get() as { id: string }).id;
+    t.db
+      .query(
+        "INSERT INTO venue (id, name, name_key, geocode_state, created_at, updated_at) VALUES ('v1', 'Hall', 'hall', 'resolved', ?, ?)",
+      )
+      .run(stamp, stamp);
+    t.db
+      .query(
+        `INSERT INTO event (id, source_event_id, source_slot_id, title, starts_at, time_kind, venue_id, venue_name, category, source_url, content_hash,
+           first_seen_at, last_seen_at, last_seen_run_id, updated_at)
+         VALUES ('e1', 'e1', '0', 'A show', '2026-11-20T14:00:00.000Z', 'timed', 'v1', 'Hall', 'comedy', 'https://example.test/x', 'h', ?, ?, 'run', ?)`,
+      )
+      .run(stamp, stamp, stamp);
+    t.db
+      .query(
+        `INSERT INTO plan (id, member_id, event_id, dedupe_key, group_type, state, show_title, show_starts_at, venue_name, created_at, updated_at)
+         VALUES ('p1', ?, 'e1', 'e1', 'open', 'group_confirmed', 'A show', '2026-11-20T14:00:00.000Z', 'Hall', ?, ?)`,
+      )
+      .run(memberId, stamp, stamp);
+    t.db
+      .query(
+        "INSERT INTO show_group (id, event_id, starts_at, group_type, created_at, updated_at) VALUES ('g1', 'e1', '2026-11-20T14:00:00.000Z', 'open', ?, ?)",
+      )
+      .run(stamp, stamp);
+    t.db
+      .query("INSERT INTO group_member (id, group_id, member_id, plan_id, member_ref, joined_at) VALUES ('gm1', 'g1', ?, 'p1', 'r1', ?)")
+      .run(memberId, stamp);
+    const locked = await put("changed.mind");
+    expect(locked.status).toBe(409);
+    expect((await errorOf(locked)).code).toBe("handle_locked");
+    expect((await me(t, token)).handle.handle).toBe("free.to.change");
+    t.db.query("UPDATE show_group SET state = 'done' WHERE id = 'g1'").run();
+    expect((await put("changed.mind")).status).toBe(200);
   });
 });
 

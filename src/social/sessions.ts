@@ -57,6 +57,8 @@ export function rotateSession(
     if (result.changes === 0) return false;
     insertSession(db, input);
     db.query("UPDATE auth_session SET replaced_by = ? WHERE id = ?").run(input.id, input.oldId);
+    // The device that registered under the old session now belongs to the new one, so a later sign-out still finds it.
+    db.query("UPDATE device SET session_id = ? WHERE session_id = ?").run(input.id, input.oldId);
     return true;
   })();
 }
@@ -66,8 +68,9 @@ export function revokeSession(db: Database, id: string, now: Date): void {
   db.query("UPDATE auth_session SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL").run(now.toISOString(), id);
 }
 
-/** Signs a member out everywhere. Returns how many sessions were still open. */
+/** Signs a member out everywhere, and no device of theirs gets a push any more. Returns how many sessions were still open. */
 export function revokeAllSessions(db: Database, memberId: string, now: Date): number {
+  db.query("DELETE FROM device WHERE member_id = ?").run(memberId);
   return db.query("UPDATE auth_session SET revoked_at = ? WHERE member_id = ? AND revoked_at IS NULL").run(now.toISOString(), memberId)
     .changes;
 }

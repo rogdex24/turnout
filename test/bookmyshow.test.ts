@@ -205,7 +205,7 @@ test("date-only migration upgrades the old event schema and clears invented Book
     fetchedBySource: { bookmyshow: [{ id: record.id, raw: record, occurrences: toOccurrences(record, new Date("2026-09-08T12:00:00Z")) }] },
   });
   db.exec("UPDATE event SET starts_at = '2026-09-08T13:30:00.000Z', ends_at = '2026-09-08T15:00:00.000Z'");
-  db.exec("DROP VIEW listable_event; ALTER TABLE event DROP COLUMN time_kind");
+  db.exec("DROP VIEW eligible_show; DROP VIEW listable_event; ALTER TABLE event DROP COLUMN time_kind");
   migrate(db);
   migrate(db);
   expect(db.query("SELECT time_kind, starts_at, ends_at FROM event LIMIT 1").get()).toEqual({
@@ -253,7 +253,7 @@ test("date-only migration releases legacy groups formed against invented times",
   });
   db.exec("UPDATE event SET dedupe_group_id = 'legacy', is_canonical = CASE WHEN source = 'bookmyshow' THEN 1 ELSE 0 END");
   db.exec("UPDATE event SET starts_at = '2026-09-08T13:30:00.000Z' WHERE source = 'bookmyshow'");
-  db.exec("DROP VIEW listable_event; ALTER TABLE event DROP COLUMN time_kind");
+  db.exec("DROP VIEW eligible_show; DROP VIEW listable_event; ALTER TABLE event DROP COLUMN time_kind");
   migrate(db);
   expect(db.query("SELECT COUNT(*) AS n FROM event WHERE is_canonical = 1 AND dedupe_group_id IS NULL").get()).toEqual({ n: 3 });
   db.close();

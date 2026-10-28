@@ -518,7 +518,7 @@ an eligible future event.
   listings use `12th Sep`, `12/09`, `Sep 12, 7 PM onwards` and `Friday 7pm` in
   roughly equal measure.
 
-## 13. Social (Turnout, from M2)
+## 13. Social (Turnout, from M2; plans and groups from M3)
 
 The people tables live in `src/social/schema.ts`, migrated last by `src/migrate.ts`. They follow section 1
 (ISO UTC `Z` times, lowercase ULID ids, `CHECK` enums) with one difference: `rate_bucket.window_start` is epoch
@@ -538,6 +538,17 @@ column is added to a table here and not there.
 | `social_handle` | `kind`, normalised handle, `status` (`pending`, `approved`, `rejected`), `reject_reason`, review fields, `submissions_today` and `submissions_day` | Until deletion or ban |
 | `consent_record` | Notice version, purpose, given and withdrawn times | 1 year after the account ends, under the tombstone id |
 | `rate_bucket` | Keyed-hash key, window, count | One window (the `otp:sends` counter: 62 days, for the monthly spend alert) |
+| `start_override` | `event_id` (one row per show), the operator's confirmed `starts_at`, who and when | While the show exists |
+| `show_group` | Event, `starts_at` snapshot, `group_type`, `state` (`confirmed`, `locked`, `live`, `done`, `called_off`, `dissolved`), the cafe, `meet_at`, state times. No personal data | `done`, `called_off` and `dissolved` rows are kept for counts |
+| `plan` | Member, event, `dedupe_key`, `group_type`, `state` (the plan state machine), `reason`, a snapshot of the show (title, start, venue name and point), `group_id` | Until deletion; an ended plan keeps no ticket file |
+| `ticket_proof` | `plan_id`, `object_key` (never returned by an app route), `mime`, `bytes`, `sha256`, `status`, `reject_reason`, review fields, `file_deleted_at` | The file: until review ends or 24 h after the show starts. The row: until the plan is deleted |
+| `group_member` | Group, member, plan, the opaque `member_ref`, `joined_at`, `left_at`, `checked_in_at` | Until deletion |
+| `device` | Member, the session that registered it, `expo_token` (unique), `platform`, `disabled_at` | Until sign-out, a failed receipt or deletion |
+| `notice` | ULID id, member, `kind`, plan, group, a unique `dedupe_key`, `read_at`, `stale_after`, `push_state` | 30 days |
+| `push_delivery` | Notice, device, the Expo ticket id, `status`, `error_code`, receipt time | 30 days |
+| `operator_action` | Action name, subject type and id, short detail, time | 1 year |
+| `scheduler_lease` | Lease name, holder, expiry, last tick | One row per lease |
+| `alert_sent` | Alert key, time | 30 days |
 
 Rules the schema encodes:
 
@@ -548,3 +559,15 @@ Rules the schema encodes:
   `undeliverable` can follow any of them. The API reports `pending` as `sent` and `reviewer` as `delivered`.
 - Keys in `rate_bucket` are HMACs (scope plus subject, keyed with `OTP_PEPPER`), so the table holds no phone and no IP.
 - `phone_hash` is `HMAC-SHA256(OTP_PEPPER, "phone:" + e164)`.
+- A plan has a `reason` exactly when it is `no_group` or `withdrawn` (`CHECK`). A member has one live plan per
+  `dedupe_key` (a partial unique index), where the key is the event's dedupe group or its own id. Every state move is
+  `UPDATE plan SET state = ? WHERE id = ? AND state = ?`, so two writers cannot both win.
+- A ticket proof carries a `reject_reason` exactly when rejected. A deleted file nulls `object_key` and `sha256` together.
+- A member is current in a group while `group_member.left_at` is null, at most once (a partial unique index). `member_ref`
+  is unique inside the group and is the only name another member's app sees.
+- A notice is inserted in the same transaction as the change it reports, and `dedupe_key` makes a second insert for the
+  same milestone fail instead of repeating.
+- `eligible_show` is a view over `listable_event`, `venue` and `start_override`. It is dropped and recreated on every
+  migrate. It holds the group rules that SQL can express (category, price, free, a known start, a placed venue inside
+  Hyderabad) and exposes `effective_starts_at`: the override when there is one, else the source's start. It has no
+  clock and does not know the city-centre placeholder point, so a caller re-runs `isEligible` before acting.

@@ -139,3 +139,17 @@ to need fixes. Do these in order, on a branch, and fix what fails before relying
 3. Run the visual capture once and read the artifact `visual-shots-<target>`. Accept the first set with `bun scripts/visual-accept.ts <run-id>` and commit the Git LFS files it writes. Until then `visual-compare.sh` prints a notice and passes. No baseline exists, and none could be made without an emulator.
 4. Start `mobile-canary.yml` by hand once (it also runs on Mondays at 03:00 UTC) and check that it passes.
 5. After the first green run, record the wall time of each job in `docs/plans/mobile-ci-budget.md`.
+
+## Needs owner: server side (M3)
+
+Added 2026-10-28 with the M3 server work. The code runs against fakes until each row is done.
+Names only; no value is written here.
+
+| Item | What the owner does | Where the steps are | Status |
+|---|---|---|---|
+| Expo account and project | Create an Expo account and project so the app can get push tokens. Blocks real push | `docs/plans/mobile-stack.md` | needs owner |
+| Firebase project `turnout-push` | Create the Firebase project and the FCM V1 server credential for the Android app and upload it to Expo. Blocks real push on Android | `docs/google-setup.md` | needs owner |
+| Expo access token | Only if enhanced push security is turned on: put the token in `EXPO_ACCESS_TOKEN` on the host | `docs/deploy.md` | needs owner |
+| Push sender | Set `PUSH_SENDER=expo` on staging when the items above are done. Production always uses `expo` | `docs/deploy.md` | blocked: Expo account |
+| Admin file links | Put the same `FILE_LINK_SECRET`, `OBJECT_STORE` and `FILES_DIR` on the admin process as on the server | `docs/deploy.md` | blocked: host slot |
+| Ticket and handle review | Someone opens the admin queues at least twice a day and inside the 12 hour handle alert | `docs/runbook.md` | needs owner |

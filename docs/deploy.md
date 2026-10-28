@@ -24,7 +24,7 @@ the repository, in EAS, or in CI, except the items `docs/plans/mobile-accounts.m
 
 | `TURNOUT_ENV` | Sender | Secrets and keys | Test routes | Notes |
 |---|---|---|---|---|
-| `production` | WhatsApp only. `OTP_SENDER=fake` is refused | All required; startup fails with the list of missing names | None. `/__test/*` is not in the route table | Needs the `GRIEVANCE_*` block |
+| `production` | WhatsApp and Expo push only. `OTP_SENDER=fake` and `PUSH_SENDER=fake` are refused | All required; startup fails with the list of missing names | None. `/__test/*` is not in the route table | Needs the `GRIEVANCE_*` block |
 | `staging` | Fake by default; never messages anyone | A missing secret is replaced by a random one for that run (sessions end at a restart) and the log says which | `POST /__test/otp` and `POST /__test/clock`, only with `STAGING_TEST_TOKEN` | Sign-in only for numbers in `TEST_PHONE_ALLOWLIST` |
 | `development` | Fake unless `OTP_SENDER=whatsapp` | Same as staging | Same as staging | Must be set on purpose: `serve` refuses to start when `TURNOUT_ENV` is unset |
 | `test` | Injected by the test | Fixed per test | In tests | In-memory object store |
@@ -39,6 +39,11 @@ case. Members get signed, short-lived links (`FILE_LINK_SECRET`, 5 minutes) and 
 | `disk` (default) | `FILES_DIR` (default `data/files`). Writes a temp name then renames, mode 0600, `Cache-Control: private, no-store` | Production on a single host, staging, development |
 | `s3` | `S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` through Bun's `S3Client` | Only if the host slot comes with an object bucket |
 | `memory` | The process | Tests only, the default when `TURNOUT_ENV=test` |
+
+The admin process reads the same store, so it needs the same `FILE_LINK_SECRET`, `OBJECT_STORE` and
+`FILES_DIR` (or `S3_*`) to show ticket files and handle photos. With the secret unset, or with `memory`,
+the admin shows no file link and the queues still work. The admin signs its own 5 minute links and
+serves them itself; the app's files route never serves a `tickets/` key.
 
 A nightly sweep deletes files no row points to. **Photos and tickets are not in the Litestream
 backup**, which covers the SQLite file only. A lost disk means members upload their photo again;
@@ -61,7 +66,9 @@ wrong.
 - Review account for the Play app access form: `REVIEWER_PHONE`, `REVIEWER_OTP` (production only).
 - Staging only: `STAGING_TEST_TOKEN` (at least 32 characters), `TEST_PHONE_ALLOWLIST`, `FAKE_UNDELIVERABLE_PHONES`.
 - Files: `OBJECT_STORE`, `FILES_DIR`, `S3_*`.
-- Behaviour: `MIN_APP_VERSION`, `PUSH_PLATFORMS` (Android only until the Apple account exists),
+- Push: `PUSH_SENDER` (`expo` or `fake`; production always uses `expo` and refuses `fake`), `EXPO_ACCESS_TOKEN` (optional, needed
+  only with Expo's enhanced push security), `PUSH_PLATFORMS` (Android only until the Apple account exists).
+- Behaviour: `MIN_APP_VERSION`,
   `TRUST_PROXY_HEADER` (set to the proxy's header name only when a proxy you control sets it).
 - Later: `APP_LINKS_ANDROID_SHA256`, `SENTRY_DSN`.
 
