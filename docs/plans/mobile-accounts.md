@@ -87,3 +87,24 @@ The plan sets the alerts; the numbers here follow the plan.
 
 A budget alert is not a spending cap. Acceptance for F1 includes the alert test email arriving at
 the `operator` role.
+
+## Needs owner: server side (M2)
+
+Added 2026-10-27 with the M2 server work. The code runs against fakes until each row is done.
+Names only; no value is written here.
+
+| Item | What the owner does | Where the steps are | Status |
+|---|---|---|---|
+| Host slot | Say which host runs the server (and its replica type for Litestream). Blocks S21, the webhook and HTTPS | `docs/deploy.md` | pending: user |
+| DNS | Point the domain and `staging.<domain>` at the host. Later, `go.<domain>` for the share link | `docs/deploy.md` | pending: user |
+| Meta business portfolio, verification, dedicated number, prepaid top-up, authentication template, system user token | Do steps 1 to 7 in the table; put the token in `WHATSAPP_ACCESS_TOKEN` on the host only | `docs/meta-setup.md` | pending: user |
+| WhatsApp webhook registration | Register `https://<domain>/api/app/v1/webhooks/whatsapp` once the host serves HTTPS; choose `WHATSAPP_VERIFY_TOKEN` | `docs/meta-setup.md` | blocked: host slot |
+| Server secrets | Generate `OTP_PEPPER`, `BAN_PEPPER`, `FILE_LINK_SECRET` and the ES256 pair on the host | `docs/deploy.md`, `.env.example` | blocked: host slot |
+| Grievance officer details | Set `GRIEVANCE_NAME`, `GRIEVANCE_ADDRESS`, `GRIEVANCE_EMAIL`, `GRIEVANCE_PHONE` on the host. Production will not start without them. They are published through `/privacy`, not in the repository | `docs/open-questions.md` Q10 | pending: user |
+| Privacy policy review | Read `docs/privacy-policy.md` (the `/privacy` page) and confirm it with whoever advises on the DPDP Act before launch | `docs/privacy-policy.md` | pending: user |
+| Alert destination | Pick a chat webhook or a mailbox for `OPERATOR_ALERT_WEBHOOK_URL` | `docs/runbook.md` | pending: user |
+| Google Cloud, Firebase, Maps key, budget | Steps 1 to 7 | `docs/google-setup.md` | pending: user |
+| Reviewer login | Choose `REVIEWER_PHONE` and `REVIEWER_OTP` for Google's review and enter them in Play app access | `docs/deploy.md` | pending: user |
+| Staging token | Generate `STAGING_TEST_TOKEN` on the staging host only | `docs/deploy.md` | blocked: host slot |
+| Photo backup choice | Decide whether to back up the files directory, since photos are outside the Litestream backup | `docs/deploy.md` | pending: user |
+| HEIC check on a real phone | Upload an iPhone HEIC photo through the app. The server sniffs it and decodes with `Bun.Image`, which could not be exercised on the Linux build machine | `DECISIONS.md` | pending: user |
