@@ -1,12 +1,18 @@
 import type { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { migrate } from "../src/migrate.js";
 import { withdrawPlan } from "../src/social/groups.js";
 import { getHandle } from "../src/social/handles.js";
+import { DEFAULT_TUNABLES, type Tunables } from "../src/social/model/tunables.js";
 import { addNotice, listNotices } from "../src/social/notices.js";
 import { approveTicket, rejectTicket } from "../src/social/operator.js";
 import { createPlan, getPlan, livePlanFor, movePlan } from "../src/social/plans.js";
 import { getEligibleShow, lookingCount } from "../src/social/shows.js";
 import { addTicket, dueTicketFiles, latestTicket, markTicketFileDeleted, reviewTicket, ticketQueue } from "../src/social/tickets.js";
+import { openDb } from "../src/utils/openDb.js";
 import { SHOW_START, seedMember, seedShow, waitingPlan } from "./helpers/socialFixture.js";
 import { memoryDb } from "./helpers.js";
 
@@ -331,4 +337,107 @@ test("the looking count is the people waiting for a group, nobody else", () => {
   waitingPlan(db, seedMember(db, NOW), "show-a", NOW);
   createPlan(db, { memberId: seedMember(db, NOW), eventId: "show-a", groupType: "open", now: NOW });
   expect(lookingCount(db, "show-a")).toBe(1);
+});
+
+/**
+ * Two connections to one file. `probe` runs inside the first one's transaction, from a tunable it reads, and tries to start a write
+ * on the second with no wait. A transaction that took the write lock at BEGIN makes that fail; a deferred one has not yet.
+ */
+function writeLockedDuring(run: (db: Database, tunables: Tunables) => void, seed: (db: Database) => void): boolean {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "plan-lock-"));
+  const first = openDb(path.join(dir, "a.db"));
+  migrate(first);
+  seed(first);
+  const second = openDb(path.join(dir, "a.db"));
+  second.exec("PRAGMA busy_timeout = 0");
+  let locked = false;
+  let probed = false;
+  const probe = () => {
+    if (probed) return;
+    probed = true;
+    try {
+      second.exec("BEGIN IMMEDIATE");
+      second.exec("ROLLBACK");
+    } catch {
+      locked = true;
+    }
+  };
+  const tunables: Tunables = {
+    ...DEFAULT_TUNABLES,
+    get joinCutoffHours() {
+      probe();
+      return DEFAULT_TUNABLES.joinCutoffHours;
+    },
+  };
+  try {
+    run(first, tunables);
+  } finally {
+    first.close();
+    second.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  return locked;
+}
+
+test("createPlan takes the write lock when it starts, so two requests for one show cannot read the same empty answer", () => {
+  let member = "";
+  const locked = writeLockedDuring(
+    (db, t) => {
+      expect(createPlan(db, { memberId: member, eventId: "show-a", groupType: "open", now: NOW }, t).ok).toBe(true);
+    },
+    (db) => {
+      seedShow(db, { id: "show-a" });
+      member = seedMember(db, NOW);
+    },
+  );
+  expect(locked).toBe(true);
+});
+
+test("addTicket takes the write lock when it starts", () => {
+  let planId = "";
+  const locked = writeLockedDuring(
+    (db, t) => {
+      const plan = getPlan(db, planId) as NonNullable<ReturnType<typeof getPlan>>;
+      const sent = addTicket(db, { plan, objectKey: "tickets/x/a.jpg", mime: "image/jpeg", bytes: 900, sha256: "sha-x", now: NOW }, t);
+      expect(sent.ok).toBe(true);
+    },
+    (db) => {
+      seedShow(db, { id: "show-a" });
+      const made = createPlan(db, { memberId: seedMember(db, NOW), eventId: "show-a", groupType: "open", now: NOW });
+      if (!made.ok) throw new Error(made.error);
+      planId = made.plan.id;
+    },
+  );
+  expect(locked).toBe(true);
+});
+
+test("a second live plan that slips past the read is plan_exists naming the first, not a constraint error", () => {
+  const { db, member } = setup();
+  const first = createPlan(db, { memberId: member, eventId: "show-a", groupType: "open", now: NOW });
+  if (!first.ok) throw new Error(first.error);
+  // A read that ran before the other request committed: it saw no live plan. Only that first read is stale.
+  let stalePending = true;
+  const stale = new Proxy(db, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop, target);
+      if (prop !== "query") return typeof value === "function" ? value.bind(target) : value;
+      return (sql: string) => {
+        const query = target.query(sql);
+        if (!sql.startsWith("SELECT * FROM plan WHERE member_id = ? AND dedupe_key = ?")) return query;
+        return {
+          get: (...args: unknown[]) => {
+            if (!stalePending) return query.get(...(args as never[]));
+            stalePending = false;
+            return null;
+          },
+        };
+      };
+    },
+  });
+  expect(createPlan(stale, { memberId: member, eventId: "show-a", groupType: "open", now: after(1000) })).toEqual({
+    ok: false,
+    error: "plan_exists",
+    planId: first.plan.id,
+  });
+  expect(db.query("SELECT COUNT(*) AS n FROM plan").get()).toEqual({ n: 1 });
 });

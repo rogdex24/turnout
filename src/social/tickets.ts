@@ -42,19 +42,21 @@ export function addTicket(
   input: { plan: PlanRow; objectKey: string; mime: string; bytes: number; sha256: string; now: Date },
   t: Tunables = DEFAULT_TUNABLES,
 ): AddTicketResult {
-  return db.transaction((): AddTicketResult => {
-    if (input.now.getTime() >= Date.parse(planLockAt(input.plan, t))) return { ok: false, error: "too_late" };
-    const moved =
-      input.plan.state === "needs_ticket" || input.plan.state === "ticket_rejected"
-        ? movePlan(db, input.plan, { type: "ticket_uploaded" }, input.now)
-        : null;
-    if (moved === null) return { ok: false, error: "plan_closed" };
-    const id = ulid(input.now);
-    db.query(
-      "INSERT INTO ticket_proof (id, plan_id, object_key, mime, bytes, sha256, status, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
-    ).run(id, input.plan.id, input.objectKey, input.mime, input.bytes, input.sha256, input.now.toISOString());
-    return { ok: true, ticket: getTicket(db, id) as TicketRow };
-  })();
+  return db
+    .transaction((): AddTicketResult => {
+      if (input.now.getTime() >= Date.parse(planLockAt(input.plan, t))) return { ok: false, error: "too_late" };
+      const moved =
+        input.plan.state === "needs_ticket" || input.plan.state === "ticket_rejected"
+          ? movePlan(db, input.plan, { type: "ticket_uploaded" }, input.now)
+          : null;
+      if (moved === null) return { ok: false, error: "plan_closed" };
+      const id = ulid(input.now);
+      db.query(
+        "INSERT INTO ticket_proof (id, plan_id, object_key, mime, bytes, sha256, status, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
+      ).run(id, input.plan.id, input.objectKey, input.mime, input.bytes, input.sha256, input.now.toISOString());
+      return { ok: true, ticket: getTicket(db, id) as TicketRow };
+    })
+    .immediate();
 }
 
 export type TicketDecision = { kind: "approve" } | { kind: "reject"; reason: TicketRejectReason };

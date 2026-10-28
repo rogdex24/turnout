@@ -63,44 +63,55 @@ export type CreatePlanResult =
 /**
  * Makes a plan in `needs_ticket`, with the show's title, start and venue copied in so a later change at the source cannot move it.
  * Checks, in order: the show can have a group now, the member has what a plan needs, `women_only` is for women and non-binary people,
- * and there is no live plan for the same show already (the answer names it, so a retry can carry on with it).
+ * and there is no live plan for the same show already (the answer names it, so a retry can carry on with it). The transaction is
+ * immediate: it holds the write lock from its first read, so two requests for one show line up instead of both reading an empty answer.
  */
 export function createPlan(
   db: Database,
   input: { memberId: string; eventId: string; groupType: GroupType; now: Date },
   t: Tunables = DEFAULT_TUNABLES,
 ): CreatePlanResult {
-  return db.transaction((): CreatePlanResult => {
-    const show = getEligibleShow(db, input.eventId, input.now, t);
-    if (show === null) return { ok: false, error: "show_not_found" };
-    const missing = missingForPlan(db, input.memberId);
-    if (missing.length > 0) return { ok: false, error: "not_matchable", missing };
-    const gender = getProfile(db, input.memberId)?.gender ?? null;
-    if (input.groupType === "women_only" && (gender === null || !canChooseWomenOnly(gender))) return { ok: false, error: "women_only" };
-    const existing = livePlanFor(db, input.memberId, show.dedupeKey);
-    if (existing !== null) return { ok: false, error: "plan_exists", planId: existing.id };
-    const id = ulid(input.now);
-    const at = input.now.toISOString();
-    db.query(
-      `INSERT INTO plan (id, member_id, event_id, dedupe_key, group_type, state, show_title, show_starts_at, venue_name, venue_lat, venue_lng,
-         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'needs_ticket', ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      id,
-      input.memberId,
-      show.id,
-      show.dedupeKey,
-      input.groupType,
-      show.title,
-      show.startsAt,
-      show.venueName,
-      show.venueLat,
-      show.venueLng,
-      at,
-      at,
-    );
-    return { ok: true, plan: getPlan(db, id) as PlanRow };
-  })();
+  return db
+    .transaction((): CreatePlanResult => {
+      const show = getEligibleShow(db, input.eventId, input.now, t);
+      if (show === null) return { ok: false, error: "show_not_found" };
+      const missing = missingForPlan(db, input.memberId);
+      if (missing.length > 0) return { ok: false, error: "not_matchable", missing };
+      const gender = getProfile(db, input.memberId)?.gender ?? null;
+      if (input.groupType === "women_only" && (gender === null || !canChooseWomenOnly(gender))) return { ok: false, error: "women_only" };
+      const existing = livePlanFor(db, input.memberId, show.dedupeKey);
+      if (existing !== null) return { ok: false, error: "plan_exists", planId: existing.id };
+      const id = ulid(input.now);
+      const at = input.now.toISOString();
+      try {
+        db.query(
+          `INSERT INTO plan (id, member_id, event_id, dedupe_key, group_type, state, show_title, show_starts_at, venue_name, venue_lat, venue_lng,
+             created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'needs_ticket', ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          id,
+          input.memberId,
+          show.id,
+          show.dedupeKey,
+          input.groupType,
+          show.title,
+          show.startsAt,
+          show.venueName,
+          show.venueLat,
+          show.venueLng,
+          at,
+          at,
+        );
+      } catch (error) {
+        // The unique index idx_plan_live is the rule itself: a request that read "no live plan" just before another one wrote it
+        // lands here, and the answer is the same as if it had read the other's plan.
+        const winner = livePlanFor(db, input.memberId, show.dedupeKey);
+        if (winner === null) throw error;
+        return { ok: false, error: "plan_exists", planId: winner.id };
+      }
+      return { ok: true, plan: getPlan(db, id) as PlanRow };
+    })
+    .immediate();
 }
 
 /**
