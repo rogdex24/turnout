@@ -396,3 +396,8 @@ waived as for the scaffold. `expo` and `jest-expo` stay excluded.
 Why. A patch release inside the SDK is what Expo tests against. Holding the old pin would leave CI
 red until Renovate's 14-day window passes. The cost: each Expo patch day can break `mobile-health`
 until someone bumps the pins.
+
+The module patches also need the matching native core. With `expo` held at 58.0.11, iOS crashed at
+launch on a missing `ExpoModulesJSI` symbol, so `expo` moved to 58.0.21 too and left
+`expo.install.exclude`, so `expo install --check` now flags `expo` when it falls behind its modules.
+Only `jest-expo` stays excluded.

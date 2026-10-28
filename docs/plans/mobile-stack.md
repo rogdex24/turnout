@@ -27,7 +27,7 @@ Versions that did not qualify, kept so nobody bumps to them by hand before the a
 
 | Topic | Package or tool | Planned version | Published | Source | Status |
 |---|---|---|---|---|---|
-| Framework | `expo` | 58.0.11 | 2026-10-15 | https://expo.dev/changelog/sdk-58 | installed (`apps/mobile`) |
+| Framework | `expo` | 58.0.21 | 2026-10-28 | https://expo.dev/changelog/sdk-58 | installed (`apps/mobile`) |
 | Framework | `react-native` | 0.88.0 (the line Expo SDK 58 pins) | 2026-10-15 | https://www.npmjs.com/package/react-native | installed (`apps/mobile`) |
 | Framework | `react` | 19.3.0 | 2026-09-09 | https://www.npmjs.com/package/react | installed (root, web) |
 | Package age | `minimumReleaseAge` in `bunfig.toml` | 1209600 | n/a | https://bun.com/docs/runtime/bunfig | planned (workspaces stream) |
@@ -167,3 +167,8 @@ Checks on 2026-10-28:
   `expo-font`, `expo-image`, `expo-linking`, `expo-location`, `expo-notifications`, `expo-router`,
   `expo-splash-screen`, `expo-system-ui`, `expo-updates`), and the job failed until the exact pins
   moved to them. Those bumps waive the 14-day rule like the scaffold did.
+- The module patches of 2026-10-28 need `expo-modules-jsi` 58.0.21. With `expo` at 58.0.11 the
+  lockfile kept `expo-modules-core` 58.0.27 and `expo-modules-jsi` 58.0.20, and the iOS build crashed
+  at launch (`ExpoFont` could not find a symbol in `ExpoModulesJSI`). `expo` now pins 58.0.21, which
+  brings `expo-modules-core` 58.0.28 and `expo-modules-jsi` 58.0.21. `expo` left
+  `expo.install.exclude`, so the check now flags it when it falls behind; only `jest-expo` stays.
