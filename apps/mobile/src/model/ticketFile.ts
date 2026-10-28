@@ -76,3 +76,23 @@ export function canSend(state: {
 }): boolean {
   return state.file !== null && state.issue === null && !state.uploading && !state.offline;
 }
+
+/** What can go wrong on the ticket page: a file problem, or the call itself. */
+export type TicketProblem = TicketFileIssue | "offline" | "server" | "plan_closed";
+
+/** Turns a failed upload into the problem to show. A refusal of the file keeps the file, so the person can choose another. */
+export function problemFromError(error: ApiError): TicketProblem {
+  if (error.kind === "offline") return "offline";
+  if (error.code === "plan_closed") return "plan_closed";
+  return issueFromError(error) ?? "server";
+}
+
+/** The plan states where the ticket page has something to do: add, wait, or add another. Any other state belongs to the plan page. */
+export type TicketPhase = "add" | "checking" | "rejected";
+
+export function ticketPhase(state: string): TicketPhase | null {
+  if (state === "needs_ticket") return "add";
+  if (state === "checking_ticket") return "checking";
+  if (state === "ticket_rejected") return "rejected";
+  return null;
+}

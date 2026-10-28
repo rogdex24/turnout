@@ -1,5 +1,5 @@
 import { ApiError } from "./apiError";
-import { canSend, checkPicked, issueFromError, normaliseMime } from "./ticketFile";
+import { canSend, checkPicked, issueFromError, normaliseMime, problemFromError, ticketPhase } from "./ticketFile";
 
 const MB = 1024 * 1024;
 
@@ -66,5 +66,26 @@ describe("canSend", () => {
     expect(canSend({ file, issue: "too_large", uploading: false, offline: false })).toBe(false);
     expect(canSend({ file, issue: null, uploading: true, offline: false })).toBe(false);
     expect(canSend({ file, issue: null, uploading: false, offline: true })).toBe(false);
+  });
+});
+
+describe("problemFromError", () => {
+  test("names what the person can fix, and what they can only wait out", () => {
+    expect(problemFromError(new ApiError("offline", null, null))).toBe("offline");
+    expect(problemFromError(new ApiError("validation", 400, "unsupported_type"))).toBe("unsupported_type");
+    expect(problemFromError(new ApiError("validation", 409, "plan_closed"))).toBe("plan_closed");
+    expect(problemFromError(new ApiError("rate_limited", 429, "rate_limited", 30))).toBe("rate_limited");
+    expect(problemFromError(new ApiError("server", 500, "server_error"))).toBe("server");
+  });
+});
+
+describe("ticketPhase", () => {
+  test("only the three ticket states have a ticket page phase", () => {
+    expect(ticketPhase("needs_ticket")).toBe("add");
+    expect(ticketPhase("checking_ticket")).toBe("checking");
+    expect(ticketPhase("ticket_rejected")).toBe("rejected");
+    for (const state of ["finding_group", "group_confirmed", "meet_card_live", "no_group", "withdrawn", "done"]) {
+      expect(ticketPhase(state)).toBeNull();
+    }
   });
 });
