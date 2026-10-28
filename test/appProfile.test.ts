@@ -4,7 +4,7 @@ import { meResponseSchema, photoResponseSchema } from "@turnout/contract/app/me"
 import { normalizeHandle } from "@turnout/contract/profile";
 import { sniffImage } from "../src/app-api/upload.js";
 import { BASE, PHONES, type TestApp, testApp } from "./appHelpers.js";
-import { containsBytes, GPS_MARKER, jpegMarkers, makePng, withExif } from "./imageFixtures.js";
+import { containsBytes, GPS_MARKER, jpegMarkers, makeHugePng, makePng, withExif } from "./imageFixtures.js";
 
 const errorOf = async (response: Response) => errorBodySchema.parse(await response.json()).error;
 
@@ -113,7 +113,7 @@ describe("PUT /me/handle", () => {
 });
 
 describe("PUT /me/photo", () => {
-  test("a JPEG is re-encoded, stored under the member, linked with a signed URL, and the link serves the picture", async () => {
+  test("a JPEG is re-encoded, stored under an opaque key, linked with a signed URL, and the link serves the picture", async () => {
     const { t, token } = await signedIn();
     const response = await uploadJpeg(t, token);
     expect(response.status).toBe(200);
@@ -163,6 +163,50 @@ describe("PUT /me/photo", () => {
     const { photo } = photoResponseSchema.parse(await response.json());
     const stored = new Uint8Array(await (await fetchLink(t, photo.url)).arrayBuffer());
     expect(await new Bun.Image(stored).metadata()).toMatchObject({ format: "jpeg", width: 1080, height: 810 });
+  });
+
+  test("the stored key is photos/<ulid>.jpg: no member id, and a different key for each upload", async () => {
+    const { t, token } = await signedIn();
+    const memberId = (t.db.query("SELECT id FROM member").get() as { id: string }).id;
+    await uploadJpeg(t, token);
+    t.clock.advance(1000);
+    await uploadJpeg(t, token);
+    const key = (t.db.query("SELECT photo_key FROM profile").get() as { photo_key: string }).photo_key;
+    expect(key).toMatch(/^photos\/[0-9a-z]{26}\.jpg$/);
+    expect(key).not.toContain(memberId.toLowerCase());
+    const { photo } = photoResponseSchema.parse(await (await t.call("GET", "/me/photo", { token })).json());
+    expect(photo.url).not.toContain(memberId.toLowerCase());
+  });
+
+  test("a picture over 40 megapixels is 413 file_too_large from its header, before any decode, and nothing is stored", async () => {
+    const { t, token } = await signedIn();
+    const huge = makeHugePng(8000, 5001);
+    expect(huge.length).toBeLessThan(200);
+    const response = await t.call("PUT", "/me/photo", { token, rawBody: huge });
+    expect(response.status).toBe(413);
+    expect((await errorOf(response)).code).toBe("file_too_large");
+    expect((await t.app.store.list("photos/")).length).toBe(0);
+    // Exactly 40 megapixels passes the size check; the empty pixel data then fails to decode, which is a 400 and not a 413.
+    const edge = await t.call("PUT", "/me/photo", { token, rawBody: makeHugePng(8000, 5000) });
+    expect(edge.status).toBe(400);
+    expect((await errorOf(edge)).code).toBe("unsupported_type");
+  });
+
+  test("the limit is 10 uploads per member per IST day, then 429 with Retry-After, and a new day starts fresh", async () => {
+    const { t, token } = await signedIn();
+    const limit = t.app.config.tunables.rate.photoUploadPerMemberDay.limit;
+    expect(limit).toBe(10);
+    for (let i = 0; i < limit; i++) expect((await uploadJpeg(t, token)).status).toBe(200);
+    const refused = await uploadJpeg(t, token);
+    expect(refused.status).toBe(429);
+    expect((await errorOf(refused)).code).toBe("rate_limited");
+    expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(0);
+    // Another member is not held back by this one.
+    const other = await t.signIn(PHONES[1] as string);
+    expect((await uploadJpeg(t, other.accessToken)).status).toBe(200);
+    t.clock.advance(24 * 60 * 60 * 1000);
+    const nextDay = await t.signIn(PHONES[0] as string);
+    expect((await uploadJpeg(t, nextDay.accessToken)).status).toBe(200);
   });
 
   test("a PDF renamed .jpg is 400 unsupported_type and nothing is stored", async () => {
@@ -259,7 +303,7 @@ describe("signed file links", () => {
     const exp = Number(parsed.searchParams.get("exp"));
     const tamperedSig = url.replace(sig, `${sig.slice(0, -1)}${sig.endsWith("A") ? "B" : "A"}`);
     const tamperedExp = url.replace(`exp=${exp}`, `exp=${exp + 3600}`);
-    const otherKey = url.replace(/photos\/([^/]+)\//, "photos/someone-else/");
+    const otherKey = url.replace(/photos\/[^/?]+\.jpg/, "photos/someone-else.jpg");
     const noSig = url.split("&sig=")[0] as string;
     const shortSig = url.replace(sig, sig.slice(0, 5));
     for (const bad of [tamperedSig, tamperedExp, otherKey, noSig, shortSig]) {

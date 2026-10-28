@@ -24,15 +24,18 @@ const PHOTO_QUALITY = 85;
 /**
  * Decodes the upload and writes a new JPEG, longest side at most 1080 px. Only pixels come across: EXIF (including a GPS position)
  * and every other piece of metadata is dropped, because the file is made again from the decoded picture. Anything the decoder
- * cannot read is `unsupported_type`.
+ * cannot read is `unsupported_type`; one with more than `maxPixels` pixels is `file_too_large`.
  */
-export async function reencodePhoto(bytes: Uint8Array): Promise<Uint8Array> {
+export async function reencodePhoto(bytes: Uint8Array, maxPixels: number): Promise<Uint8Array> {
   try {
     const source = new Bun.Image(bytes);
     const { width, height } = await source.metadata();
+    // The header is read before any pixel is decoded, so a small file that claims a huge picture costs nothing.
+    if (width * height > maxPixels) throw new AppError(413, "file_too_large", "that picture is too large, send one under 40 megapixels");
     const scaled = Math.max(width, height) > PHOTO_MAX_SIDE ? source.resize(PHOTO_MAX_SIDE, PHOTO_MAX_SIDE, { fit: "inside" }) : source;
     return await scaled.jpeg({ quality: PHOTO_QUALITY }).bytes();
-  } catch {
+  } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(400, "unsupported_type", "that picture could not be read, try a JPEG or PNG");
   }
 }

@@ -13,6 +13,7 @@ import { authed } from "../auth.js";
 import type { AppContext, Route } from "../context.js";
 import { AppError, notFound } from "../errors.js";
 import { ok, parseBody, readBytes, retryAfter } from "../http.js";
+import { enforce } from "../rateLimit.js";
 import { reencodePhoto, sniffImage } from "../upload.js";
 
 function photoLink(app: AppContext, key: string, now: Date): FileLink {
@@ -94,8 +95,10 @@ export const meRoutes: Route[] = [
       const { member: row } = authed(member);
       const bytes = await readBytes(request, MAX_PHOTO_BYTES, "file_too_large");
       if (sniffImage(bytes) === null) throw new AppError(400, "unsupported_type", "send a JPEG, PNG or HEIC picture");
-      const jpeg = await reencodePhoto(bytes);
-      const key = `photos/${row.id.toLowerCase()}/${ulid(now).toLowerCase()}.jpg`;
+      enforce(app.db, app.config.otpPepper, "photo:upload", row.id, app.config.tunables.rate.photoUploadPerMemberDay, now);
+      const jpeg = await reencodePhoto(bytes, app.config.tunables.photoMaxPixels);
+      // The key says nothing about whose photo it is, so a link to it never carries a member id.
+      const key = `photos/${ulid(now).toLowerCase()}.jpg`;
       await app.store.put(key, jpeg, "image/jpeg");
       const old = setPhotoKey(app.db, row.id, key, now);
       // A different face needs the handle looked at again.

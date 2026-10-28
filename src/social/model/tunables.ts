@@ -47,6 +47,8 @@ export interface Tunables {
     refreshGraceSeconds: number;
   };
   fileLinkMinutes: number;
+  /** A profile photo with more pixels than this is refused before it is decoded. */
+  photoMaxPixels: number;
   rate: {
     otpPerPhoneShort: RateRule;
     otpPerPhoneDay: RateRule;
@@ -58,6 +60,7 @@ export interface Tunables {
     messagesPerMinute: RateRule;
     planCreatePerDay: RateRule;
     handleSubmitPerDay: RateRule;
+    photoUploadPerMemberDay: RateRule;
   };
 }
 
@@ -80,6 +83,7 @@ export const DEFAULT_TUNABLES: Tunables = {
   },
   session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
   fileLinkMinutes: 5,
+  photoMaxPixels: 40_000_000,
   rate: {
     otpPerPhoneShort: { limit: 3, window: { seconds: 15 * 60 } },
     otpPerPhoneDay: { limit: 10, window: "ist_day" },
@@ -91,6 +95,7 @@ export const DEFAULT_TUNABLES: Tunables = {
     messagesPerMinute: { limit: 30, window: { seconds: 60 } },
     planCreatePerDay: { limit: 10, window: "ist_day" },
     handleSubmitPerDay: { limit: 3, window: "ist_day" },
+    photoUploadPerMemberDay: { limit: 10, window: "ist_day" },
   },
 };
 
