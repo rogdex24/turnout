@@ -352,8 +352,8 @@ Rules:
 ### 10.1 JSON endpoint
 `GET /api/events` with query parameters, all optional and combinable:
 `from`, `to` (ISO dates, IST), `area`, `category`, `free` (bool),
-`max_price` (rupees), `lat`, `lng`, `radius_km`, `limit` (default 50, max 200),
-`cursor`.
+`max_price` (rupees), `lat`, `lng`, `radius_km`, `group_eligible` (`1` keeps only
+shows a group can be made for), `limit` (default 50, max 200), `cursor`.
 
 ```json
 {
@@ -379,13 +379,18 @@ Rules:
     "price_min": null, "price_max": null, "currency": "INR",
     "source": { "name": "Instagram", "url": "https://..." },
     "ticket_url": null,
-    "image_url": "https://.../thumb.jpg"
+    "image_url": "https://.../thumb.jpg",
+    "group_eligible": true
   }]
 }
 ```
 
 No API key, no rate limit beyond basic abuse protection, CORS open. The point is
 to be quoted, including by AI assistants. `next_cursor` is null on the last page.
+
+`group_eligible` is true when a group can be made for the show now: comedy, music or
+theatre, not free, from ₹499, a real start time, a placed venue, and more than 24 hours
+away (exactly 24 hours is already closed). The rule is `src/social/model/eligibility.ts`.
 
 `GET /api/events/{id}` returns one event with `alternate_ticket_urls` and the
 full description.
@@ -512,3 +517,34 @@ an eligible future event.
 - Normalisation has property tests for the date parsing, since Indian event
   listings use `12th Sep`, `12/09`, `Sep 12, 7 PM onwards` and `Friday 7pm` in
   roughly equal measure.
+
+## 13. Social (Turnout, from M2)
+
+The people tables live in `src/social/schema.ts`, migrated last by `src/migrate.ts`. They follow section 1
+(ISO UTC `Z` times, lowercase ULID ids, `CHECK` enums) with one difference: `rate_bucket.window_start` is epoch
+seconds. Foreign keys are enforced (`openDb` turns `foreign_keys` on), so erasing a member is: delete the child
+rows, then reduce `member` to a tombstone (`status = 'deleted'`, `phone_e164` null). `consent_record` has no
+cascade: it outlives the member under the tombstone id for a year.
+
+`docs/data-map.md` lists every column with its purpose, who sees it and how long it is kept. A test fails when a
+column is added to a table here and not there.
+
+| Table | Holds | Kept |
+| --- | --- | --- |
+| `member` | ULID id, `phone_e164` unique, `status` (`active`, `suspended`, `stopped`, `banned`, `deleted`), reason, times | Until deletion, then a tombstone |
+| `auth_session` | Refresh token hash (never the token), expiry, `revoked_at`, `replaced_by`, `replaced_at` | Until expiry or sign-out; revoked or rotated rows 7 days |
+| `otp_challenge` | `phone_hash`, purpose (`sign_in`, `delete_account`), `code_hmac`, attempts, expiry, `wamid`, `delivery_status` | 1 day; no code and no raw phone |
+| `profile` | `first_name`, `gender`, `group_pref`, `photo_key` | Until deletion |
+| `social_handle` | `kind`, normalised handle, `status` (`pending`, `approved`, `rejected`), `reject_reason`, review fields, `submissions_today` and `submissions_day` | Until deletion or ban |
+| `consent_record` | Notice version, purpose, given and withdrawn times | 1 year after the account ends, under the tombstone id |
+| `rate_bucket` | Keyed-hash key, window, count | One window (the `otp:sends` counter: 62 days, for the monthly spend alert) |
+
+Rules the schema encodes:
+
+- A member without a phone must be a tombstone (`CHECK`).
+- A handle has no row until it is submitted ("missing" is the absence of a row). `reject_reason` is only set on a
+  rejected row.
+- A challenge's `delivery_status` only moves up (`pending`, `sent`, `delivered`, `read`); `failed` and
+  `undeliverable` can follow any of them. The API reports `pending` as `sent` and `reviewer` as `delivered`.
+- Keys in `rate_bucket` are HMACs (scope plus subject, keyed with `OTP_PEPPER`), so the table holds no phone and no IP.
+- `phone_hash` is `HMAC-SHA256(OTP_PEPPER, "phone:" + e164)`.

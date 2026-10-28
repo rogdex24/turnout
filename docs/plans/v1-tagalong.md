@@ -49,9 +49,12 @@ officer before the first account.
    button. Eligible means a ticketed event in comedy, music or theatre, priced at 499
    rupees or more. The price floor is a guess. Tune it with real data.
 2. **Sign up once.** Phone number and OTP, first name, one clear face photo, gender,
-   and the women-only preference. Then identity verification (see "Safety").
-3. **Prove the ticket.** For BookMyShow, the booking ID. For everyone else, a
-   screenshot or PDF. In v1 an operator checks each one by hand in the admin console.
+   and the women-only preference. Then an Instagram or LinkedIn handle the operator
+   checks (see "Safety"). Sign-in needs WhatsApp on the number: the code arrives
+   there, and there is no SMS fallback in v1 (amended 2026-10-26).
+3. **Prove the ticket.** For BookMyShow, a screenshot only, with no booking ID. For
+   other sellers, a screenshot or a PDF. In v1 an operator checks each one by hand in
+   the admin console (amended 2026-10-26).
    Most will take under a minute.
 4. **Wait for a group.** A group forms when four people of the right mix hold tickets
    to the same show. Up to six. If no group forms by 24 hours before the show, the
@@ -70,12 +73,22 @@ officer before the first account.
 
 These are part of v1, not a later version.
 
-- **Identity.** Government ID check through a vendor (DigiLocker-based or similar,
-  `open-questions.md` Q11) plus a liveness selfie that matches the profile photo. We
-  keep the vendor's yes or no and a reference, never the ID image itself.
+- **Handle check** (amended 2026-10-26; replaces the vendor identity check, Q11
+  closed). We do not collect identity documents. Before a first match a person needs
+  a phone that receives a WhatsApp code, a face photo, a complete profile, an
+  Instagram or LinkedIn handle the operator has checked, an approved ticket for the
+  show, and no ban or stop. The operator looks at the handle and approves or rejects
+  it with a fixed reason. No other member ever sees the handle.
+- **Ban list** (2026-10-26). A keyed hash of the phone number (HMAC with a server-only
+  pepper), kept only for people who are banned or stopped. Ordinary account deletion
+  deletes everything. A banned number cannot sign in again.
 - **Gender balance.** No group has more than 4 of 6, or 3 of 4, of one gender.
   Women can pick women-only groups. If the mix won't work, people wait. Slower
-  growth is the price.
+  growth is the price. The caps are per category (woman, man, non-binary): 3 of 4,
+  3 of 5 and 4 of 6. Women-only groups are open to women and non-binary people, have
+  no cap inside them, and never mix with open groups (2026-10-26).
+- **Group of 3 after T-24h.** Groups lock 24 hours before the show. A locked group
+  that loses people still goes ahead with 3. Below 3 it is called off (2026-10-26).
 - **Public places only.** The meeting spot is a cafe we pick, never a home, never a
   car. The venue is public by definition.
 - **Report.** One report suspends the reported account at once and hides it from
@@ -155,8 +168,9 @@ New code, in the module rules of `AGENTS.md`:
   CSRF come with them.
 - Admin: a ticket review queue and a report queue. This breaks the invariant that the
   admin only writes `mute_rule`, so `AGENTS.md` changes with it.
-- Vendors: an SMS OTP provider and an identity vendor. Both cost money per use, so
-  pick them in step 0 (Q11).
+- Vendors (amended 2026-10-26): no SMS provider and no identity vendor. Sign-in codes
+  go by WhatsApp from our own server (Meta's Cloud API, prepaid, about 0.136 rupees a
+  code with GST). `docs/meta-setup.md` has the steps.
 
 ### Measures for v1
 

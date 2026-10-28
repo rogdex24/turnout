@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { isUsablePoint } from "../../catalog/venue.js";
+import { isPlacedVenue } from "../../catalog/venue.js";
 import { endOfDayIst, istCalendarDate, startOfDayIst } from "../../utils/time.js";
 import { collapseRuns } from "../queries.js";
 import { publicSourceUrl } from "../source-url.js";
@@ -61,12 +61,7 @@ export function loadMap(db: Database, fromIso: string, toIso: string): MapCollec
   const venues = new Map<string, MapFeature>();
   let excludedNoLocation = 0;
   for (const { row, moreDates } of collapseRuns(rows)) {
-    const placed =
-      row.venueId != null &&
-      row.lat != null &&
-      row.lng != null &&
-      isUsablePoint(row.lat, row.lng) &&
-      (row.state === "resolved" || row.state === "approximate" || row.state === "manual");
+    const placed = row.venueId != null && isPlacedVenue({ lat: row.lat, lng: row.lng, state: row.state });
     if (!placed) {
       excludedNoLocation += 1;
       continue;

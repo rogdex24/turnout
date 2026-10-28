@@ -211,7 +211,7 @@ Phase 1.
 
 ---
 
-## Q10. Grievance officer identity — OPEN
+## Q10. Grievance officer identity - CLOSED
 
 **Question.** Whose name, address and contact are published as grievance officer
 before Phase 4 opens accounts?
@@ -231,9 +231,14 @@ may require the LLP or Pvt Ltd structure to be in place first.
 **Decide by.** Month 8, so that the entity work can complete before Phase 4
 build starts.
 
+**Decision (2026-10-26).** Closed. The operator is the grievance officer. The
+details are published through `/privacy`, the notice and the settings screen in
+the app, and are not written in this repository. Production refuses to start
+without them (`GRIEVANCE_*` in the host environment).
+
 ---
 
-## Q11. Identity verification vendor for tag-along — OPEN
+## Q11. Identity verification vendor for tag-along - CLOSED
 
 **Question.** How is government ID plus liveness verification actually performed?
 
@@ -254,6 +259,13 @@ document. Confirm pricing fits inside the verification fee of 199 to 299 rupees.
 **Blocks.** Phase 4 build.
 
 **Decide by.** Month 9.
+
+**Decision (2026-10-26).** Closed. There is no identity check and no KYC vendor in
+v1, so we hold no identity documents. The handle check (an Instagram or LinkedIn
+handle the operator approves), the ticket check and the ban list replace it.
+Sign-in codes go by WhatsApp from our own server, so there is no SMS vendor and no
+DLT registration to decide either. Revisit only if the operator adds identity
+checks in a later version.
 
 ---
 

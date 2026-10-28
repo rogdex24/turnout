@@ -6,11 +6,15 @@
   "description": "Request and response schemas shared by the Turnout server and the mobile app. Zod only, no runtime APIs.",
   "exports": {
     ".": "./index.ts",
+    "./app/auth": "./app/auth.ts",
+    "./app/config": "./app/config.ts",
+    "./app/errors": "./app/errors.ts",
+    "./app/me": "./app/me.ts",
+    "./app/notice": "./app/notice.ts",
     "./category": "./category.ts",
     "./events": "./events.ts",
     "./profile": "./profile.ts",
-    "./ticket": "./ticket.ts",
-    "./app/errors": "./app/errors.ts"
+    "./ticket": "./ticket.ts"
   },
   "dependencies": {
     "zod": "4.6.6"

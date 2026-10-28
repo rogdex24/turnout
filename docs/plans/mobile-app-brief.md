@@ -59,11 +59,15 @@ Screens, in the order a new person meets them:
 
 1. **Welcome.** Three short cards: what happens, that everyone's verified, that you
    meet in public. Then sign in.
-2. **Sign in.** Phone number and OTP. Nothing else at this step.
+2. **Sign in.** Phone number and a WhatsApp code. Nothing else at this step. The code
+   is sent and checked by our own server, which issues short-lived access tokens with
+   a refresh token. The number needs WhatsApp, and there is no SMS fallback in v1
+   (amended 2026-10-26).
 3. **Profile.** First name, one photo, gender, the women-only preference. Four
    fields. No bio, no quiz, no interests in v1.
-4. **Verify.** Identity check through the vendor, with a liveness selfie. Explain why
-   in one sentence before the camera opens.
+4. **Handle check** (amended 2026-10-26; moved from M4 to M3). An Instagram or LinkedIn
+   handle the operator checks. There is no identity check in v1. Explain why in one
+   sentence before the field.
 5. **Home.** Upcoming eligible shows near you, from the catalog. The one primary
    action is "Go with a group".
 6. **Show.** Poster, time, venue, price, the link out to buy if you haven't yet, and
@@ -171,11 +175,11 @@ week 1 with evidence. After that, they're settled.
 | Server state | TanStack Query | Caching, retries, offline replay. Don't hand-roll fetch state |
 | Local state | React state plus one small store (Zustand) if it's truly needed | No Redux |
 | Forms | React Hook Form with Zod | Zod schemas are shared with the server |
-| Auth | Better Auth with its Expo integration and phone OTP plugin, on the existing Bun server | TypeScript, self-hosted, no per-user pricing |
-| Identity check | An Indian KYC vendor with DigiLocker and liveness (IDfy, HyperVerge or Digio, `open-questions.md` Q11) | Never build ID checks yourself |
+| Auth | Our own: a WhatsApp code sent and checked by the Bun server, then our own short-lived access tokens and refresh (amended 2026-10-26; replaces Better Auth) | TypeScript, self-hosted, no per-user pricing, no SMS vendor |
+| Handle check | The operator checks an Instagram or LinkedIn handle in the admin console (amended 2026-10-26; replaces the identity vendor, Q11 closed) | We do not collect identity documents |
 | Group thread | A hosted chat SDK with React Native UI (Stream Chat or similar) if the cost fits. Otherwise a plain thread on our own server | Chat looks small and isn't. Moderation, read state and push come with the SDK |
 | Maps | `react-native-maps` | One cafe and one venue pin. Nothing fancier |
-| Push | `expo-notifications` | Works across both platforms through EAS |
+| Push | `expo-notifications` | Android only until the Apple account exists (amended 2026-10-26) |
 | Secure storage | `expo-secure-store` for tokens | Keychain on iOS, Keystore on Android |
 | Errors | Sentry for React Native | Crashes with source maps from EAS builds |
 | Analytics | PostHog React Native | Already in use. Funnels for the loop, session replay with masking on |
@@ -212,13 +216,12 @@ locally, same as the web.
 
 ## Security and privacy
 
-This app holds faces, phone numbers, ID check results and where people will be
-tonight. Treat it that way.
+This app holds faces, phone numbers, handles and where people will be tonight. Treat it that way.
 
 - Follow OWASP MASVS at level L1 at minimum, L2 for auth and storage.
 - No secrets in the bundle. Everything privileged happens on the server.
 - Tokens in secure storage only. Short-lived access tokens with refresh.
-- We never store ID images. We keep the vendor's yes or no and a reference.
+- We do not collect identity documents (amended 2026-10-26).
 - Location only while the meet card is live, foreground only, and only to show
   distance. Never stored after the show.
 - Every endpoint checks that the caller belongs to the group whose data they're asking
@@ -240,7 +243,7 @@ Each one ends with something I can install from TestFlight and Play internal tes
    reading the real catalog. Light and dark, all states designed.
 3. **Weeks 4 to 5: the loop.** Ticket upload, admin review queue, grouping, your
    plans, meet card, push notifications.
-4. **Weeks 6 to 7: trust.** Identity check, group thread, after-show feedback, report
+4. **Weeks 6 to 7: trust.** Group thread, after-show feedback, report
    handling, women-only, gender caps, settings, account deletion.
 5. **Week 8: hardening.** Accessibility pass, performance on a mid-range Android
    phone, a security review against MASVS, store listings, privacy labels.
@@ -251,8 +254,9 @@ teaches us can change milestones 3 and 4, so expect that.
 ## Done means
 
 - Every gate above is green on both platforms.
-- I've used the full loop on a real iPhone and a real mid-range Android phone, in
-  light and dark, with large text on, and nothing felt unfinished.
+- I've used the full loop on the iOS simulator (until the Apple account exists) and a
+  real mid-range Android phone, in light and dark, with large text on, and nothing
+  felt unfinished.
 - Every screen in the app has a reference screen in the design board it traces back
   to.
 - Every custom piece of plumbing has a PR note saying what existing project it
@@ -262,5 +266,5 @@ teaches us can change milestones 3 and 4, so expect that.
 
 1. The visual diff tool, and what it costs.
 2. The chat SDK, or our own thread, and what each costs at 1,000 groups a month.
-3. The identity vendor, with price per check and how long a check takes.
+3. ~~The identity vendor~~ Dropped on 2026-10-26: no identity check in v1.
 4. Whether the monorepo works with Expo and Metro, or the app needs its own repo.

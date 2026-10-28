@@ -30,6 +30,8 @@ export const eventSchema = z.object({
   source: z.object({ name: z.string(), url: z.string() }),
   ticket_url: z.string(),
   image_url: z.string().nullable(),
+  /** A group can be made for this show right now (category, price, a real start time, a placed venue, before T-24h). */
+  group_eligible: z.boolean(),
 });
 
 export const eventDetailSchema = eventSchema.extend({

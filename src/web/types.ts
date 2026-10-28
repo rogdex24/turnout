@@ -14,6 +14,10 @@ export interface EventCard {
   area: string;
   latitude: number | null;
   longitude: number | null;
+  /** The venue row's point and state, which the placed-venue rule reads. The event's own latitude is not used for that. */
+  venueLat: number | null;
+  venueLng: number | null;
+  venueGeocodeState: string | null;
   categories: string;
   category: Category;
   isFree: number;
@@ -40,6 +44,8 @@ export interface ListingFilters {
   lng: number | null;
   radiusKm: number | null;
   venueId: string | null;
+  /** Only shows a group can be made for (`group_eligible=1`). */
+  groupEligible: boolean;
 }
 
 /**

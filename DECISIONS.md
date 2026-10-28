@@ -80,3 +80,66 @@ versions are candidates that `expo install` may move at the scaffold. `posthog-r
 set, about 2 GB a month of bandwidth) until the first snapshot on 2026-11-02. The iOS gaps (no
 TestFlight, real iPhone, universal links, iOS push, or App Store listing) are listed in
 `docs/plans/mobile-visual-testing.md`.
+
+## 2026-10-27: M2 server, where the build differs from the plan or fills a gap
+
+Decision. Each item below is a choice made while building S1 to S6, S16 and S20 where the plan was
+silent, or where it could not be followed as written. Each keeps the plan's intent.
+
+1. **The contract lives in `packages/contract`, not `src/`.** The plan's file list says
+   `packages/contract/src/*.ts`; the workspace from F-tasks puts the files at `packages/contract/*.ts`
+   and `packages/contract/app/*.ts`. The server imports `@turnout/contract`. `FIRST_NAME_MAX` is 40, not
+   30, so long first names in common use fit; the app reads the same constant.
+2. **`rate_bucket.window_start` is epoch seconds.** Every other table uses ISO UTC text. A rate window
+   is arithmetic (floor to the window), so integers avoid parsing on each request. `docs/data-model.md`
+   section 13 says so.
+3. **`otp:sends` is kept 62 days.** The monthly spend alert needs the previous and current month, so
+   the one counter outlives the usual one-window retention. No phone or address is in it.
+4. **A distinct 503 `otp_cap_reached`.** The plan says every refusal is one generic `sign_in_unavailable`
+   except 429 and the tripped cap. The cap answer is a different status and code so the app can show
+   "try again tomorrow" and not "this number cannot sign in". `sign_in_unavailable` itself is 403.
+5. **The ban list stands in as `member.status = 'banned'` until M4.** S25 (the keyed-hash ban list) is
+   not in this stream. Sign-in refuses a banned member with the generic 403 and refresh revokes the
+   session. M4 adds the hashed list and does not change the response.
+6. **Refresh token reuse is strict.** A refresh token that was already traded in signs the member out
+   everywhere, with no grace window. A client that retries a refresh after a lost response will have to
+   sign in again; this is the safe side for a stolen token. Revisit if the field shows many false hits.
+7. **Exact T-24h counts as closed.** `isEligible` closes joining at the instant T-24h, the same as the
+   lock, so the two never disagree. The tests cover one second before, exactly, and after.
+8. **The start override is null in M2.** `isEligible` takes an operator start override, but the table
+   and the admin write arrive in M3 (S15). Until then a date-only show is never eligible.
+9. **The handle lock is a stub.** `PUT /me/handle` returns 409 `handle_locked` through
+   `isInLockedGroup`, which returns false until the group tables exist in M3. The route and its test
+   hook are in place.
+10. **`FileLink.url` is a relative path or an absolute URL.** Disk and memory stores give a path on the API
+    origin (`/api/app/v1/files/<key>?exp=&sig=`); S3 gives a presigned absolute URL. The store takes the
+    signer as an injected `link` function so `src/utils` imports nothing from `src/app-api`.
+11. **Photo upload takes raw bytes.** `PUT /me/photo` reads the request body as the image, with the
+    `Content-Type` ignored and the bytes sniffed (JPEG, PNG, HEIC). A multipart form would need a parser
+    that reads past the 10 MB cap before it can refuse.
+12. **HEIC is sniffed and decoded by `Bun.Image`, and the decode could not be checked here.** I could not
+    verify a HEIC decode on this Linux machine, so the tests cover the sniffer and the failure path (a
+    file the decoder cannot read is 400 `unsupported_type`). A real HEIC upload is a check on the host
+    (`docs/plans/mobile-accounts.md`, needs owner). A member whose phone sends HEIC and fails is told to
+    try a JPEG or PNG.
+13. **Staging and development fill a missing secret with a random one for the run.** The server lists
+    the names in `ephemeral` and logs them. Sessions end at a restart. Production refuses to start
+    instead.
+14. **S20: `FAKE_UNDELIVERABLE_PHONES`.** The plan asks for one number the fake sender marks
+    `undeliverable`. It is an environment list so any environment can name its own; the seed prints it.
+15. **S20: five seeded states wait for M3.** Waiting, grouped before the reveal, meet card live, group
+    of 3 and done need plan and group tables. They are seeded as matchable members with their numbers
+    reserved, and the seed file says where M3 adds the rows. The recording push sender belongs with the
+    push work (S11, M3), so staging uses no push sender yet.
+16. **S20: the test token is generated per run.** `e2e/mobile-server.ts` makes a random
+    `STAGING_TEST_TOKEN` at start and hands it to the test through the returned object. It is never
+    written to a file.
+17. **`/privacy` is not an exact-path route.** `exactPath` in `src/web/index.ts` declines a trailing
+    slash and returned 404 for `/privacy/`; the page now answers both.
+
+Evidence. Tests for each item: `test/auth.test.ts`, `test/appApi.test.ts`, `test/appProfile.test.ts`,
+`test/eligibility.test.ts`, `test/objectStore.test.ts`, `test/seedStaging.test.ts`,
+`test/privacyPage.test.ts`, `test/mobileServer.test.ts`.
+
+Why. Each one is the smaller or safer choice that keeps the plan's behaviour for members. None adds a
+paid service or a package.

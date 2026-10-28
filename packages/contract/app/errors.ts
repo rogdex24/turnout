@@ -13,3 +13,35 @@ export const errorBodySchema = z.object({
 });
 
 export type ErrorBody = z.infer<typeof errorBodySchema>;
+
+/**
+ * The codes the server sends. A code is added here in the commit that first sends it, so the app can
+ * switch on the list and a test can fail on a code the server invents.
+ */
+export const ERROR_CODES = [
+  // Every endpoint.
+  "invalid_request",
+  "unauthorized",
+  "not_found",
+  "method_not_allowed",
+  "rate_limited",
+  "payload_too_large",
+  "server_error",
+  // Sign-in and sessions.
+  "bad_phone",
+  "sign_in_unavailable",
+  "otp_cap_reached",
+  "otp_send_failed",
+  "invalid_code",
+  "unknown_notice_version",
+  "account_suspended",
+  // Profile, handle and photo.
+  "women_only",
+  "bad_handle",
+  "handle_locked",
+  "file_too_large",
+  "unsupported_type",
+] as const;
+
+export const errorCodeSchema = z.enum(ERROR_CODES);
+export type ErrorCode = z.infer<typeof errorCodeSchema>;

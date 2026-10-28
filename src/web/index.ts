@@ -10,14 +10,22 @@ import { mapApi } from "./map/api.js";
 import { assetResponse, mapAssetsNow } from "./map/assets.js";
 import { mapPage } from "./map/server.js";
 import { detailPage, listingPage, matchProgrammaticRoute, notFoundPage, programmaticListingPage, venuePage } from "./pages.js";
+import { type GrievanceBlock, privacyPage } from "./privacy.js";
 import type { NowFn } from "./types.js";
 
 interface RouteContext {
   db: Database;
   url: URL;
   now: NowFn;
+  options: SiteOptions;
   /** Decoded capture groups from the matching pattern. */
   params: [string, ...string[]];
+}
+
+/** What the host passes in that the database does not hold. */
+export interface SiteOptions {
+  /** The grievance officer, shown on /privacy. Null reads as "Details not set". */
+  grievance?: GrievanceBlock | null;
 }
 
 /** Returns null to decline, letting the next route try. */
@@ -44,6 +52,8 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
       }),
   ],
 
+  [/^\/privacy$/, ({ options }) => privacyPage(options.grievance ?? null)],
+
   [/^\/favicon\.svg$/, exactPath("/favicon.svg", () => faviconResponse())],
   // Browsers ask for /favicon.ico before reading the page head; point them at the SVG.
   [/^\/favicon\.ico$/, () => new Response(null, { status: 301, headers: { location: "/favicon.svg" } })],
@@ -64,18 +74,18 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
   [/^\/assets\/icons\/categories\.[0-9a-f]+\.svg$/, ({ url }) => iconSpriteResponse(url.pathname)],
   [/^\/map$/, ({ db, url, now }) => mapPage(db, url, now, mapAssetsNow())],
   [/^\/api\/map$/, ({ db, url, now }) => mapApi(db, url, now)],
-  [/^\/api\/events\/([^/]+)$/, ({ db, url, params }) => eventsApiDetail(db, params[0], url.origin)],
+  [/^\/api\/events\/([^/]+)$/, ({ db, url, params, now }) => eventsApiDetail(db, params[0], url.origin, now)],
 
   // Thin HTTP tool endpoints matching data-model 10.4 names (full MCP transport deferred).
   [/^\/tools\/search_events$/, ({ db, url, now }) => eventsApiList(db, url, now)],
   [
     /^\/tools\/get_event$/,
-    ({ db, url }) => {
+    ({ db, url, now }) => {
       const id = url.searchParams.get("id") ?? url.searchParams.get("slug");
-      return id ? eventsApiDetail(db, id, url.origin) : jsonResponse({ error: "missing_id" }, 400);
+      return id ? eventsApiDetail(db, id, url.origin, now) : jsonResponse({ error: "missing_id" }, 400);
     },
   ],
-  [/^\/tools\/get_event\/([^/]+)$/, ({ db, url, params }) => eventsApiDetail(db, params[0], url.origin)],
+  [/^\/tools\/get_event\/([^/]+)$/, ({ db, url, params, now }) => eventsApiDetail(db, params[0], url.origin, now)],
   [/^\/tools\/whats_on_this_weekend$/, ({ db, url, now }) => whatsOnThisWeekendTool(db, url, now)],
   [/^\/tools\/list_venues$/, ({ db, url, now }) => listVenuesTool(db, url, now)],
   [/^\/tools\/list_areas$/, ({ db, now }) => listAreasTool(db, now)],
@@ -103,7 +113,7 @@ function normalizePath(pathname: string): string {
   return trimmed === "" ? "/" : trimmed;
 }
 
-export function siteResponse(db: Database, request: Request, now: NowFn = () => new Date()): Response {
+export function siteResponse(db: Database, request: Request, now: NowFn = () => new Date(), options: SiteOptions = {}): Response {
   try {
     const url = new URL(request.url);
     // Validate encoding even on a path that no route matches.
@@ -114,7 +124,13 @@ export function siteResponse(db: Database, request: Request, now: NowFn = () => 
       const match = pattern.exec(path);
       if (!match) continue;
       // Every pattern that reads params[0] has a mandatory capture group.
-      const response = handle({ db, url, now, params: match.slice(1).map((part) => decodeURIComponent(part!)) as [string, ...string[]] });
+      const response = handle({
+        db,
+        url,
+        now,
+        options,
+        params: match.slice(1).map((part) => decodeURIComponent(part!)) as [string, ...string[]],
+      });
       if (response) return response;
     }
     return htmlResponse(notFoundPage(), 404);

@@ -48,6 +48,17 @@ export function tonightBoundsIst(now: Date): { fromIso: string; toIso: string } 
   return { fromIso: new Date(`${day}T17:00:00+05:30`).toISOString(), toIso: endOfDayIst(day) };
 }
 
+/** The next 00:00 IST after `now`, as an ISO instant. Daily limits reset then. */
+export function nextIstMidnight(now: Date): string {
+  return startOfDayIst(addDaysToDate(istCalendarDate(now), 1));
+}
+
+/** A YYYY-MM-DD date plus whole days, as YYYY-MM-DD. */
+export function addDaysToDate(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
 export function startOfDayIst(date: string): string {
   return new Date(`${date}T00:00:00+05:30`).toISOString();
 }

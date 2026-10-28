@@ -48,6 +48,8 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cn": "^0.4.0",
+    "jose": "6.2.12",
+    "libphonenumber-js": "1.13.14",
     "lucide-react": "1.55.0",
     "maplibre-gl": "6.13.0",
     "nuqs": "2.10.2",

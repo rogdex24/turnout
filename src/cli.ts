@@ -1,12 +1,13 @@
-import { Database } from "bun:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import { startAdmin } from "./admin/start.js";
+import { APP_PREFIX, type AppContext, appResponse, ConfigError, createAppContext, startTicker } from "./app-api/index.js";
 import { addMuteRule, countMuted, isMuteField, listMuteRules, MUTE_FIELDS, removeMuteRule } from "./curation/mute.js";
 import { nominatimGeocoder } from "./ingestion/geocode/nominatim.js";
 import { runGeocode } from "./ingestion/geocode/runGeocode.js";
 import { runSync } from "./ingestion/sync.js";
 import { migrate } from "./migrate.js";
+import { openDb } from "./utils/openDb.js";
 import { isUuid } from "./utils/uuid.js";
 import { siteResponse } from "./web/index.js";
 import { buildMapAssets } from "./web/map/assets.js";
@@ -35,7 +36,7 @@ function positionalArgs(args: string[]): string[] {
 /** Mute rules hide events from everything the site serves. Sync still ingests them. */
 function runMute(dbPath: string, args: string[]): void {
   const [action, field, ...valueParts] = positionalArgs(args);
-  const db = new Database(dbPath, { create: true, strict: true });
+  const db = openDb(dbPath);
   try {
     migrate(db);
 
@@ -83,7 +84,7 @@ function runMute(dbPath: string, args: string[]): void {
 }
 
 async function runGeocodeCommand(dbPath: string, args: string[]): Promise<void> {
-  const db = new Database(dbPath, { create: true, strict: true });
+  const db = openDb(dbPath);
   try {
     migrate(db);
     const limit = readFlag(args, "--limit");
@@ -107,7 +108,7 @@ async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
   if (command !== "sync" && command !== "serve" && command !== "mute" && command !== "geocode" && command !== "admin") {
     console.error(
-      "Usage: bun run src/cli.ts <sync|serve|mute|geocode|admin> [--db <path>] [--port <port>] [--sources communitie,district,allevents,luma,townscript,meraevents,bookmyshow,growezy] [--run-id <uuid>]",
+      "Usage: bun run src/cli.ts <sync|serve|mute|geocode|admin> [--db <path>] [--port <port>] [--sources communitie,district,allevents,luma,townscript,meraevents,bookmyshow,growezy] [--run-id <uuid>] [--no-ticker]",
     );
     console.error(`       mute list | mute add <${MUTE_FIELDS.join("|")}> <value> [--note <text>] | mute remove <field> <value>`);
     process.exitCode = 1;
@@ -127,7 +128,7 @@ async function main(): Promise<void> {
     const port = Number(readFlag(rest, "--port") ?? 3001);
     // Same as serve: the panel opens the file read-only, so bring the schema up first.
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    const migrator = new Database(dbPath, { create: true, strict: true });
+    const migrator = openDb(dbPath);
     migrate(migrator);
     migrator.close();
     try {
@@ -141,21 +142,47 @@ async function main(): Promise<void> {
   }
   if (command === "serve") {
     const port = Number(readFlag(rest, "--port") ?? 3000);
-    // Bring the schema up to date on a writable handle first. Serving is
-    // read-only, so without this an existing database is missing any table a
-    // newer build introduced and every query against it fails.
-    const migrator = new Database(dbPath, { create: true, strict: true });
+    // Bring the schema up to date on a writable handle first. The site reads through a read-only
+    // handle, so without this an existing database is missing any table a newer build introduced
+    // and every query against it fails.
+    const migrator = openDb(dbPath);
     migrate(migrator);
     migrator.close();
     await buildMapAssets();
-    const db = new Database(dbPath, { readonly: true, strict: true });
-    Bun.serve({ port, fetch: (request) => siteResponse(db, request) });
+    const siteDb = openDb(dbPath, { readonly: true });
+    // The app API is the one writer in this process; it gets its own handle (WAL, busy_timeout, foreign keys).
+    let app: AppContext;
+    try {
+      app = await createAppContext({ db: openDb(dbPath), env: process.env });
+    } catch (error) {
+      if (!(error instanceof ConfigError)) throw error;
+      console.error(error.message);
+      process.exitCode = 1;
+      return;
+    }
+    if (app.config.ephemeral.length > 0) {
+      console.warn(`Not set, so random for this run (sessions end at a restart): ${app.config.ephemeral.join(", ")}`);
+    }
+    const stopTicker = rest.includes("--no-ticker") ? undefined : startTicker(app);
+    const server = Bun.serve({
+      port,
+      // A photo is at most 10 MB; the app API refuses bigger ones itself, and this stops a bigger body being buffered at all.
+      maxRequestBodySize: 12 * 1024 * 1024,
+      fetch: (request, bunServer) =>
+        new URL(request.url).pathname.startsWith(APP_PREFIX)
+          ? appResponse(app, request, bunServer.requestIP(request)?.address ?? null)
+          : siteResponse(siteDb, request, app.now, { grievance: app.config.grievance }),
+    });
+    process.once("SIGTERM", () => {
+      stopTicker?.();
+      server.stop();
+    });
     console.log(`Serving ${dbPath} at http://localhost:${port}`);
     return;
   }
 
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath, { create: true, strict: true });
+  const db = openDb(dbPath);
   migrate(db);
 
   const sourcesFlag = readFlag(rest, "--sources");
