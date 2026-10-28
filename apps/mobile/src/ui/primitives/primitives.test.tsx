@@ -11,6 +11,7 @@ import { Note } from "./Note";
 import { Row } from "./Row";
 import { Sheet } from "./Sheet";
 import { Text } from "./Text";
+import { TextButton } from "./TextButton";
 
 const flat = (style: unknown) => StyleSheet.flatten(style as object);
 
@@ -24,6 +25,16 @@ describe("hit areas", () => {
   it("a chip is at least 44 tall", async () => {
     await render(<Chip label="Jubilee Hills" onPress={() => undefined} />);
     expect(flat(screen.getByRole("button").props.style)).toMatchObject({ minHeight: sizes.hitMin });
+  });
+
+  it("a text button is at least 44 tall and named", async () => {
+    await render(<TextButton title="Skip" onPress={() => undefined} />);
+    expect(flat(screen.getByRole("button", { name: "Skip" }).props.style)).toMatchObject({ minHeight: sizes.hitMin });
+  });
+
+  it("a text button that reads as a link says so", async () => {
+    await render(<TextButton link title="Change number" onPress={() => undefined} />);
+    expect(screen.getByRole("link", { name: "Change number" })).toBeOnTheScreen();
   });
 
   it("a row is at least 56 tall", async () => {

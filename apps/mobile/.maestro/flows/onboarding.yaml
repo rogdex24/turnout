@@ -1,0 +1,28 @@
+# A fresh install walks the Welcome cards with the Next button, then reaches the notice.
+# It is extended as the sign-in (A5) and profile (A6) screens land. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: onboarding
+tags:
+  - onboarding
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
+- assertVisible: "Everyone signs in with a phone number, a real photo and a social profile we check."
+- assertVisible: "1 of 3"
+- tapOn:
+    id: welcome-next
+- assertVisible: "2 of 3"
+- swipe:
+    direction: LEFT
+- assertVisible: "3 of 3"
+- assertVisible: "Get started"
+- tapOn:
+    id: welcome-next
+- extendedWaitUntil:
+    visible:
+      id: notice
+    timeout: 10000

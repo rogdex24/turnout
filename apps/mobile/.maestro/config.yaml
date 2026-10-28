@@ -7,3 +7,4 @@ executionOrder:
   flowsOrder:
     - launch
     - smoke
+    - onboarding

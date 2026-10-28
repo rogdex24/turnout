@@ -32,6 +32,14 @@ describe("signed out", () => {
     expect(screen).toHavePathname("/welcome");
   });
 
+  test("Skip on welcome is remembered and opens the notice", async () => {
+    await launch({});
+    await on("welcome");
+    await fireEvent.press(screen.getByTestId("welcome-skip"));
+    await on("notice");
+    expect(mockApp.deps.localFlags.getSnapshot().welcomeSeen).toBe(true);
+  });
+
   test("after welcome comes the notice, before any phone screen", async () => {
     await launch({ welcomeSeen: true });
     await on("notice");

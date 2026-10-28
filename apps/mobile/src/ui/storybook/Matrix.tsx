@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, useWindowDimensions, View } from "react-native";
 import { ScopedTheme } from "uniwind";
 import { Text } from "../primitives/Text";
 import { LARGEST_TEXT_SCALE, TextScaleContext } from "../textScale";
@@ -13,9 +13,11 @@ const CELLS = [
 
 /**
  * Story helper: shows the same content in light and dark, at the default and the largest text size, one under the other. Every
- * design-system story and every screen state story uses it, so each one is checked at both extremes.
+ * design-system story and every screen state story uses it, so each one is checked at both extremes. `framed` gives the content a
+ * full window height, for screens that fill the phone.
  */
-export function Matrix({ children, padded = false }: { children: ReactNode; padded?: boolean }) {
+export function Matrix({ children, padded = false, framed = false }: { children: ReactNode; padded?: boolean; framed?: boolean }) {
+  const { height } = useWindowDimensions();
   return (
     <ScrollView contentContainerClassName="gap-4">
       {CELLS.map((cell) => (
@@ -25,7 +27,9 @@ export function Matrix({ children, padded = false }: { children: ReactNode; padd
               <Text variant="label" className="mb-2 px-4 text-muted">
                 {cell.name}
               </Text>
-              <View className={padded ? "px-4" : undefined}>{children}</View>
+              <View className={padded ? "px-4" : undefined} style={framed ? { height } : undefined}>
+                {children}
+              </View>
             </View>
           </TextScaleContext.Provider>
         </ScopedTheme>

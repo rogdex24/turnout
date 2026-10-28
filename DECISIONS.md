@@ -303,3 +303,11 @@ members out whenever a response was lost on a bad network.
   required props.
 - A1 acceptance "system back on every pushed screen" is covered by the router test on the pushed screens that exist. The sign-in to
   code and Home to Show cases are added with A5 and A8. The Android back gesture itself needs a device.
+- Welcome (A4): the board only draws card 1, so the copy for cards 2 and 3 is written here (`src/copy/welcome.ts`) and the trust line
+  is on every card. The wordmark diamond is left out of the hero; the wordmark is text only.
+- `TextButton` is a new primitive for the borderless Skip, Next-as-text and Send again actions. The design uses it on four screens,
+  so it lives in `src/ui/primitives` with stories, not as a one-off style.
+- `Matrix` has a `framed` option that gives its content the window height, so full-screen stories (Welcome, sign-in) lay out as on a
+  device.
+- `jest.setup.ts` mocks `react-native-safe-area-context` with the library's own Jest mock, so any screen that reads insets renders in
+  a test without a provider.
