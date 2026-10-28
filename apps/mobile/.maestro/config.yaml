@@ -11,3 +11,10 @@ executionOrder:
     - otp-errors
     - browse
     - deeplink-show
+    - loop-join
+    - ticket-rejected
+    - cancel
+    - profile-check
+    - loop-group
+    - loop-no-group
+    - group-shrinks

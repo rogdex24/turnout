@@ -1,0 +1,123 @@
+# The loop that ends in a group: Dev makes a plan, three others with accepted tickets join the show, and the plan page says the group is
+# confirmed with a count and a reveal time and nothing else. No name, photo or cafe is on the page before the names open, which is the
+# rule the whole social side rests on. The plans are ended at the end. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: loop-group
+tags:
+  - plans
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550105"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# Dev's ticket is accepted and Dev waits alone.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: approve
+      REASON: ""
+      PHONES: ""
+- extendedWaitUntil:
+    visible: ".*Finding your group.*"
+    timeout: 80000
+
+# Esha, Farid and Gita each get an accepted ticket, and a grouping pass puts the four together (the server runs without its ticker).
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: crowd
+      PHONE: ""
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: "+12025550106,+12025550107,+12025550108"
+- extendedWaitUntil:
+    visible: ".*Group confirmed.*"
+    timeout: 80000
+- assertVisible:
+    id: plan-reveal
+- assertVisible: ".*3 people with tickets, plus you.*"
+- assertVisible: ".*Names, photos and the cafe at.*"
+
+# Before the names open nobody is named on the plan, the Plans tab or Home.
+- assertNotVisible: ".*(Esha|Farid|Gita).*"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: plans
+    timeout: 10000
+- assertVisible: ".*Group confirmed.*"
+- assertNotVisible: ".*(Esha|Farid|Gita).*"
+
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: "+12025550106"
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: "+12025550107"
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: "+12025550108"
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""

@@ -1,0 +1,16 @@
+# One call to the operator routes. Run with runFlow and SERVER_URL, TEST_TOKEN, ROUTE and what the route needs
+# (PHONE, EVENT_ID, DECISION, REASON, PHONES). A value a route does not need is passed as an empty string.
+appId: com.turnout.app.e2e
+name: operator
+---
+- runScript:
+    file: ../scripts/operator.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ${ROUTE}
+      PHONE: ${PHONE}
+      PHONES: ${PHONES}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ${DECISION}
+      REASON: ${REASON}

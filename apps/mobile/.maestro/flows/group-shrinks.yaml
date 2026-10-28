@@ -1,0 +1,83 @@
+# A group that loses a person after it locks keeps going with three. Dev's group of four locks when the server's clock passes T-24h,
+# Gita leaves, and the plan page says the group is smaller than usual and still going ahead. The count drops from 3 to 2 others and
+# no name is shown. This moves the server's clock another 22 hours, so it runs last. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: group-shrinks
+tags:
+  - plans
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550105"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: approve
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: crowd
+      PHONE: ""
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: "+12025550106,+12025550107,+12025550108"
+- extendedWaitUntil:
+    visible: ".*Group confirmed.*"
+    timeout: 80000
+- assertVisible: ".*3 people with tickets, plus you.*"
+- assertNotVisible: ".*Fewer people than usual.*"
+
+# The group locks at T-24h (the flow before this one moved the clock 3 hours; this is the other 22). Then Gita leaves.
+- runScript:
+    file: ../scripts/clock.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ADVANCE_HOURS: "22"
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: "+12025550108"
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- extendedWaitUntil:
+    visible: ".*Fewer people than usual. Your group goes ahead with 3.*"
+    timeout: 80000
+- assertVisible: ".*2 people with tickets, plus you.*"
+- assertVisible: ".*Group confirmed.*"
+- assertNotVisible: ".*(Esha|Farid|Gita).*"

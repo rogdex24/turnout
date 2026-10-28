@@ -1,0 +1,108 @@
+# A ticket that cannot be used: the plan says so with the reason in plain words and one button, the button opens the ticket page, and
+# a second ticket that is accepted puts the plan back to finding a group. Farid's plan is ended at the end. Written for CI; it has
+# not run on a device yet.
+appId: com.turnout.app.e2e
+name: ticket-rejected
+tags:
+  - plans
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550107"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      PHONES: ""
+      DECISION: ""
+      REASON: ""
+- extendedWaitUntil:
+    visible: ".*Checking your ticket.*"
+    timeout: 80000
+
+# The operator cannot use it. The plan says what to do, in the words of the ticket page, with nothing red and no blame.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: reject
+      REASON: wrong_show
+      PHONES: ""
+- extendedWaitUntil:
+    visible: ".*We couldn't use your ticket.*"
+    timeout: 80000
+- assertVisible: ".*This screenshot is for a different show.*"
+- assertVisible:
+    id: plan-send-another
+
+# The button opens the ticket page, and a way back from it lands on the plan again.
+- tapOn:
+    id: plan-send-another
+- extendedWaitUntil:
+    visible:
+      id: ticket
+    timeout: 15000
+- tapOn:
+    id: ticket-later
+- extendedWaitUntil:
+    visible:
+      id: plan
+    timeout: 10000
+
+# A second ticket is accepted, and the plan goes on to finding a group.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      PHONES: ""
+      DECISION: ""
+      REASON: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: approve
+      PHONES: ""
+      REASON: ""
+- extendedWaitUntil:
+    visible: ".*Finding your group.*"
+    timeout: 80000
+- assertNotVisible:
+    id: plan-send-another
+
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      PHONES: ""
+      DECISION: ""
+      REASON: ""

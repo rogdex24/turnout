@@ -37,7 +37,7 @@ env:
 - assertVisible:
     id: "show-card-.*"
 
-# A card opens its show: the ticket stub, the buy link and Go with a group. Go opens Coming soon in this build while groups are off.
+# A card opens its show: the ticket stub, the buy link and Go with a group. Go opens the Go with a group sheet, and Not now closes it.
 # The system back goes back to the list.
 - tapOn:
     id: "show-card-.*"
@@ -50,9 +50,14 @@ env:
 - assertVisible: "How it works"
 - tapOn:
     id: show-go
-- assertVisible: "Coming soon in this build"
-- tapOn: "Got it"
-- assertNotVisible: "Coming soon in this build"
+- extendedWaitUntil:
+    visible:
+      id: go-sheet
+    timeout: 10000
+- tapOn:
+    id: go-not-now
+- assertNotVisible:
+    id: go-sheet
 - back
 - assertVisible: "Shows coming up"
 
