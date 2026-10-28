@@ -13,6 +13,8 @@ export const queryKeys = {
   plansList: () => ["plans", "list"] as const,
   planDetail: (planId: string) => ["plans", "detail", planId] as const,
   group: (groupId: string) => ["group", groupId] as const,
+  /** The plan and venue a group is for. Under the group prefix, so it is kept on disk with the group. */
+  groupContext: (groupId: string) => ["group", groupId, "context"] as const,
   thread: (groupId: string) => ["thread", groupId] as const,
   after: (groupId: string) => ["after", groupId] as const,
   blocked: () => ["blocked"] as const,

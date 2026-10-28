@@ -7,9 +7,12 @@ import {
   groupResponseSchema,
 } from "@turnout/contract/app/groups";
 import { type Plan, type PlanListResponse, planListResponseSchema } from "@turnout/contract/app/plans";
+import { isApiError } from "@/model/apiError";
+import { type Point, toPoint } from "@/model/walk";
 import type { ApiClient } from "./client";
 import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
+import { fetchShow } from "./shows";
 
 export function fetchPlans(api: ApiClient): Promise<PlanListResponse> {
   return api.request({ path: "/plans", schema: planListResponseSchema });
@@ -31,6 +34,36 @@ export function fetchGroup(api: ApiClient, groupId: string): Promise<GroupRespon
 export const groupQuery = (api: ApiClient, groupId: string) => ({
   queryKey: queryKeys.group(groupId),
   queryFn: () => fetchGroup(api, groupId),
+});
+
+/** The plan and the venue a group is for. The group answer carries the cafe but not the venue's pin, so the venue comes from the show. */
+export interface MeetContext {
+  planId: string;
+  /** The show's public id. */
+  eventId: string;
+  venue: { name: string | null; point: Point | null };
+}
+
+/**
+ * Finds the plan that holds this group in the person's plans, then the show's venue from the public show. The venue is null-pinned when
+ * the show is gone or has no coordinates. Null when no plan holds the group (the plan list has not got it). Kept with the group on
+ * disk, so the card opens offline with both pins.
+ */
+export async function fetchMeetContext(api: ApiClient, groupId: string): Promise<MeetContext | null> {
+  const plan = planOfGroup((await fetchPlans(api)).plans, groupId);
+  if (plan === null) return null;
+  try {
+    const show = await fetchShow(api, plan.eventId);
+    return { planId: plan.id, eventId: plan.eventId, venue: { name: show.venue.name, point: toPoint(show.venue.lat, show.venue.lng) } };
+  } catch (error) {
+    if (!isApiError(error) || error.kind !== "not_found") throw error;
+    return { planId: plan.id, eventId: plan.eventId, venue: { name: null, point: null } };
+  }
+}
+
+export const meetContextQuery = (api: ApiClient, groupId: string) => ({
+  queryKey: queryKeys.groupContext(groupId),
+  queryFn: () => fetchMeetContext(api, groupId),
 });
 
 /** From T-3h the answer carries the cafe and the members; before that it carries neither. */
@@ -55,7 +88,13 @@ export function sendCheckin(api: ApiClient) {
 
 /** Lets a check-in made without a network be sent after a restart, once the phone is back online. */
 export function registerCheckin(queryClient: QueryClient, api: ApiClient): void {
-  registerReplayable<CheckinVariables>(queryClient, "checkin", sendCheckin(api));
+  registerReplayable<CheckinVariables>(queryClient, "checkin", sendCheckin(api), retryCheckin);
+}
+
+/** A refusal (outside the check-in window, not in the group) will not change on a second try, so only a bad connection or a busy server is retried. */
+export function retryCheckin(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 3) return false;
+  return !isApiError(error) || error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited";
 }
 
 export const checkinMutationKey = mutationKey("checkin");
