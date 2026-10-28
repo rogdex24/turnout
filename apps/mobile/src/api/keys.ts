@@ -15,6 +15,8 @@ export const queryKeys = {
   plansList: () => ["plans", "list"] as const,
   planDetail: (planId: string) => ["plans", "detail", planId] as const,
   group: (groupId: string) => ["group", groupId] as const,
+  /** The plan and venue a group is for. Under the group prefix, so it is kept on disk with the group. */
+  groupContext: (groupId: string) => ["group", groupId, "context"] as const,
   thread: (groupId: string) => ["thread", groupId] as const,
   after: (groupId: string) => ["after", groupId] as const,
   blocked: () => ["blocked"] as const,
@@ -38,11 +40,12 @@ export const STALE_TIMES: readonly { prefix: QueryKey; staleTime: number }[] = [
 
 /**
  * Only these are written to disk, so an offline start shows the shows and the person's own state. The plans are the person's own
- * and carry no other member, so the list and each plan are kept. Everything else (the group, the thread, the after-show screen, the
+ * and carry no other member, so the list and each plan are kept. The group is kept so the meet card opens with the cafe and the
+ * members with no signal at the venue; the cache is emptied at sign-out. Everything else (the thread, the after-show screen, the
  * blocked list, the member view of a show) is added to this list by the task that builds its screen, with its own rule for what is
  * kept; a key that is not listed is never persisted.
  */
-export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"], ["plans"]];
+export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"], ["plans"], ["group"]];
 
 export function keyStartsWith(key: QueryKey, prefix: QueryKey): boolean {
   return prefix.length <= key.length && prefix.every((part, index) => part === key[index]);

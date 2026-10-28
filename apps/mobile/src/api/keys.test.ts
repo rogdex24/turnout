@@ -43,11 +43,11 @@ describe("query keys", () => {
     expect(isPersistedKey(queryKeys.config())).toBe(true);
     expect(isPersistedKey(queryKeys.areas())).toBe(true);
     expect(isPersistedKey(queryKeys.showsList("Bandra"))).toBe(true);
+    expect(isPersistedKey(queryKeys.group("g1"))).toBe(true);
     expect(isPersistedKey(queryKeys.showDetail("abc"))).toBe(false);
     expect(isPersistedKey(queryKeys.showMember("abc"))).toBe(false);
     expect(isPersistedKey(queryKeys.plansList())).toBe(true);
     expect(isPersistedKey(queryKeys.planDetail("p1"))).toBe(true);
-    expect(isPersistedKey(queryKeys.group("g1"))).toBe(false);
     expect(isPersistedKey(queryKeys.after("g1"))).toBe(false);
     expect(isPersistedKey(queryKeys.blocked())).toBe(false);
     expect(isPersistedKey(["something", "new"])).toBe(false);

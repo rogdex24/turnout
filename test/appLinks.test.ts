@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appLinksFromEnv, rejectedAppLinkVars } from "../src/web/appLinks.js";
+import { appLinksFromEnv, goWithGroupLink, rejectedAppLinkVars } from "../src/web/appLinks.js";
 import { siteResponse } from "../src/web/index.js";
 import { memoryDb } from "./helpers.js";
 
@@ -15,7 +15,7 @@ const configured = { appLinks: appLinksFromEnv({ APP_LINKS_ANDROID_PACKAGE: PACK
 
 describe("appLinksFromEnv", () => {
   test("nothing is set", () => {
-    expect(appLinksFromEnv({})).toEqual({ androidPackage: null, androidSha256: [], iosAppIds: [] });
+    expect(appLinksFromEnv({})).toEqual({ androidPackage: null, androidSha256: [], iosAppIds: [], host: null, playStoreUrl: null });
   });
 
   test("a comma list is split, trimmed, upper-cased, colon-formatted and de-duplicated", () => {
@@ -44,6 +44,34 @@ describe("appLinksFromEnv", () => {
   });
 });
 
+describe("the go host and the Play link", () => {
+  test("a dotted host is lower-cased and kept; a scheme, path, port or bare word is dropped", () => {
+    expect(appLinksFromEnv({ APP_LINKS_HOST: " Go.Example.com " }).host).toBe("go.example.com");
+    for (const bad of ["https://go.example.com", "go.example.com/e", "go.example.com:8080", "localhost", "go example.com"]) {
+      expect(appLinksFromEnv({ APP_LINKS_HOST: bad }).host).toBeNull();
+    }
+  });
+
+  test("only an https Google Play page is kept as the Play link", () => {
+    const play = "https://play.google.com/store/apps/details?id=com.turnout.app";
+    expect(appLinksFromEnv({ PLAY_STORE_URL: play }).playStoreUrl).toBe(play);
+    for (const bad of [
+      "http://play.google.com/store/apps/details?id=a.b",
+      "https://example.com/store",
+      `https://user:pw${"@"}play.google.com/x`,
+      "play",
+    ]) {
+      expect(appLinksFromEnv({ PLAY_STORE_URL: bad }).playStoreUrl).toBeNull();
+    }
+  });
+
+  test("the group link is on the go host with src=web, and null without a host", () => {
+    expect(goWithGroupLink(appLinksFromEnv({ APP_LINKS_HOST: "go.example.com" }), "e1")).toBe("https://go.example.com/e/e1/go?src=web");
+    expect(goWithGroupLink(appLinksFromEnv({}), "e1")).toBeNull();
+    expect(goWithGroupLink(undefined, "e1")).toBeNull();
+  });
+});
+
 describe("rejectedAppLinkVars", () => {
   test("names each set variable holding a value that is dropped", () => {
     expect(
@@ -51,8 +79,10 @@ describe("rejectedAppLinkVars", () => {
         APP_LINKS_ANDROID_PACKAGE: "not a package",
         APP_LINKS_ANDROID_SHA256: `${FP_A},ZZ:11`,
         APP_LINKS_IOS_APP_IDS: "app.example.turnout",
+        APP_LINKS_HOST: "https://go.example.com",
+        PLAY_STORE_URL: "https://example.com",
       }),
-    ).toEqual(["APP_LINKS_ANDROID_PACKAGE", "APP_LINKS_ANDROID_SHA256", "APP_LINKS_IOS_APP_IDS"]);
+    ).toEqual(["APP_LINKS_ANDROID_PACKAGE", "APP_LINKS_ANDROID_SHA256", "APP_LINKS_IOS_APP_IDS", "APP_LINKS_HOST", "PLAY_STORE_URL"]);
   });
 
   test("is empty when nothing is set or everything is valid", () => {

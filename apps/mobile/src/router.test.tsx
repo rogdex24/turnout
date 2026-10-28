@@ -9,6 +9,7 @@ import { you } from "@/copy/you";
 import { PLANS } from "@/model/planFixtures";
 import { releaseSplash } from "@/providers/splash";
 import { createTestApp, meFixture, type TestApp, type TestAppOptions } from "@/providers/testing";
+import { SAMPLE_CONFIG } from "@/screens/notice/fixtures";
 
 // Skip the native splash and the real stores: MMKV does not load in Jest, so boot hands back in-memory parts.
 jest.mock("@/providers/splash", () => ({ holdSplash: jest.fn(), releaseSplash: jest.fn() }));
@@ -16,8 +17,9 @@ let mockApp: TestApp;
 jest.mock("@/providers/boot", () => ({ bootApp: () => Promise.resolve(mockApp.deps) }));
 
 async function launch(options: TestAppOptions, initialUrl = "/") {
-  // The tab bar and Home both read the person's plans; none unless a test says otherwise.
-  mockApp = await createTestApp({ ...options, routes: { "GET /plans": json(200, { plans: [] }), ...options.routes } });
+  // The tab bar, Home and push set-up read the config and the plans; an unscripted route reads as a dead network.
+  const routes = { "GET /config": json(200, SAMPLE_CONFIG), "GET /plans": json(200, { plans: [] }), ...options.routes };
+  mockApp = await createTestApp({ ...options, routes });
   await renderRouter("./src/app", { initialUrl });
 }
 

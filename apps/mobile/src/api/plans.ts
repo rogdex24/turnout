@@ -1,4 +1,3 @@
-import { type GroupResponse, groupResponseSchema } from "@turnout/contract/app/groups";
 import {
   type CreatePlanRequest,
   type Plan,
@@ -56,14 +55,4 @@ export function fetchMemberShow(api: ApiClient, publicId: string): Promise<ShowR
 export const memberShowQuery = (api: ApiClient, publicId: string) => ({
   queryKey: queryKeys.showMember(publicId),
   queryFn: () => fetchMemberShow(api, publicId),
-});
-
-/** GET /groups/:id: before T-3h only the state, the size and the times; from T-3h the cafe and the members. */
-export function fetchGroup(api: ApiClient, groupId: string): Promise<GroupResponse> {
-  return api.request({ path: `/groups/${encodeURIComponent(groupId)}`, schema: groupResponseSchema });
-}
-
-export const groupQuery = (api: ApiClient, groupId: string) => ({
-  queryKey: queryKeys.group(groupId),
-  queryFn: () => fetchGroup(api, groupId),
 });

@@ -1,0 +1,61 @@
+/** Every user-facing string lives under src/copy. The meet card (B11.1) and its Safety sheet (B11.2). */
+export const meet = {
+  title: "Meet card",
+  safety: "Safety",
+  showRow: (title: string, time: string | null) => (time ? `Then ${title}, ${time}` : `Then ${title}`),
+  timeLabel: (clock: string, countdown: string | null) => (countdown ? `Meet at ${clock}, ${countdown.toLowerCase()}` : `Meet at ${clock}`),
+  cafe: {
+    photoMissing: "Cafe",
+    walkToVenue: (minutes: number, venue: string) => `${minutes} min walk to ${venue}`,
+    fallbackNote: "No cafe was picked for this show, so you meet at the entrance.",
+  },
+  map: {
+    label: (cafe: string, venue: string | null) => (venue ? `Map with ${cafe} and ${venue}` : `Map with ${cafe}`),
+    open: "Open in Maps",
+    openLabel: "Open in Maps, opens your maps app",
+    venue: "Venue",
+  },
+  location: {
+    ask: "Show how far you are. Your location stays on your phone.",
+    turnOn: "Turn on",
+    turnOnLabel: "Turn on location",
+    settingsLead: "Location is off for Turnout. Your location stays on your phone.",
+    settings: "Settings",
+    settingsLabel: "Open Settings to turn on location",
+    finding: "Finding where you are. Your location stays on your phone.",
+    atCafe: "You're at the cafe",
+    walk: (minutes: number, cafe: string) => `${minutes} min walk to ${cafe}`,
+  },
+  group: {
+    title: "Your group",
+    you: "You",
+    here: (here: number, of: number) => `${here} of ${of} here`,
+    hereLabel: (name: string) => `${name}, here`,
+    smaller: "Your group is smaller than usual, and it is still going ahead.",
+  },
+  here: {
+    button: "I'm here",
+    done: "You're checked in",
+    early: (opensAt: string) => `You can tap this from ${opensAt}, when you head over`,
+    closed: "Check-in has closed",
+    failed: "That didn't go through. Try again.",
+    queued: "You're offline. We'll check you in when you're back online.",
+  },
+  waiting: {
+    title: "Your meet card opens 3 hours before",
+    body: (opensAt: string) => `Your cafe and your group show here from ${opensAt}.`,
+  },
+  closed: {
+    title: "This meet card has closed",
+    body: "Meet cards stay for a day after the show.",
+    action: "Back to your plans",
+  },
+  loading: "Loading your meet card",
+  sheet: {
+    title: "Safety",
+    call: "Call 112, emergency",
+    callLabel: "Call 112, emergency, opens your phone",
+    leave: "Leave this plan",
+    close: "Close",
+  },
+} as const;

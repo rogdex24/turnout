@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { CalendarX } from "phosphor-react-native";
 import { useEffect, useSyncExternalStore } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { groupQuery, memberShowQuery, planDetailQuery } from "@/api/plans";
+import { groupQuery } from "@/api/groups";
+import { memberShowQuery, planDetailQuery } from "@/api/plans";
 import { confirmedPlayed, markConfirmedPlayed } from "@/api/prefs";
 import { plan as copy } from "@/copy/plan";
 import { isApiError } from "@/model/apiError";
@@ -14,6 +14,7 @@ import { BackBar } from "@/ui/BackBar";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState } from "@/ui/ErrorState";
 import { moments } from "@/ui/moments";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { SkeletonRow } from "@/ui/SkeletonRow";
 import { PlanView } from "./PlanView";
 

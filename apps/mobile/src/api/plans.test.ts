@@ -2,10 +2,10 @@ import { isApiError } from "../model/apiError";
 import { groupBeforeRevealFixture, groupRevealedFixture, memberShowFixture, PLANS, planFixture } from "../model/planFixtures";
 import { createApiClient } from "./client";
 import { createConnectivity } from "./connectivity";
+import { fetchGroup } from "./groups";
 import { keyStartsWith, queryKeys } from "./keys";
 import {
   createPlan,
-  fetchGroup,
   fetchMemberShow,
   fetchPlan,
   fetchPlans,

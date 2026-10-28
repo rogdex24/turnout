@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CalendarX } from "phosphor-react-native";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { queryKeys } from "@/api/keys";
 import { memberShowQuery, planDetailQuery, putTicket } from "@/api/plans";
 import { markTicketAsked, ticketAsked } from "@/api/prefs";
@@ -15,6 +14,7 @@ import { useApi } from "@/providers/hooks";
 import { BackBar } from "@/ui/BackBar";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState } from "@/ui/ErrorState";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { SkeletonRow } from "@/ui/SkeletonRow";
 import { askNotifications } from "./askNotifications";
 import { TicketView } from "./TicketView";

@@ -2,7 +2,6 @@ import type { ProofKind, TicketRejectReason } from "@turnout/contract/ticket";
 import { Image } from "expo-image";
 import { BellRinging, CheckCircle, FilePdf, ImageSquare, Info, WarningCircle } from "phosphor-react-native";
 import { ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { ticket as copy } from "@/copy/ticket";
 import { canSend, isPdf, type PickedTicket, type TicketPhase, type TicketProblem } from "@/model/ticketFile";
 import { BackBar } from "@/ui/BackBar";
@@ -10,6 +9,7 @@ import { OfflineBar } from "@/ui/OfflineBar";
 import { Button } from "@/ui/primitives/Button";
 import { Icon } from "@/ui/primitives/Icon";
 import { Note } from "@/ui/primitives/Note";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
 

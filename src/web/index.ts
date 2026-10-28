@@ -10,7 +10,15 @@ import { PublicInputError } from "./input.js";
 import { mapApi } from "./map/api.js";
 import { assetResponse, mapAssetsNow } from "./map/assets.js";
 import { mapPage } from "./map/server.js";
-import { detailPage, listingPage, matchProgrammaticRoute, notFoundPage, programmaticListingPage, venuePage } from "./pages.js";
+import {
+  detailPage,
+  goFallbackPage,
+  listingPage,
+  matchProgrammaticRoute,
+  notFoundPage,
+  programmaticListingPage,
+  venuePage,
+} from "./pages.js";
 import { type GrievanceBlock, privacyPage } from "./privacy.js";
 import type { NowFn } from "./types.js";
 
@@ -29,6 +37,8 @@ export interface SiteOptions {
   grievance?: GrievanceBlock | null;
   /** The values for the app links files under /.well-known. Unset, both files are 404. */
   appLinks?: AppLinksConfig;
+  /** Where "Contact us" on the go fallback page writes to. Unset, the page leaves the link out. */
+  supportEmail?: string;
 }
 
 /** Returns null to decline, letting the next route try. */
@@ -114,7 +124,8 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
     },
   ],
 
-  [/^\/e\/([^/]+)$/, ({ db, url, params }) => detailPage(db, params[0], url.origin)],
+  [/^\/e\/([^/]+)\/go$/, ({ db, params, options }) => goFallbackPage(db, params[0], options.appLinks, options.supportEmail ?? null)],
+  [/^\/e\/([^/]+)$/, ({ db, url, params, now, options }) => detailPage(db, params[0], url.origin, now, options.appLinks)],
 ];
 
 /** A trailing slash never changes the resource, so strip it once here instead of in every route. */

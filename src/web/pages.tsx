@@ -2,9 +2,11 @@ import type { Database } from "bun:sqlite";
 import { AREAS } from "../catalog/area.js";
 import { CATEGORIES } from "../catalog/category.js";
 import { istCalendarDate, toIstOffset, tonightBoundsIst, weekendRangeIst } from "../utils/time.js";
+import { type AppLinksConfig, goWithGroupLink } from "./appLinks.js";
+import { groupEligibility } from "./groupEligible.js";
 import { htmlResponse } from "./html.js";
 import { collapseRuns, facetCounts, loadEligibleEvent, queryListingEvents, readFilters } from "./queries.js";
-import { Detail, NotFound } from "./site/Detail.js";
+import { Detail, GoFallback, NotFound } from "./site/Detail.js";
 import { renderDocument } from "./site/Document.js";
 import { Listing } from "./site/Listing.js";
 import { publicSourceUrl } from "./source-url.js";
@@ -176,10 +178,25 @@ export function programmaticListingPage(db: Database, url: URL, now: NowFn, prog
   return htmlResponse(renderListing(rows, filters, facetCounts(db, filters, now, defaultDays), now, prog.title, prog.lede));
 }
 
-export function detailPage(db: Database, publicId: string, origin: string): Response {
+export function detailPage(db: Database, publicId: string, origin: string, now: NowFn, appLinks?: AppLinksConfig): Response {
   const row = loadEligibleEvent(db, publicId);
   if (!row) return htmlResponse(notFoundPage(), 404);
-  return htmlResponse(renderDetail(row, origin));
+  // Only a show that group rules accept right now gets the link, so a free, closed or unplaced show shows nothing for it.
+  const groupLink = groupEligibility(row, now()).eligible ? goWithGroupLink(appLinks, row.publicId) : null;
+  return htmlResponse(renderDetail(row, origin, groupLink));
+}
+
+/** /e/<id>/go: the page a "Go with a group" link opens on a phone that does not have the app. */
+export function goFallbackPage(
+  db: Database,
+  publicId: string,
+  appLinks: AppLinksConfig | undefined,
+  contactEmail: string | null,
+): Response {
+  const row = loadEligibleEvent(db, publicId);
+  if (!row) return htmlResponse(notFoundPage(), 404);
+  const children = <GoFallback row={row} playStoreUrl={appLinks?.playStoreUrl ?? null} contactEmail={contactEmail} />;
+  return htmlResponse(renderDocument({ title: row.title, children }));
 }
 
 export function venuePage(db: Database, url: URL, now: NowFn, slug: string): Response {
@@ -209,8 +226,8 @@ function renderListing(
   });
 }
 
-function renderDetail(row: EventCard, origin: string): string {
-  return renderDocument({ title: row.title, jsonLd: buildEventJsonLd(row, origin), children: <Detail row={row} /> });
+function renderDetail(row: EventCard, origin: string, groupLink: string | null): string {
+  return renderDocument({ title: row.title, jsonLd: buildEventJsonLd(row, origin), children: <Detail row={row} groupLink={groupLink} /> });
 }
 
 /** data-model.md §10.3 schema.org/Event — only for listing-eligible (active canonical) detail pages. */

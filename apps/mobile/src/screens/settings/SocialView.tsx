@@ -1,12 +1,12 @@
 import type { HandleKind, HandleRejectReason, HandleState } from "@turnout/contract/profile";
 import type { Ref } from "react";
 import { ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { profileCheck } from "@/copy/profileCheck";
 import { BackBar } from "@/ui/BackBar";
 import { ProfileCheckStrip } from "@/ui/ProfileCheckStrip";
 import { Button } from "@/ui/primitives/Button";
 import { Field, type FieldInput } from "@/ui/primitives/Field";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 
 const copy = profileCheck.social;

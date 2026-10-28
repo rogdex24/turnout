@@ -164,3 +164,33 @@ describe("normalizeLinkHost", () => {
     expect(normalizeLinkHost(input)).toBeNull();
   });
 });
+
+describe("the e2e push link", () => {
+  const hooked = { pushHook: true };
+  const link = "turnout://push?kind=meet_card_live&noticeId=n1&planId=p1";
+
+  it("opens the push route in the e2e build, with only the three fields", () => {
+    expect(resolve(link, hooked)).toBe("/push?kind=meet_card_live&noticeId=n1&planId=p1");
+    expect(resolve("turnout://push?kind=handle_rejected&noticeId=n1", hooked)).toBe("/push?kind=handle_rejected&noticeId=n1");
+    expect(resolve("turnout://push?kind=head_over&noticeId=n1&planId=p1&extra=x", hooked)).toBe(
+      "/push?kind=head_over&noticeId=n1&planId=p1",
+    );
+  });
+
+  it("accepts the path again once the router hands it back", () => {
+    expect(resolve("/push?kind=no_group&noticeId=n1&planId=p1", hooked)).toBe("/push?kind=no_group&noticeId=n1&planId=p1");
+  });
+
+  it("is Home in every other build", () => {
+    expect(resolve(link)).toBe("/");
+    expect(resolve(link, { pushHook: false })).toBe("/");
+    expect(resolve("/push?kind=no_group&noticeId=n1&planId=p1")).toBe("/");
+  });
+
+  it("is Home for a kind it does not know or an id that is not an id", () => {
+    expect(resolve("turnout://push?kind=settings&noticeId=n1", hooked)).toBe("/");
+    expect(resolve("turnout://push?noticeId=n1", hooked)).toBe("/");
+    expect(resolve("turnout://push?kind=no_group&noticeId=../x", hooked)).toBe("/");
+    expect(resolve("turnout://push?kind=no_group&noticeId=n1&planId=a/b", hooked)).toBe("/");
+  });
+});

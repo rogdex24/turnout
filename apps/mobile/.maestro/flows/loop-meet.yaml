@@ -1,0 +1,90 @@
+# The meet card, from a push to "I'm here". Signs in as the seeded member whose group is live (the seed's meet_card_live state), opens
+# the card the way a tap on the "Meet your group" push does (the e2e build's own link, turnout-e2e://push), then checks what the card
+# draws, moves the emulator to the cafe, and checks in.
+#
+# Needs, and has not been run against:
+#  - The seed (scripts/seed-staging.ts) holding the plan and group rows for the meet_card_live member. M3 adds them; PLAN_ID is that plan's id.
+#  - The phone's own clock inside the check-in window (T-90m to T+60m of the show). The server's __test/clock hook moves the server only,
+#    and the phone decides when "I'm here" is on and whether the location line shows, so on a CI emulator set the date first, for example
+#    `adb shell date` with the seeded show's time, or seed a show that starts about an hour from the real now.
+#  - An emulator for the location step. Maestro's setLocation is the same as `adb emu geo fix <lng> <lat>`; the cafe is at 17.4435, 78.3772.
+# The e2e build has no Maps key, so the card draws the static map. The real map needs a Play-signed phone and is checked by hand.
+# config.yaml leaves it out of the CI run (excludeTags) until the seed rows exist; run it by path. It has not run on a device yet.
+appId: com.turnout.app.e2e
+name: loop-meet
+tags:
+  - loop
+  - needs-group-seed
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEET_MEMBER: "+12025550107"
+  PLAN_ID: plan-meet-live
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEET_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# The location permission is granted up front, so the card goes straight to the walk line instead of the system dialog.
+- launchApp:
+    clearState: false
+    permissions:
+      location: allow
+
+# The push for a live meet card opens the card.
+- openLink: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
+- extendedWaitUntil:
+    visible:
+      id: meet
+    timeout: 15000
+
+# The card draws the meet time, the cafe with its map and the group. The e2e build shows the static map.
+- assertVisible:
+    id: meet-time
+- assertVisible:
+    id: meet-place
+- assertVisible:
+    id: meet-map-static
+- assertNotVisible:
+    id: meet-map
+- assertVisible:
+    id: meet-group
+- assertVisible:
+    id: meet-open-maps
+
+# Members show a first name and a photo, and nothing else: no handle, no number.
+- assertNotVisible: ".*@.*"
+- assertNotVisible: ".*\\+\\d{6,}.*"
+
+# The phone is away from the cafe, then at it. The position stays on the phone: the line is drawn here, from the phone's own fix.
+- setLocation:
+    latitude: 17.4525
+    longitude: 78.3811
+- extendedWaitUntil:
+    visible: ".*min walk to .*"
+    timeout: 20000
+- setLocation:
+    latitude: 17.4435
+    longitude: 78.3772
+- extendedWaitUntil:
+    visible: ".*at the cafe.*"
+    timeout: 20000
+
+# The Safety sheet puts Call 112 first and can be closed.
+- tapOn:
+    id: meet-safety
+- assertVisible:
+    id: safety-call
+- tapOn: Close
+- assertNotVisible:
+    id: safety-call
+
+# I'm here checks the person in and the button says so. The press plays the moment (a Success haptic on the phone).
+- tapOn:
+    id: meet-here
+- extendedWaitUntil:
+    visible: ".*checked in.*"
+    timeout: 15000

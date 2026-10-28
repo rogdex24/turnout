@@ -72,6 +72,8 @@ wrong.
   `TRUST_PROXY_HEADER` (set to the proxy's header name only when a proxy you control sets it).
 - App links (serve `/.well-known/assetlinks.json`; the route is a 404 until the package and a fingerprint are set): `APP_LINKS_ANDROID_PACKAGE`,
   `APP_LINKS_ANDROID_SHA256` (comma-separated SHA-256 fingerprints), `APP_LINKS_IOS_APP_IDS` (later, with the Apple account).
+- Go with a group (the event page link and the `/e/<id>/go` fallback page): `APP_LINKS_HOST` (the host the app answers on; no link is shown while it is unset)
+  and `PLAY_STORE_URL` (the Play listing; until it is set the fallback page says the app is in testing on Android).
 - Later: `SENTRY_DSN`.
 
 ## Staging and the seed

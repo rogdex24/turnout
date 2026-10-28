@@ -10,6 +10,10 @@ export interface AppLinksConfig {
   androidSha256: readonly string[];
   /** `<team id>.<bundle id>`, the team id being 10 upper-case letters or digits. Empty until the Apple account exists. */
   iosAppIds: readonly string[];
+  /** The `go.<domain>` host that app links and the website's "Go with a group" link use. Null until the domain is decided. */
+  host: string | null;
+  /** The app's Google Play page. Null while the app is only in a closed test, so the fallback page says it is in testing. */
+  playStoreUrl: string | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -17,6 +21,7 @@ type Env = Record<string, string | undefined>;
 const PACKAGE = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/;
 const FINGERPRINT = /^[0-9A-F]{64}$/;
 const IOS_APP_ID = /^[A-Z0-9]{10}\.[A-Za-z0-9.-]+$/;
+const HOST = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
 
 function list(value: string | undefined): string[] {
   return (value ?? "")
@@ -31,6 +36,24 @@ function normalizeFingerprint(raw: string): string | null {
   return FINGERPRINT.test(bare) ? (bare.match(/../g) as string[]).join(":") : null;
 }
 
+/** A host written in any case, as the lower-case name a URL carries. Null when it is not a dotted host name (no scheme, path or port). */
+function normalizeHost(raw: string | undefined): string | null {
+  const host = (raw ?? "").trim().toLowerCase();
+  return HOST.test(host) ? host : null;
+}
+
+/** An https link to the app's page on Google Play. Anything else (another host, plain http, a credential in the URL) is dropped. */
+function normalizePlayUrl(raw: string | undefined): string | null {
+  const value = (raw ?? "").trim();
+  try {
+    const url = new URL(value);
+    const ok = url.protocol === "https:" && url.hostname === "play.google.com" && url.username === "" && url.password === "";
+    return ok ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function appLinksFromEnv(env: Env): AppLinksConfig {
   const androidPackage = env.APP_LINKS_ANDROID_PACKAGE?.trim() ?? "";
   const fingerprints = list(env.APP_LINKS_ANDROID_SHA256).flatMap((raw) => normalizeFingerprint(raw) ?? []);
@@ -38,6 +61,8 @@ export function appLinksFromEnv(env: Env): AppLinksConfig {
     androidPackage: PACKAGE.test(androidPackage) ? androidPackage : null,
     androidSha256: [...new Set(fingerprints)],
     iosAppIds: list(env.APP_LINKS_IOS_APP_IDS).filter((id) => IOS_APP_ID.test(id)),
+    host: normalizeHost(env.APP_LINKS_HOST),
+    playStoreUrl: normalizePlayUrl(env.PLAY_STORE_URL),
   };
 }
 
@@ -48,7 +73,14 @@ export function rejectedAppLinkVars(env: Env): string[] {
   if (androidPackage !== "" && !PACKAGE.test(androidPackage)) rejected.push("APP_LINKS_ANDROID_PACKAGE");
   if (list(env.APP_LINKS_ANDROID_SHA256).some((raw) => normalizeFingerprint(raw) === null)) rejected.push("APP_LINKS_ANDROID_SHA256");
   if (list(env.APP_LINKS_IOS_APP_IDS).some((id) => !IOS_APP_ID.test(id))) rejected.push("APP_LINKS_IOS_APP_IDS");
+  if ((env.APP_LINKS_HOST?.trim() ?? "") !== "" && normalizeHost(env.APP_LINKS_HOST) === null) rejected.push("APP_LINKS_HOST");
+  if ((env.PLAY_STORE_URL?.trim() ?? "") !== "" && normalizePlayUrl(env.PLAY_STORE_URL) === null) rejected.push("PLAY_STORE_URL");
   return rejected;
+}
+
+/** The link that opens a show's group sheet: the app when it is installed, the website's fallback page when it is not. Null without a host. */
+export function goWithGroupLink(config: AppLinksConfig | undefined, publicId: string): string | null {
+  return config?.host ? `https://${config.host}/e/${encodeURIComponent(publicId)}/go?src=web` : null;
 }
 
 function publicJson(body: unknown): Response {

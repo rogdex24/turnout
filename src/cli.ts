@@ -177,7 +177,7 @@ async function main(): Promise<void> {
       fetch: (request, bunServer) =>
         new URL(request.url).pathname.startsWith(APP_PREFIX)
           ? appResponse(app, request, bunServer.requestIP(request)?.address ?? null)
-          : siteResponse(siteDb, request, app.now, { grievance: app.config.grievance, appLinks }),
+          : siteResponse(siteDb, request, app.now, { grievance: app.config.grievance, appLinks, supportEmail: app.config.support.email }),
     });
     process.once("SIGTERM", () => {
       stopTicker?.();
