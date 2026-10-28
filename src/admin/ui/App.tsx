@@ -1,4 +1,4 @@
-import { CalendarDays, Database, History, VolumeX } from "lucide-react";
+import { CalendarDays, Database, History, IdCard, Ticket, Users, VolumeX } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import {
   Sidebar,
@@ -15,10 +15,13 @@ import {
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "./components/theme-toggle";
 import { EventsPage } from "./pages/events";
+import { HandlesPage } from "./pages/handles";
 import { MutesPage } from "./pages/mutes";
 import { RunDetailPage } from "./pages/run-detail";
 import { RunsPage } from "./pages/runs";
+import { ShowsPage } from "./pages/shows";
 import { SourcesPage } from "./pages/sources";
+import { TicketsPage } from "./pages/tickets";
 import { Link, navigate, useLocation } from "./router";
 
 const NAV = [
@@ -26,6 +29,9 @@ const NAV = [
   { to: "/sources", label: "Sources", icon: Database },
   { to: "/events", label: "Events", icon: CalendarDays },
   { to: "/mutes", label: "Mutes", icon: VolumeX },
+  { to: "/tickets", label: "Tickets", icon: Ticket },
+  { to: "/handles", label: "Handles", icon: IdCard },
+  { to: "/shows", label: "Shows", icon: Users },
 ];
 
 function Page({ path }: { path: string }): ReactNode {
@@ -41,6 +47,12 @@ function Page({ path }: { path: string }): ReactNode {
       return <EventsPage />;
     case "/mutes":
       return <MutesPage />;
+    case "/tickets":
+      return <TicketsPage />;
+    case "/handles":
+      return <HandlesPage />;
+    case "/shows":
+      return <ShowsPage />;
     default:
       return <p className="text-muted-foreground text-sm">No such page. Pick one from the sidebar.</p>;
   }

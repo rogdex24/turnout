@@ -1,6 +1,28 @@
 import type { Database } from "bun:sqlite";
 import { timingSafeEqual } from "node:crypto";
-import { createMute, deleteMute, getEvent, getRun, HttpError, listEvents, listMutes, listRuns, listSources } from "./api.js";
+import {
+  approveHandleAction,
+  approveTicketAction,
+  createMute,
+  deleteMute,
+  getEvent,
+  getRun,
+  HttpError,
+  handlePhotoKey,
+  listEvents,
+  listHandles,
+  listMutes,
+  listRuns,
+  listSources,
+  listTickets,
+  listUpcomingShows,
+  putCafe,
+  putStartTime,
+  rejectHandleAction,
+  rejectTicketAction,
+  ticketFile,
+} from "./api.js";
+import { type AdminFiles, verifyAdminLink } from "./files.js";
 import type { StartRun } from "./runs.js";
 
 const LOOPBACK = /^(localhost|127(\.\d{1,3}){3}|\[?::1\]?)$/i;
@@ -29,10 +51,13 @@ export function resolveBind(env: Record<string, string | undefined>): Bind {
 export interface AdminContext {
   /** Read-only handle: every GET. */
   read: Database;
-  /** The only handle that writes, and only mute_rule. */
+  /** The only handle that writes: mute rules, and through social/operator.ts the tickets, handles, start times and cafes. */
   write: Database;
   startRun: StartRun;
   agentRunsDir: string;
+  /** The stored tickets and photos, and the secret that signs the links to them. Null when the admin has none, so no link is shown. */
+  files?: AdminFiles | null;
+  now?: () => Date;
   /** When set, every request must carry `Authorization: Bearer <token>`. */
   token?: string;
 }
@@ -70,6 +95,24 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+const noContent = () => new Response(null, { status: 204 });
+
+/** The bytes of a stored file. An image opens in the tab; a PDF or anything else downloads, and nothing is ever run as a page. */
+async function fileResponse(files: AdminFiles | null | undefined, key: string, mime: string): Promise<Response> {
+  const stored = files ? await files.store.get(key) : null;
+  if (!stored) throw new HttpError(404, "the file is not there");
+  const inline = mime.startsWith("image/");
+  return new Response(Buffer.from(stored.bytes), {
+    headers: {
+      "content-type": inline ? mime : "application/octet-stream",
+      "content-disposition": inline ? "inline" : "attachment",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "sandbox",
+      "cache-control": "no-store",
+    },
+  });
+}
+
 type Handler = (ctx: AdminContext, request: Request, url: URL, params: [string, ...string[]]) => Response | Promise<Response>;
 
 const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
@@ -86,17 +129,53 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
     /^\/api\/mutes\/([^/]+)$/,
     (c, _r, _u, [id]) => {
       deleteMute(c.write, id);
-      return new Response(null, { status: 204 });
+      return noContent();
     },
+  ],
+  ["GET", /^\/api\/tickets$/, (c) => json(listTickets(c.read, c.files ?? null, clock(c)()))],
+  [
+    "GET",
+    /^\/api\/tickets\/([^/]+)\/file$/,
+    (c, _r, _u, [id]) => {
+      const file = ticketFile(c.read, id);
+      return fileResponse(c.files, file.key, file.mime);
+    },
+  ],
+  ["POST", /^\/api\/tickets\/([^/]+)\/approve$/, (c, _r, _u, [id]) => json(approveTicketAction(c.write, id, clock(c)()))],
+  [
+    "POST",
+    /^\/api\/tickets\/([^/]+)\/reject$/,
+    async (c, r, _u, [id]) => json(rejectTicketAction(c.write, id, await readJson(r), clock(c)())),
+  ],
+  ["GET", /^\/api\/shows$/, (c) => json(listUpcomingShows(c.read, clock(c)()))],
+  ["PUT", /^\/api\/events\/([^/]+)\/start-time$/, async (c, r, _u, [id]) => json(putStartTime(c.write, id, await readJson(r), clock(c)()))],
+  ["PUT", /^\/api\/groups\/([^/]+)\/cafe$/, async (c, r, _u, [id]) => json(putCafe(c.write, id, await readJson(r), clock(c)()))],
+  ["GET", /^\/api\/handles$/, (c, _r, url) => json(listHandles(c.read, c.files ?? null, url.searchParams, clock(c)()))],
+  ["GET", /^\/api\/handles\/([^/]+)\/photo$/, (c, _r, _u, [id]) => fileResponse(c.files, handlePhotoKey(c.read, id), "image/jpeg")],
+  ["POST", /^\/api\/handles\/([^/]+)\/approve$/, (c, _r, _u, [id]) => json(approveHandleAction(c.write, id, clock(c)()))],
+  [
+    "POST",
+    /^\/api\/handles\/([^/]+)\/reject$/,
+    async (c, r, _u, [id]) => json(rejectHandleAction(c.write, id, await readJson(r), clock(c)())),
   ],
 ];
 
-export async function apiResponse(ctx: AdminContext, request: Request): Promise<Response> {
-  const denied = guard(request, ctx.token);
-  if (denied) return denied;
+const clock = (ctx: AdminContext): (() => Date) => ctx.now ?? (() => new Date());
 
+/** The two routes a browser tab opens by link, where no bearer token can ride along. Their signed link stands in for it. */
+const SIGNED_FILE_PATH = /^\/api\/(tickets\/[^/]+\/file|handles\/[^/]+\/photo)$/;
+
+export async function apiResponse(ctx: AdminContext, request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
+  const signed =
+    request.method === "GET" &&
+    SIGNED_FILE_PATH.test(pathname) &&
+    ctx.files != null &&
+    verifyAdminLink(ctx.files, pathname, url.searchParams, clock(ctx)());
+  const denied = guard(request, signed ? undefined : ctx.token);
+  if (denied) return denied;
+
   let pathMatched = false;
   try {
     for (const [method, pattern, handler] of ROUTES) {
