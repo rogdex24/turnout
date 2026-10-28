@@ -10,10 +10,12 @@ import {
   type ChallengeRow,
   getChallenge,
   insertChallenge,
+  latestOpenChallenge,
   recordSendFailed,
   recordSent,
   voidOpenChallenges,
 } from "../social/otpChallenges.js";
+import { revokeAllSessions } from "../social/sessions.js";
 import { ulid } from "../utils/ulid.js";
 import { OTP_SENDS_KEY } from "./alerts.js";
 import type { AppContext } from "./context.js";
@@ -252,8 +254,17 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
   return openSession(app, member.id, now);
 }
 
-/** "I did not request this code" (the WhatsApp button): the number gets no code for 24 hours and any open code stops working. */
+/**
+ * "I did not request this code" (the WhatsApp button): the number gets no code for 24 hours and any open code stops working. When the
+ * latest open code was a delete code, someone holding the member's session asked for it, so the member is signed out everywhere.
+ */
 export function handleNotRequested(app: AppContext, e164: string, now: Date): void {
+  const hash = phoneHash(app.config, e164);
+  const latest = latestOpenChallenge(app.db, hash);
   blockPhone(app.db, app.config.otpPepper, e164, now, app.config.tunables.otp.notRequestedBlockHours);
-  voidOpenChallenges(app.db, phoneHash(app.config, e164), now);
+  voidOpenChallenges(app.db, hash, now);
+  if (latest?.purpose === "delete_account") {
+    const member = getMemberByPhone(app.db, e164);
+    if (member !== null) revokeAllSessions(app.db, member.id, now);
+  }
 }

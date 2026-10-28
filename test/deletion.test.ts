@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
+import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { banReason, isPhoneRefused } from "../src/social/bans.js";
 import { eraseMember } from "../src/social/deletion.js";
 import { getMember } from "../src/social/members.js";
@@ -72,6 +73,22 @@ describe("POST /me/delete-code and DELETE /me", () => {
     expect(response.status).toBe(403);
     expect((await errorOf(response)).code).toBe("forbidden");
     expect(getMember(t.db, who.memberId)?.status).toBe("active");
+  });
+
+  test("a delete code cannot sign anyone in: /auth/otp/verify answers 400 and opens no session", async () => {
+    const t = await testApp();
+    const who = await memberSession(t, 0);
+    const sessions = () => (t.db.query("SELECT COUNT(*) AS n FROM auth_session WHERE member_id = ?").get(who.memberId) as { n: number }).n;
+    const before = sessions();
+    const issued = await deleteCode(t, who);
+    const verify = await t.call("POST", "/auth/otp/verify", {
+      body: { challengeId: issued.challengeId, phone: who.phone, code: issued.code, noticeVersion: NOTICE_VERSION },
+    });
+    expect(verify.status).toBe(400);
+    expect((await errorOf(verify)).code).toBe("invalid_code");
+    expect(sessions()).toBe(before);
+    // The refused try did not spend the code: it still confirms the deletion.
+    expect((await confirm(t, who, issued.challengeId, issued.code)).status).toBe(204);
   });
 
   test("a wrong, used, expired, unknown or someone else's code is a 400", async () => {
