@@ -1,5 +1,7 @@
 import { afterAll, expect, test } from "bun:test";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { type MobileServer, startMobileServer } from "../e2e/mobile-server.js";
 import { SEED_MEMBERS } from "../scripts/seed-staging.js";
@@ -74,3 +76,20 @@ test("it is a staging server: seeded members sign in with the code the test rout
     await other.stop();
   }
 }, 90_000);
+
+test("serve exits 1 and names TURNOUT_ENV when it is not set, and does not start as development", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "serve-env-"));
+  try {
+    const { TURNOUT_ENV: _unset, ...env } = process.env;
+    const run = Bun.spawn([process.execPath, "src/cli.ts", "serve", "--db", path.join(dir, "db.sqlite"), "--port", "0", "--no-ticker"], {
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(await run.exited).toBe(1);
+    expect(await new Response(run.stderr).text()).toContain("TURNOUT_ENV is required");
+    expect(await new Response(run.stdout).text()).not.toContain("Serving");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}, 30_000);

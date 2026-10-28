@@ -58,6 +58,9 @@ export class ConfigError extends Error {}
 
 type Env = Record<string, string | undefined>;
 
+/** The staging test routes can read any sign-in code, so their token is not a short word. */
+export const STAGING_TEST_TOKEN_MIN_LENGTH = 32;
+
 const REVIEWER_PHONE = /^\+1\d{3}55501\d{2}$/;
 const E164 = /^\+[1-9]\d{6,14}$/;
 const VERSION = /^\d+\.\d+\.\d+$/;
@@ -79,10 +82,15 @@ async function thumbprint(publicKey: KeyLike): Promise<string> {
 /**
  * Reads and checks every setting the app API needs. Production refuses to start without the grievance block, the secrets, the signing
  * keys and the WhatsApp settings, and refuses the fake sender. The other environments fill a missing secret with a random one for this
- * run (sessions then end at a restart) and say which, by name, in `ephemeral`.
+ * run (sessions then end at a restart) and say which, by name, in `ephemeral`. With `requireEnv` (the `serve` command) a missing
+ * `TURNOUT_ENV` is refused instead of meaning development. `STAGING_TEST_TOKEN`, when set, must be at least 32 characters.
  */
-export async function loadAppConfig(env: Env): Promise<AppConfig> {
+export async function loadAppConfig(env: Env, options: { requireEnv?: boolean } = {}): Promise<AppConfig> {
   const problems: string[] = [];
+  // A served process must say what it is: a missing name must never quietly turn on the development fakes.
+  if (options.requireEnv && clean(env.TURNOUT_ENV) === undefined) {
+    throw new ConfigError(`TURNOUT_ENV is required: set it to ${TURNOUT_ENVS.filter((name) => name !== "test").join(", ")}`);
+  }
   const rawEnv = clean(env.TURNOUT_ENV) ?? "development";
   if (!(TURNOUT_ENVS as readonly string[]).includes(rawEnv)) {
     throw new ConfigError(`TURNOUT_ENV must be one of ${TURNOUT_ENVS.join(", ")}`);
@@ -245,6 +253,11 @@ export async function loadAppConfig(env: Env): Promise<AppConfig> {
   const alertWebhookUrl = clean(env.OPERATOR_ALERT_WEBHOOK_URL) ?? null;
   if (alertWebhookUrl !== null && !/^https:\/\//.test(alertWebhookUrl)) problems.push("OPERATOR_ALERT_WEBHOOK_URL must be an https URL");
 
+  const stagingTestToken = clean(env.STAGING_TEST_TOKEN) ?? null;
+  if (!production && stagingTestToken !== null && stagingTestToken.length < STAGING_TEST_TOKEN_MIN_LENGTH) {
+    problems.push(`STAGING_TEST_TOKEN must be at least ${STAGING_TEST_TOKEN_MIN_LENGTH} characters`);
+  }
+
   const supportEmail = clean(env.SUPPORT_EMAIL) ?? grievance.email;
 
   if (problems.length > 0 || jwt === null) throw new ConfigError(`Settings problem: ${problems.join("; ")}`);
@@ -267,7 +280,7 @@ export async function loadAppConfig(env: Env): Promise<AppConfig> {
     push: { android: platforms.includes("android"), ios: platforms.includes("ios") },
     alertWebhookUrl,
     // The staging test routes exist only outside production, and only with a token.
-    stagingTestToken: production ? null : (clean(env.STAGING_TEST_TOKEN) ?? null),
+    stagingTestToken: production ? null : stagingTestToken,
     objectStore: store as AppConfig["objectStore"],
     filesDir: clean(env.FILES_DIR) ?? "data/files",
     s3,

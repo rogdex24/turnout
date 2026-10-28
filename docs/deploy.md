@@ -26,7 +26,7 @@ the repository, in EAS, or in CI, except the items `docs/plans/mobile-accounts.m
 |---|---|---|---|---|
 | `production` | WhatsApp only. `OTP_SENDER=fake` is refused | All required; startup fails with the list of missing names | None. `/__test/*` is not in the route table | Needs the `GRIEVANCE_*` block |
 | `staging` | Fake by default; never messages anyone | A missing secret is replaced by a random one for that run (sessions end at a restart) and the log says which | `POST /__test/otp` and `POST /__test/clock`, only with `STAGING_TEST_TOKEN` | Sign-in only for numbers in `TEST_PHONE_ALLOWLIST` |
-| `development` | Fake unless `OTP_SENDER=whatsapp` | Same as staging | Same as staging | The default when the variable is unset |
+| `development` | Fake unless `OTP_SENDER=whatsapp` | Same as staging | Same as staging | Must be set on purpose: `serve` refuses to start when `TURNOUT_ENV` is unset |
 | `test` | Injected by the test | Fixed per test | In tests | In-memory object store |
 
 ## File storage
@@ -59,7 +59,7 @@ wrong.
   `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `OTP_DAILY_CAP`,
   `OPERATOR_ALERT_WEBHOOK_URL`. Steps are in `docs/meta-setup.md`.
 - Review account for the Play app access form: `REVIEWER_PHONE`, `REVIEWER_OTP` (production only).
-- Staging only: `STAGING_TEST_TOKEN`, `TEST_PHONE_ALLOWLIST`, `FAKE_UNDELIVERABLE_PHONES`.
+- Staging only: `STAGING_TEST_TOKEN` (at least 32 characters), `TEST_PHONE_ALLOWLIST`, `FAKE_UNDELIVERABLE_PHONES`.
 - Files: `OBJECT_STORE`, `FILES_DIR`, `S3_*`.
 - Behaviour: `MIN_APP_VERSION`, `PUSH_PLATFORMS` (Android only until the Apple account exists),
   `TRUST_PROXY_HEADER` (set to the proxy's header name only when a proxy you control sets it).

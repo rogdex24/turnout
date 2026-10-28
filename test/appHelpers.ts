@@ -13,7 +13,7 @@ import { memoryDb } from "./helpers.js";
 export const PHONES = Array.from({ length: 20 }, (_, index) => `+1202555${String(index + 100).padStart(4, "0")}`);
 export const REVIEWER_PHONE = "+12025550199";
 export const REVIEWER_CODE = "424242";
-export const TEST_TOKEN = "staging-test-token-for-tests";
+export const TEST_TOKEN = "staging-test-token-for-tests-0123456789";
 
 export const BASE = "/api/app/v1";
 

@@ -153,7 +153,7 @@ async function main(): Promise<void> {
     // The app API is the one writer in this process; it gets its own handle (WAL, busy_timeout, foreign keys).
     let app: AppContext;
     try {
-      app = await createAppContext({ db: openDb(dbPath), env: process.env });
+      app = await createAppContext({ db: openDb(dbPath), env: process.env, requireEnv: true });
     } catch (error) {
       if (!(error instanceof ConfigError)) throw error;
       console.error(error.message);

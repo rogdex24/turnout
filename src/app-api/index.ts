@@ -4,7 +4,7 @@ import type { FetchLike } from "../utils/http.js";
 import { diskStore, memoryStore, type ObjectStore, s3Store } from "../utils/objectStore.js";
 import { createAlerts } from "./alerts.js";
 import type { AppContext, LogEntry, Route } from "./context.js";
-import { type AppConfig, loadAppConfig } from "./env.js";
+import { type AppConfig, ConfigError, loadAppConfig } from "./env.js";
 import { signedLinker } from "./fileLinks.js";
 import { housekeeping } from "./housekeeping.js";
 import { createRouter, handleRequest, type Router } from "./http.js";
@@ -27,6 +27,8 @@ export interface AppContextOptions {
   /** Replaces the sender the settings pick (tests pass a fake they can read). */
   sender?: OtpSender;
   store?: ObjectStore;
+  /** `serve` sets it: a missing TURNOUT_ENV is refused instead of meaning development. */
+  requireEnv?: boolean;
   log?: (entry: LogEntry) => void;
   extraRoutes?: Route[];
 }
@@ -45,7 +47,7 @@ function fakeSender(config: AppConfig): OtpSender {
 
 /** Reads the settings (refusing to start on a bad one) and builds everything a handler needs. */
 export async function createAppContext(options: AppContextOptions): Promise<AppContext> {
-  const config: AppConfig = await loadAppConfig(options.env);
+  const config: AppConfig = await loadAppConfig(options.env, { requireEnv: options.requireEnv });
   const adjust = config.env === "staging" && options.now === undefined ? adjustableClock() : undefined;
   const now: Clock = options.now ?? adjust ?? systemClock;
   const fetch: FetchLike = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
@@ -60,6 +62,10 @@ export async function createAppContext(options: AppContextOptions): Promise<AppC
   const sender =
     options.sender ??
     (config.otpSender === "whatsapp" && config.whatsapp !== null ? whatsappOtpSender(config.whatsapp, fetch) : fakeSender(config));
+  // The settings already refuse OTP_SENDER=fake in production; this catches a fake passed in code, so nobody gets a code that was never sent.
+  if (config.env === "production" && (sender as { fake?: boolean }).fake === true) {
+    throw new ConfigError("a sender that sends nothing is not allowed in production");
+  }
   const context: AppContext = {
     db: options.db,
     now,
