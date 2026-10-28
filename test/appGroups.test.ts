@@ -134,6 +134,20 @@ describe("GET /groups/:groupId from T-3h", () => {
     expect(unknown.status).toBe(404);
   });
 
+  test("the group and its photos close 24 hours after the start: the same 404 as a group that is not yours", async () => {
+    const s = await setup();
+    await s.at(23 * HOUR + 59 * MINUTE);
+    const me = s.members[0] as Session;
+    const other = s.t.db.query("SELECT member_ref FROM group_member WHERE member_id = ?").get((s.members[1] as Session).memberId) as {
+      member_ref: string;
+    };
+    expect((await group(s, me)).status).toBe(200);
+    expect((await s.t.call("GET", `/groups/${s.groupId}/members/${other.member_ref}/photo`, { token: me.token })).status).toBe(200);
+    await s.at(24 * HOUR);
+    expect((await group(s, me)).status).toBe(404);
+    expect((await s.t.call("GET", `/groups/${s.groupId}/members/${other.member_ref}/photo`, { token: me.token })).status).toBe(404);
+  });
+
   test("a member who withdrew is gone from everyone's list, and their ref is a 404", async () => {
     const s = await setup(5);
     await s.at(-3 * HOUR);

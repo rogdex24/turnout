@@ -6,7 +6,7 @@ import {
   type MemberPhotoResponse,
 } from "@turnout/contract/app/groups";
 import { belowPlan, checkIn, getGroupForMember, groupSize, memberPhotoKey, revealedMembers } from "../../social/groups.js";
-import { canReveal, meetAt, revealAt } from "../../social/model/schedule.js";
+import { canReveal, meetAt, revealAt, revealClosed } from "../../social/model/schedule.js";
 import { getPlan } from "../../social/plans.js";
 import { authed } from "../auth.js";
 import type { Route } from "../context.js";
@@ -26,6 +26,7 @@ export const groupRoutes: Route[] = [
       const found = getGroupForMember(app.db, params.groupId as string, row.id);
       if (found === null) throw notFound();
       const { group, mine } = found;
+      if (revealClosed({ startsAt: group.starts_at }, now, t)) throw notFound();
       // The show as the member's own plan saw it: the same snapshot the plan shows.
       const plan = getPlan(app.db, mine.plan_id);
       if (plan === null) throw notFound();

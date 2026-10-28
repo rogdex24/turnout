@@ -54,6 +54,12 @@ export interface Tunables {
   plan: {
     /** The meet card goes live and co-members are revealed this many hours before the start (T-3h). */
     revealHoursBefore: number;
+    /** The group and its co-members stop being served this many hours after the start (24 now; the feedback work may move it to 72). */
+    revealCloseHours: number;
+    /** The group meets this many minutes before the start. */
+    meetMinutesBefore: number;
+    /** The thread turns read-only this many hours after the start. */
+    threadCloseHoursAfterStart: number;
     /** The "head over" notice goes out this many minutes before the start, and check-in opens then. */
     headOverMinutes: number;
     /** Check-in stays open this many minutes after the start. */
@@ -116,6 +122,9 @@ export const DEFAULT_TUNABLES: Tunables = {
   session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
   plan: {
     revealHoursBefore: 3,
+    revealCloseHours: 24,
+    meetMinutesBefore: 60,
+    threadCloseHoursAfterStart: 24,
     headOverMinutes: 90,
     checkInCloseMinutes: 60,
     rejectedTicketDeleteHours: 24,

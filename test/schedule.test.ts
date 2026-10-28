@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { canCheckIn, canReveal, checkInWindow, meetAt, milestones, revealAt } from "../src/social/model/schedule.js";
+import { tunables } from "../src/social/model/tunables.js";
 
 const START = "2026-11-10T14:00:00.000Z";
 const at = (iso: string, minutes: number) => new Date(Date.parse(iso) + minutes * 60_000);
@@ -49,6 +50,21 @@ describe("reveal", () => {
 
   test("a done group still reveals, for the feedback that follows", () => {
     expect(canReveal({ startsAt: START, state: "done" }, at(START, 600))).toBe(true);
+  });
+
+  test("closes 24 hours after the start, for a done group as for a live one", () => {
+    for (const state of ["live", "done"] as const) {
+      expect(canReveal({ startsAt: START, state }, at(START, 24 * 60 - 1))).toBe(true);
+      expect(canReveal({ startsAt: START, state }, at(START, 24 * 60))).toBe(false);
+    }
+    expect(canReveal(group, at(START, 48 * 60), tunables({ plan: { revealCloseHours: 72 } }))).toBe(true);
+  });
+
+  test("the meet time and the thread close come from tunables, not from fixed numbers", () => {
+    const t = tunables({ plan: { meetMinutesBefore: 45, threadCloseHoursAfterStart: 12 } });
+    expect(milestones(START, t).meetAt).toBe("2026-11-10T13:15:00.000Z");
+    expect(milestones(START, t).threadClosesAt).toBe("2026-11-11T02:00:00.000Z");
+    expect(milestones(START, t).ticketDeleteAt).toBe("2026-11-11T14:00:00.000Z");
   });
 });
 
