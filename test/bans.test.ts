@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { banHash, banReason, isPhoneRefused, removeBan, writeBan } from "../src/social/bans.js";
+import { eraseMember } from "../src/social/deletion.js";
 import { getMemberByPhone } from "../src/social/members.js";
+import { banMember, liftBan } from "../src/social/operator.js";
 import { PHONES, testApp } from "./appHelpers.js";
+import { memberSession } from "./helpers/appFixture.js";
 
 const PEPPER = "a-test-ban-pepper-0123456789abcdef";
 const NOW = new Date("2026-10-27T06:00:00Z");
@@ -103,5 +106,43 @@ describe("ban list", () => {
     expect(member?.status_reason).toBe("downvote_stop");
     const me = await t.call("GET", "/me", { token: tokens.accessToken });
     expect(me.status).toBe(200);
+  });
+
+  test("the operator's ban writes one row with no member id, erases the account, and the number is refused at request and at verify", async () => {
+    const { t, pepper } = await setup();
+    const who = await memberSession(t, 0);
+    const result = banMember(t.db, pepper, who.memberId, t.clock(), t.app.config.tunables);
+    expect(result.ok).toBe(true);
+    expect(t.db.query("SELECT reason FROM ban_list").all()).toEqual([{ reason: "operator" }]);
+    expect(banReason(t.db, pepper, who.phone)).toBe("operator");
+    expect(getMemberByPhone(t.db, who.phone)).toBeNull();
+    expect((await requestCode(t, who.phone)).status).toBe(403);
+    expect(t.db.query("SELECT COUNT(*) AS n FROM auth_session WHERE member_id = ? AND revoked_at IS NULL").get(who.memberId)).toEqual({
+      n: 0,
+    });
+  });
+
+  test("a self-deletion leaves the table exactly as it was, and the same number signs up fresh", async () => {
+    const { t, pepper } = await setup();
+    writeBan(t.db, pepper, PHONES[3] as string, "operator", NOW);
+    const before = t.db.query("SELECT phone_hash, reason, created_at FROM ban_list ORDER BY phone_hash").all();
+    const who = await memberSession(t, 0);
+    expect(eraseMember(t.db, who.memberId, { kind: "self" }, t.clock(), t.app.config.tunables).ok).toBe(true);
+    expect(t.db.query("SELECT phone_hash, reason, created_at FROM ban_list ORDER BY phone_hash").all()).toEqual(before);
+    expect(isPhoneRefused(t.db, pepper, who.phone)).toBe(false);
+    const again = await t.signIn(who.phone);
+    expect(again.accessToken.length).toBeGreaterThan(20);
+    expect(getMemberByPhone(t.db, who.phone)?.id).not.toBe(who.memberId);
+  });
+
+  test("the operator's lift takes the number off, records the action without the number, and the number can sign up", async () => {
+    const { t, pepper } = await setup();
+    const who = await memberSession(t, 0);
+    banMember(t.db, pepper, who.memberId, t.clock(), t.app.config.tunables);
+    expect(liftBan(t.db, pepper, who.phone, t.clock())).toEqual({ ok: true });
+    expect(liftBan(t.db, pepper, who.phone, t.clock())).toEqual({ ok: false });
+    expect(t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
+    expect(t.db.query("SELECT detail FROM operator_action WHERE action = 'ban_lift'").all()).toEqual([{ detail: null }]);
+    expect((await t.signIn(who.phone)).accessToken.length).toBeGreaterThan(20);
   });
 });
