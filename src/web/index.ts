@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { eventsApiDetail, eventsApiList, jsonResponse, listAreasTool, listVenuesTool, whatsOnThisWeekendTool } from "./api.js";
+import { type AppLinksConfig, aasaResponse, assetlinksResponse } from "./appLinks.js";
 import { faviconResponse } from "./brand.js";
 import { categoryOrAreaIcsFeed, eventIcs, eventsIcsFeed, llmsTxt, robotsTxt, sitemapXml, textResponse } from "./feeds.js";
 import { fontResponse } from "./fonts.js";
@@ -26,6 +27,8 @@ interface RouteContext {
 export interface SiteOptions {
   /** The grievance officer, shown on /privacy. Null reads as "Details not set". */
   grievance?: GrievanceBlock | null;
+  /** The values for the app links files under /.well-known. Unset, both files are 404. */
+  appLinks?: AppLinksConfig;
 }
 
 /** Returns null to decline, letting the next route try. */
@@ -53,6 +56,13 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
   ],
 
   [/^\/privacy$/, ({ options }) => privacyPage(options.grievance ?? null)],
+
+  // Fetched by the phone to check that go.<host> links belong to the app. Exact paths, and a 404 (never a redirect) until set.
+  [/^\/\.well-known\/assetlinks\.json$/, exactPath("/.well-known/assetlinks.json", ({ options }) => assetlinksResponse(options.appLinks))],
+  [
+    /^\/\.well-known\/apple-app-site-association$/,
+    exactPath("/.well-known/apple-app-site-association", ({ options }) => aasaResponse(options.appLinks)),
+  ],
 
   [/^\/favicon\.svg$/, exactPath("/favicon.svg", () => faviconResponse())],
   // Browsers ask for /favicon.ico before reading the page head; point them at the SVG.
