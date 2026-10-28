@@ -36,7 +36,7 @@ export const messageSchema = z.object({
 export type Message = z.infer<typeof messageSchema>;
 
 /** GET /groups/:groupId/messages?after=<id>: up to 100 newer messages, oldest first. */
-export const messageListQuerySchema = z.object({ after: z.string().min(1).max(40).optional() });
+export const messageListQuerySchema = z.object({ after: z.string().min(1).max(40).optional() }).strict();
 export const messageListResponseSchema = z.object({
   messages: z.array(messageSchema),
   /** `open` while a member can post, `read_only` after T+24h. The route does not answer outside those two. */

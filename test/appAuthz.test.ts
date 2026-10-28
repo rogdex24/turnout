@@ -39,6 +39,8 @@ const ROWS: Row[] = [
   { method: "PUT", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/me/consent", path: "/me/consent", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/me/delete-code", path: "/me/delete-code", auth: "member", anonymous: 401 },
+  { method: "DELETE", pattern: "/me", path: "/me", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/shows/:publicId", path: "/shows/show-a", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },

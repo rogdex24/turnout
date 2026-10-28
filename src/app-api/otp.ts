@@ -6,7 +6,14 @@ import { addMinutes } from "../social/dates.js";
 import { createMember, getMemberByPhone, markPhoneVerified, recordConsent } from "../social/members.js";
 import { normalizePhone } from "../social/model/phone.js";
 import type { RateRule } from "../social/model/tunables.js";
-import { getChallenge, insertChallenge, recordSendFailed, recordSent, voidOpenChallenges } from "../social/otpChallenges.js";
+import {
+  type ChallengeRow,
+  getChallenge,
+  insertChallenge,
+  recordSendFailed,
+  recordSent,
+  voidOpenChallenges,
+} from "../social/otpChallenges.js";
 import { ulid } from "../utils/ulid.js";
 import { OTP_SENDS_KEY } from "./alerts.js";
 import type { AppContext } from "./context.js";
@@ -52,9 +59,29 @@ export async function requestOtp(app: AppContext, input: OtpRequest, ip: string,
   const { config, db } = app;
   const e164 = normalizePhone(input.phone, config.phoneAllowlist);
   if (e164 === null) throw new AppError(400, "bad_phone", "enter an Indian mobile number");
-  const reviewer = config.reviewer !== null && config.reviewer.phone === e164;
-
   if (isPhoneRefused(db, config.banPepper, e164) || isPhoneBlocked(db, config.otpPepper, e164, now)) throw unavailable();
+  return issueCode(app, e164, "sign_in", ip, now);
+}
+
+/**
+ * Asks for the code that confirms deleting the signed-in member's own account. It goes to the member's own number, under the same
+ * limits, cap and reviewer rule as a sign-in code, and lives `deleteCodeExpiresMinutes`. A number the owner reported with
+ * "I did not request this code" gets none, so a stolen session cannot delete the account.
+ */
+export async function requestDeleteCode(app: AppContext, e164: string, ip: string, now: Date): Promise<OtpChallengeResponse> {
+  if (isPhoneBlocked(app.db, app.config.otpPepper, e164, now)) throw unavailable();
+  return issueCode(app, e164, "delete_account", ip, now);
+}
+
+async function issueCode(
+  app: AppContext,
+  e164: string,
+  purpose: ChallengeRow["purpose"],
+  ip: string,
+  now: Date,
+): Promise<OtpChallengeResponse> {
+  const { config, db } = app;
+  const reviewer = config.reviewer !== null && config.reviewer.phone === e164;
 
   const rate = config.tunables.rate;
   const entries: LimitEntry[] = [];
@@ -82,13 +109,16 @@ export async function requestOtp(app: AppContext, input: OtpRequest, ip: string,
   const id = ulid(now);
   const code = reviewer && config.reviewer !== null ? config.reviewer.code : generateCode(config.tunables.otp.digits);
   const hash = phoneHash(config, e164);
-  const expiresAt = addMinutes(now, config.tunables.otp.expiresMinutes);
+  const expiresAt = addMinutes(
+    now,
+    purpose === "sign_in" ? config.tunables.otp.expiresMinutes : config.tunables.otp.deleteCodeExpiresMinutes,
+  );
   db.transaction(() => {
     voidOpenChallenges(db, hash, now);
     insertChallenge(db, {
       id,
       phoneHash: hash,
-      purpose: "sign_in",
+      purpose,
       codeHmac: codeHmac(config, id, code),
       now,
       expiresAt,
@@ -135,17 +165,18 @@ function sameHash(a: string, b: string): boolean {
 }
 
 /**
- * Checks a code and signs the person in. Every problem with the code (unknown, someone else's, used, cancelled, expired, wrong)
- * is the same 400, so the answer teaches nothing. Each wrong try is counted atomically and the challenge is cancelled at the fifth.
- * The member and the first consent record are made here, once, the first time a number signs in.
+ * Checks a code and spends it. Every problem with the code (unknown, someone else's, used, cancelled, expired, wrong) is the same
+ * 400, so the answer teaches nothing. Each wrong try is counted atomically and the challenge is cancelled at the fifth. One case is
+ * told apart: the caller's own sign-in code offered to confirm a deletion is a 403, so a code that opened a session cannot end the account.
  */
-export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: Date): Promise<TokenPair> {
+async function spendCode(
+  app: AppContext,
+  input: { challengeId: string; code: string },
+  e164: string,
+  purpose: ChallengeRow["purpose"],
+  now: Date,
+): Promise<void> {
   const { config, db } = app;
-  if (input.noticeVersion !== NOTICE_VERSION)
-    throw new AppError(400, "unknown_notice_version", "the privacy notice has been updated, reload the app");
-  const e164 = normalizePhone(input.phone, config.phoneAllowlist);
-  if (e164 === null) throw new AppError(400, "bad_phone", "enter an Indian mobile number");
-
   // The store-review number has a fixed code and may ask for codes without limit, so its wrong tries are capped for the IST day.
   const failRule: RateRule = { limit: config.tunables.otp.reviewerFailCapPerDay, window: "ist_day" };
   const failKey = rateKey(config.otpPepper, "otp:reviewer:fail", e164);
@@ -160,16 +191,12 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
 
   const challenge = getChallenge(db, input.challengeId);
   const at = now.toISOString();
-  if (
-    challenge === null ||
-    challenge.purpose !== "sign_in" ||
-    !sameHash(challenge.phone_hash, phoneHash(config, e164)) ||
-    challenge.consumed_at !== null ||
-    challenge.voided_at !== null ||
-    challenge.expires_at <= at
-  ) {
+  if (challenge === null || !sameHash(challenge.phone_hash, phoneHash(config, e164))) throw invalidCode();
+  if (challenge.purpose !== purpose) {
+    if (purpose === "delete_account") throw new AppError(403, "forbidden", "that code cannot be used to delete the account");
     throw invalidCode();
   }
+  if (challenge.consumed_at !== null || challenge.voided_at !== null || challenge.expires_at <= at) throw invalidCode();
 
   const max = config.tunables.otp.maxAttempts;
   const counted = db
@@ -186,6 +213,28 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
     .query("UPDATE otp_challenge SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL AND voided_at IS NULL")
     .run(at, challenge.id);
   if (consumed.changes === 0) throw invalidCode();
+}
+
+/** Confirms deleting the member's own account: the code must be a `delete_account` code sent to this number. */
+export async function confirmDeleteCode(
+  app: AppContext,
+  input: { challengeId: string; code: string },
+  e164: string,
+  now: Date,
+): Promise<void> {
+  await spendCode(app, input, e164, "delete_account", now);
+}
+
+/**
+ * Checks a code and signs the person in. The member and the first consent record are made here, once, the first time a number signs in.
+ */
+export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: Date): Promise<TokenPair> {
+  const { config, db } = app;
+  if (input.noticeVersion !== NOTICE_VERSION)
+    throw new AppError(400, "unknown_notice_version", "the privacy notice has been updated, reload the app");
+  const e164 = normalizePhone(input.phone, config.phoneAllowlist);
+  if (e164 === null) throw new AppError(400, "bad_phone", "enter an Indian mobile number");
+  await spendCode(app, input, e164, "sign_in", now);
 
   // The ban list is read again here: a number can be banned between the request and the code being typed.
   if (isPhoneRefused(db, config.banPepper, e164)) throw unavailable();

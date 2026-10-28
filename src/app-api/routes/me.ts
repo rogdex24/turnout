@@ -1,6 +1,13 @@
-import { consentRequestSchema, MAX_PHOTO_BYTES, type MeResponse } from "@turnout/contract/app/me";
+import {
+  consentRequestSchema,
+  deleteAccountRequestSchema,
+  deleteCodeRequestSchema,
+  MAX_PHOTO_BYTES,
+  type MeResponse,
+} from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { handleInputSchema, profilePatchSchema } from "@turnout/contract/profile";
+import { eraseMember } from "../../social/deletion.js";
 import { getHandle, isInLockedGroup, resetApprovedHandle, submitHandle } from "../../social/handles.js";
 import { isPhoneBanned, latestConsent, type MemberRow, recordConsent } from "../../social/members.js";
 import { missingItems } from "../../social/model/matchable.js";
@@ -11,7 +18,8 @@ import { ulid } from "../../utils/ulid.js";
 import { authed } from "../auth.js";
 import type { AppContext, Route } from "../context.js";
 import { AppError, notFound } from "../errors.js";
-import { ok, parseBody, readBytes, retryAfter } from "../http.js";
+import { ok, parseBody, parseEmptyBody, readBytes, retryAfter } from "../http.js";
+import { confirmDeleteCode, requestDeleteCode } from "../otp.js";
 import { fileLink } from "../presenters.js";
 import { enforce } from "../rateLimit.js";
 import { reencodePhoto, sniffImage } from "../upload.js";
@@ -139,4 +147,35 @@ export const meRoutes: Route[] = [
       return ok({ noticeVersion: given.notice_version, givenAt: given.given_at });
     },
   },
+  {
+    method: "POST",
+    pattern: "/me/delete-code",
+    auth: "member",
+    handler: async ({ app, request, member, ip, now }) => {
+      const { member: row } = authed(member);
+      await parseEmptyBody(request, deleteCodeRequestSchema);
+      if (row.phone_e164 === null) throw notFound();
+      return ok(await requestDeleteCode(app, row.phone_e164, ip, now));
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: "/me",
+    auth: "member",
+    handler: async ({ app, request, member, now }) => {
+      const { member: row } = authed(member);
+      const input = await parseBody(request, deleteAccountRequestSchema);
+      if (row.phone_e164 === null) throw notFound();
+      await confirmDeleteCode(app, input, row.phone_e164, now);
+      const erased = eraseMember(app.db, row.id, { kind: "self" }, now, app.config.tunables);
+      if (!erased.ok) throw notFound();
+      await deleteFiles(app, erased.fileKeys);
+      return new Response(null, { status: 204, headers: { "cache-control": "private, no-store" } });
+    },
+  },
 ];
+
+/** Removes the files an erased account pointed at. A failure is left for the nightly sweep, which deletes any file no row points at. */
+export async function deleteFiles(app: AppContext, keys: string[]): Promise<void> {
+  for (const key of keys) await app.store.delete(key).catch(() => {});
+}

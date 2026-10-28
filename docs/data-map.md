@@ -250,7 +250,7 @@ Every write the operator makes. `detail` holds codes and ids, never free text ab
 | `operator_action.id` | Row id (ULID) | Primary key | Operator | 1 year |
 | `operator_action.action` | What was done, for example `handle_approved` | Audit | Operator | 1 year |
 | `operator_action.subject_type` | What kind of thing it was done to | Audit | Operator | 1 year |
-| `operator_action.subject_id` | The id of that thing | Audit | Operator | 1 year |
+| `operator_action.subject_id` | The id of that thing; for a member it is the tombstone id after the account ends | Audit | Operator | 1 year |
 | `operator_action.detail` | A small JSON object of codes | Audit | Operator | 1 year |
 | `operator_action.created_at` | When | Audit | Operator | 1 year |
 
