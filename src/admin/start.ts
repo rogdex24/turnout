@@ -8,7 +8,22 @@ import { withThemeBoot } from "./themeBoot.js";
 import index from "./ui/index.html";
 
 /** Pages the client router handles; each serves the same HTML shell. */
-const PAGES = ["/", "/runs", "/runs/:id", "/sources", "/events", "/mutes", "/tickets", "/shows", "/handles"];
+const PAGES = [
+  "/",
+  "/runs",
+  "/runs/:id",
+  "/sources",
+  "/events",
+  "/mutes",
+  "/tickets",
+  "/shows",
+  "/handles",
+  "/reports",
+  "/accounts",
+  "/accounts/:id",
+  "/bans",
+  "/notices",
+];
 
 export interface AdminOptions {
   dbPath: string;
@@ -31,6 +46,7 @@ export function startAdmin({ dbPath, port, env }: AdminOptions) {
     write,
     token: bind.token,
     files: adminFilesFromEnv(env),
+    banPepper: env.BAN_PEPPER?.trim() || null,
     agentRunsDir: path.join(dataDir, "agent-runs"),
     startRun: createRunStarter({ db: read, dbPath: path.resolve(dbPath), logDir: path.join(dataDir, "admin-runs") }),
   };

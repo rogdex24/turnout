@@ -3,23 +3,32 @@ import { timingSafeEqual } from "node:crypto";
 import {
   approveHandleAction,
   approveTicketAction,
+  banAction,
+  closeReportAction,
+  contactedAction,
   createMute,
   deleteMute,
+  getAccount,
   getEvent,
   getRun,
   HttpError,
   handlePhotoKey,
+  liftBanAction,
   listEvents,
+  listFailedNotices,
   listHandles,
   listMutes,
+  listReports,
   listRuns,
   listSources,
   listTickets,
   listUpcomingShows,
   putCafe,
   putStartTime,
+  reinstateAction,
   rejectHandleAction,
   rejectTicketAction,
+  suspendAction,
   ticketFile,
 } from "./api.js";
 import { type AdminFiles, verifyAdminLink } from "./files.js";
@@ -57,6 +66,8 @@ export interface AdminContext {
   agentRunsDir: string;
   /** The stored tickets and photos, and the secret that signs the links to them. Null when the admin has none, so no link is shown. */
   files?: AdminFiles | null;
+  /** The same BAN_PEPPER as the app. Without it the ban and lift routes answer 503: a number hashed with another pepper would never match. */
+  banPepper?: string | null;
   now?: () => Date;
   /** When set, every request must carry `Authorization: Bearer <token>`. */
   token?: string;
@@ -170,6 +181,23 @@ const ROUTES: [method: string, pattern: RegExp, handler: Handler][] = [
     /^\/api\/handles\/([^/]+)\/reject$/,
     async (c, r, _u, [id]) => json(rejectHandleAction(c.write, id, await readJson(r), clock(c)())),
   ],
+  ["GET", /^\/api\/reports$/, (c) => json(listReports(c.read, clock(c)()))],
+  ["POST", /^\/api\/reports\/([^/]+)\/contacted$/, (c, _r, _u, [id]) => json(contactedAction(c.write, id, clock(c)()))],
+  [
+    "POST",
+    /^\/api\/reports\/([^/]+)\/close$/,
+    async (c, r, _u, [id]) => json(await closeReportAction(c.write, c.banPepper, c.files ?? null, id, await readJson(r), clock(c)())),
+  ],
+  ["GET", /^\/api\/accounts\/([^/]+)$/, (c, _r, _u, [id]) => json(getAccount(c.read, id))],
+  ["POST", /^\/api\/accounts\/([^/]+)\/suspend$/, (c, _r, _u, [id]) => json(suspendAction(c.write, id, clock(c)()))],
+  ["POST", /^\/api\/accounts\/([^/]+)\/reinstate$/, (c, _r, _u, [id]) => json(reinstateAction(c.write, c.banPepper, id, clock(c)()))],
+  [
+    "POST",
+    /^\/api\/accounts\/([^/]+)\/ban$/,
+    async (c, _r, _u, [id]) => json(await banAction(c.write, c.banPepper, c.files ?? null, id, clock(c)())),
+  ],
+  ["POST", /^\/api\/bans\/lift$/, async (c, r) => json(liftBanAction(c.write, c.banPepper, await readJson(r), clock(c)()))],
+  ["GET", /^\/api\/notices$/, (c, _r, url) => json(listFailedNotices(c.read, url.searchParams))],
 ];
 
 const clock = (ctx: AdminContext): (() => Date) => ctx.now ?? (() => new Date());
