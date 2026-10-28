@@ -97,9 +97,15 @@ Lint rules that guard architecture: `lint/no-html-strings.grit` (no string-built
 - Every public surface reads `listable_event`, never `event` directly (`web/schema.ts`).
 - Agent output is published only after `ingestion/agent/verify.ts` finds every evidence quote on a page we fetched.
 - The venue owns coordinates; nothing outside the Hyderabad box or on the city-centre placeholder is ever shown as exact (`catalog/venue.ts` `isUsablePoint`, `placeVenue`; the map reads `venue.lat/lng`, never `event.latitude/longitude`). Automation never overwrites a `manual` venue.
-- The admin's only write handle touches `mute_rule`. Syncs it starts run in a child process (`admin/runs.ts`).
+- The admin's write handle touches `mute_rule`, and, from M4, the social tables only through `src/social/operator.ts`, which writes an `operator_action` row for every change (amended 2026-10-26). Syncs it starts run in a child process (`admin/runs.ts`).
 - `admin/reasons.ts` explains why an event is not in `listable_event`; `test/adminReasons.test.ts` fails if the view and the reasons disagree.
 - `NOT_MUTED`, `countMuted` and the admin's mute reasons all use `RULE_MATCHES_EVENT` (`curation/mute.ts`).
 - Every SQLite file is opened with `openDb` (`utils/openDb.ts`), so each handle has WAL, `busy_timeout = 5000` and `foreign_keys = ON`. Do not call `new Database` in `src` or `e2e`.
 - Product code takes a `Clock` and never calls `new Date()` for "now". The ticker, the rate limits and the staging `__test/clock` route depend on it.
 - A new source is one file in `ingestion/sources/` plus one line in `registry.ts` plus a fixture test.
+- No co-member data (names, photos, handles, the meet card) leaves the server before T-3h of the show (`social/model/tunables.ts`).
+- One 404 `not_found` for a thing that does not exist, is not yours, or is not yet visible. The three cases are never told apart (`app-api/errors.ts` `notFound`).
+- No location is stored on the server. The app opens the cafe link on the device.
+- No handle appears in any response to another member. Only the operator sees it (`packages/contract`, `test/contract.test.ts`).
+- No secrets or personal data in the repo: no real phone, email, name or token in code, tests, docs or fixtures. `scripts/pii-scan.ts` and `test/noRealPhones.test.ts` enforce it; tests build a valid Indian number at run time (`test/appHelpers.ts` `indianMobile`).
+- Every app route validates its body and query with a `.strict()` Zod schema from `@turnout/contract`; an unknown key is a 400 (`test/contract.test.ts`).

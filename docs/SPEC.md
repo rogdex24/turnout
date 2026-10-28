@@ -115,8 +115,10 @@ Explicitly not built, in any phase, unless this spec is amended:
 
 - **Ticketing or payments for third-party events.** We link out. We are not a
   ticketing platform and will not hold anyone's money for someone else's event.
-- **A mobile app.** The site is mobile-web first. No React Native, no install
-  prompts, no app store presence.
+- ~~**A mobile app.**~~ Reversed on 2026-10-26. The tag-along loop lives in an
+  Android app (Expo and React Native, Play Store); the web keeps the share link and
+  the public pages. The site stays mobile-web first, with no install prompts. Plan:
+  `docs/plans/mobile-app-brief.md`.
 - **User-generated reviews or ratings of events or venues.** Moderation cost with
   no revenue attached.
 - **Full-text search, in Phase 1 or 2.** With a few hundred live events, filters
@@ -293,21 +295,35 @@ contact another. Not negotiable, not deferrable to "v2".
   specific event; candidate matches surface only within that event.
 - **No messaging before both parties accept**, and no messaging outside the
   event's time window plus 24 hours.
-- **Verification before any match**: government ID plus a liveness selfie, plus a
-  valid ticket for the specific event.
-- **Hard gender balancing.** Men are waitlisted when the ratio for an event
-  passes the configured threshold. Slower growth is the price of the product
-  existing at all. Default threshold: no more than 60% of matched participants of
-  one gender per event.
+- **Checks before any match** (amended 2026-10-26). v1 has no identity check and
+  collects no identity documents. Before a first match a person needs a phone that
+  receives a WhatsApp code, a face photo, a complete profile, an Instagram or
+  LinkedIn handle the operator has checked, an approved ticket for the show, and no
+  ban or stop. The handle check replaces ID verification.
+- **Hard gender balancing** (amended 2026-10-26). The 60% single-gender threshold
+  is replaced by per-category caps of 3 of 4, 3 of 5 and 4 of 6 for a group of that
+  size, with woman, man and non-binary counted as separate categories. Slower
+  growth is the price of the product existing at all.
 - **Women-only opt-in from day one**, not as a later feature.
 - **Public venues only.** The ticket requirement enforces this; do not weaken it.
-- **One report ends an account.** No appeals process in year one.
+- **One report suspends at once** (amended 2026-10-26). The reported person is
+  stopped from the moment of the report. An upheld report means a ban; a dismissed
+  one makes the person active again. No other appeals process in year one.
 - **Published grievance officer name, address and contact**, with documented
   takedown timelines, before the first user account is created.
-- Paying for verification is itself a safety filter. Do not offer a free tier
-  that can match.
+- ~~Paying for verification is itself a safety filter.~~ Moot in v1 (2026-10-26):
+  there is no identity verification, so there is nothing to charge for. The handle
+  check, the ticket check and the ban list do that work.
 
 ## 10. Architecture sketch, Phase 1 and later
+
+Stack change, 2026-10-26: the Next.js, Vercel and Turso choices below are replaced
+by the Bun server, `bun:sqlite`, Litestream for backup and the host slot (see
+`docs/deploy.md`). The rejections below stand: no queue, no Redis, no Docker in
+production, no runtime-generated migrations. Added: free or owned infrastructure
+only, except per-message WhatsApp sign-in codes (prepaid) and the Google billing
+account for Maps, which has a budget alert. No DLT registration, because there is
+no SMS. The text below is kept as the original sketch.
 
 One repository. One deployable. No services, no queue, no orchestrator.
 
@@ -335,9 +351,9 @@ One repository. One deployable. No services, no queue, no orchestrator.
 
 Choices and the reason for each:
 
-- **Next.js App Router on Vercel.** One framework covers the site, the JSON
+- **Next.js App Router on Vercel** (replaced 2026-10-26). One framework covers the site, the JSON
   endpoints, ICS generation and the cron trigger. Free tier is enough.
-- **SQLite via Turso.** A few hundred events a week is three orders of magnitude
+- **SQLite via Turso** (replaced 2026-10-26 by `bun:sqlite`). A few hundred events a week is three orders of magnitude
   below anything needing Postgres. Free tier, and plain local SQLite for
   development with no container.
 - **GitHub Actions for the schedule**, not a hosted worker. Free, logged,
