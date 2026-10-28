@@ -63,7 +63,9 @@ wrong.
 - Files: `OBJECT_STORE`, `FILES_DIR`, `S3_*`.
 - Behaviour: `MIN_APP_VERSION`, `PUSH_PLATFORMS` (Android only until the Apple account exists),
   `TRUST_PROXY_HEADER` (set to the proxy's header name only when a proxy you control sets it).
-- Later: `APP_LINKS_ANDROID_SHA256`, `SENTRY_DSN`.
+- App links (serve `/.well-known/assetlinks.json`; the route is a 404 until the package and a fingerprint are set): `APP_LINKS_ANDROID_PACKAGE`,
+  `APP_LINKS_ANDROID_SHA256` (comma-separated SHA-256 fingerprints), `APP_LINKS_IOS_APP_IDS` (later, with the Apple account).
+- Later: `SENTRY_DSN`.
 
 ## Staging and the seed
 

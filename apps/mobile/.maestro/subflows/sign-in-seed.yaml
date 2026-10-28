@@ -1,0 +1,27 @@
+# A fresh install signed in as a seeded member, ending on the Shows tab. Run with runFlow and PHONE, SERVER_URL and TEST_TOKEN.
+appId: com.turnout.app.e2e
+name: sign in seed
+---
+- runFlow: open-sign-in.yaml
+- runFlow:
+    file: send-code.yaml
+    env:
+      PHONE: ${PHONE}
+- extendedWaitUntil:
+    visible:
+      id: code
+    timeout: 10000
+- runScript:
+    file: ../scripts/otp-code.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      PHONE: ${PHONE}
+- runFlow:
+    file: enter-code.yaml
+    env:
+      CODE: ${output.code}
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 20000

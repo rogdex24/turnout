@@ -1,0 +1,26 @@
+# A fresh install to the phone step: Skip on Welcome, then accept the notice. Run with runFlow from the flows that sign in.
+appId: com.turnout.app.e2e
+name: open sign-in
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
+- tapOn:
+    id: welcome-skip
+- extendedWaitUntil:
+    visible:
+      id: notice
+    timeout: 10000
+# Agree waits for the grievance officer's details, which the server sends with /config.
+- extendedWaitUntil:
+    notVisible: "Loading the grievance officer's details"
+    timeout: 15000
+- tapOn:
+    id: agree
+- extendedWaitUntil:
+    visible:
+      id: sign-in
+    timeout: 10000

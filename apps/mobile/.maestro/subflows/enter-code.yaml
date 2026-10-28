@@ -1,0 +1,7 @@
+# Types CODE into the six boxes of the code step.
+appId: com.turnout.app.e2e
+name: enter code
+---
+- tapOn:
+    id: code-field-input
+- inputText: ${CODE}

@@ -5,7 +5,7 @@
 `docs/plans/mobile-visual-testing.md`.
 
 Story ids: the story title lower-cased with `/` and spaces as `-`, then `--`, then the story name the same way. `Screens/Home` with
-the story `Placeholder` is `screens-home--placeholder`.
+the story `Loaded` is `screens-home--loaded`.
 
 Stories to capture are listed in `stories.json`: the baseline folder, the story id and a text that shows once the story has rendered.
 The device jobs run `ci/device-run.sh <target>`, which sets the theme and the text size and captures every listed story.

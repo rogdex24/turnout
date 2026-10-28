@@ -1,0 +1,52 @@
+# A link to a show opens that show, and a link to anything else lands on Home. The links use the e2e build's own scheme, because the
+# https host (go.<domain>) has no DNS yet; the https form is covered by the unit tests and the server route tests. Written for CI;
+# it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: deeplink-show
+tags:
+  - deeplink
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MATCHABLE_MEMBER: "+12025550104"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MATCHABLE_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# A show link opens the show: the ticket stub and the title of the seeded show.
+- openLink: turnout-e2e://show/${SHOW_ID}
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- assertVisible:
+    id: show-ticket
+- assertVisible: "Seed comedy night"
+
+# The same show by the short event form that the https links use.
+- openLink: turnout-e2e://
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+- openLink: turnout-e2e://e/${SHOW_ID}
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- assertVisible:
+    id: show-ticket
+
+# A link to a screen that is not a show link is not followed: the app lands on Home.
+- openLink: turnout-e2e://settings
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+- assertNotVisible:
+    id: show

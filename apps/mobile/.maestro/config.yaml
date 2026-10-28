@@ -7,3 +7,7 @@ executionOrder:
   flowsOrder:
     - launch
     - smoke
+    - onboarding
+    - otp-errors
+    - browse
+    - deeplink-show
