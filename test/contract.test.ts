@@ -188,6 +188,7 @@ describe("app contract: errors, config and the notice", () => {
       "women_only",
       "bad_handle",
       "handle_locked",
+      "profile_locked",
       "plan_exists",
       "not_matchable",
       "plan_closed",

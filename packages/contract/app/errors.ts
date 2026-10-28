@@ -43,6 +43,7 @@ export const ERROR_CODES = [
   "women_only",
   "bad_handle",
   "handle_locked",
+  "profile_locked",
   "file_too_large",
   "unsupported_type",
   // Plans, tickets, groups and check-in.

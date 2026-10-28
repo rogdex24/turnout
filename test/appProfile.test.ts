@@ -29,6 +29,36 @@ async function fetchLink(t: TestApp, url: string): Promise<Response> {
   return t.call("GET", url.replace(BASE, ""));
 }
 
+/** Puts the only member in a confirmed group for a show, the state the handle and the profile are locked in. */
+function putInLockedGroup(t: TestApp): void {
+  const stamp = t.clock().toISOString();
+  const memberId = (t.db.query("SELECT id FROM member").get() as { id: string }).id;
+  t.db
+    .query("INSERT INTO venue (id, name, name_key, geocode_state, created_at, updated_at) VALUES ('v1', 'Hall', 'hall', 'resolved', ?, ?)")
+    .run(stamp, stamp);
+  t.db
+    .query(
+      `INSERT INTO event (id, source_event_id, source_slot_id, title, starts_at, time_kind, venue_id, venue_name, category, source_url, content_hash,
+         first_seen_at, last_seen_at, last_seen_run_id, updated_at)
+       VALUES ('e1', 'e1', '0', 'A show', '2026-11-20T14:00:00.000Z', 'timed', 'v1', 'Hall', 'comedy', 'https://example.test/x', 'h', ?, ?, 'run', ?)`,
+    )
+    .run(stamp, stamp, stamp);
+  t.db
+    .query(
+      `INSERT INTO plan (id, member_id, event_id, dedupe_key, group_type, state, show_title, show_starts_at, venue_name, created_at, updated_at)
+       VALUES ('p1', ?, 'e1', 'e1', 'open', 'group_confirmed', 'A show', '2026-11-20T14:00:00.000Z', 'Hall', ?, ?)`,
+    )
+    .run(memberId, stamp, stamp);
+  t.db
+    .query(
+      "INSERT INTO show_group (id, event_id, starts_at, group_type, created_at, updated_at) VALUES ('g1', 'e1', '2026-11-20T14:00:00.000Z', 'open', ?, ?)",
+    )
+    .run(stamp, stamp);
+  t.db
+    .query("INSERT INTO group_member (id, group_id, member_id, plan_id, member_ref, joined_at) VALUES ('gm1', 'g1', ?, 'p1', 'r1', ?)")
+    .run(memberId, stamp);
+}
+
 describe("PATCH /me/profile", () => {
   test("saves the name, gender and group type, and trims the name", async () => {
     const { t, token } = await signedIn();
@@ -109,40 +139,44 @@ describe("PUT /me/handle", () => {
     const { t, token } = await signedIn();
     const put = (handle: string) => t.call("PUT", "/me/handle", { token, body: { kind: "instagram", handle } });
     expect((await put("free.to.change")).status).toBe(200);
-    const stamp = t.clock().toISOString();
-    const memberId = (t.db.query("SELECT id FROM member").get() as { id: string }).id;
-    t.db
-      .query(
-        "INSERT INTO venue (id, name, name_key, geocode_state, created_at, updated_at) VALUES ('v1', 'Hall', 'hall', 'resolved', ?, ?)",
-      )
-      .run(stamp, stamp);
-    t.db
-      .query(
-        `INSERT INTO event (id, source_event_id, source_slot_id, title, starts_at, time_kind, venue_id, venue_name, category, source_url, content_hash,
-           first_seen_at, last_seen_at, last_seen_run_id, updated_at)
-         VALUES ('e1', 'e1', '0', 'A show', '2026-11-20T14:00:00.000Z', 'timed', 'v1', 'Hall', 'comedy', 'https://example.test/x', 'h', ?, ?, 'run', ?)`,
-      )
-      .run(stamp, stamp, stamp);
-    t.db
-      .query(
-        `INSERT INTO plan (id, member_id, event_id, dedupe_key, group_type, state, show_title, show_starts_at, venue_name, created_at, updated_at)
-         VALUES ('p1', ?, 'e1', 'e1', 'open', 'group_confirmed', 'A show', '2026-11-20T14:00:00.000Z', 'Hall', ?, ?)`,
-      )
-      .run(memberId, stamp, stamp);
-    t.db
-      .query(
-        "INSERT INTO show_group (id, event_id, starts_at, group_type, created_at, updated_at) VALUES ('g1', 'e1', '2026-11-20T14:00:00.000Z', 'open', ?, ?)",
-      )
-      .run(stamp, stamp);
-    t.db
-      .query("INSERT INTO group_member (id, group_id, member_id, plan_id, member_ref, joined_at) VALUES ('gm1', 'g1', ?, 'p1', 'r1', ?)")
-      .run(memberId, stamp);
+    putInLockedGroup(t);
     const locked = await put("changed.mind");
     expect(locked.status).toBe(409);
     expect((await errorOf(locked)).code).toBe("handle_locked");
     expect((await me(t, token)).handle.handle).toBe("free.to.change");
     t.db.query("UPDATE show_group SET state = 'done' WHERE id = 'g1'").run();
     expect((await put("changed.mind")).status).toBe(200);
+  });
+});
+
+describe("the profile in a group", () => {
+  test("a name or gender change is 409 profile_locked while the member is in a group, and a group type change is not", async () => {
+    const { t, token } = await signedIn();
+    expect((await setProfile(t, token)).status).toBe(200);
+    putInLockedGroup(t);
+    for (const body of [
+      { firstName: "Asha B", gender: "woman", groupPref: "open" },
+      { firstName: "Asha", gender: "man", groupPref: "open" },
+    ]) {
+      const refused = await setProfile(t, token, body);
+      expect(refused.status).toBe(409);
+      expect((await errorOf(refused)).code).toBe("profile_locked");
+    }
+    expect((await me(t, token)).profile).toMatchObject({ firstName: "Asha", gender: "woman" });
+    expect((await setProfile(t, token, { firstName: "Asha", gender: "woman", groupPref: "women_only" })).status).toBe(200);
+    t.db.query("UPDATE show_group SET state = 'done' WHERE id = 'g1'").run();
+    expect((await setProfile(t, token, { firstName: "Asha B", gender: "woman", groupPref: "open" })).status).toBe(200);
+  });
+
+  test("a new photo is 409 profile_locked while the member is in a group, and nothing is stored", async () => {
+    const { t, token } = await signedIn();
+    expect((await uploadJpeg(t, token)).status).toBe(200);
+    const before = (await me(t, token)).profile.photo;
+    putInLockedGroup(t);
+    const refused = await uploadJpeg(t, token);
+    expect(refused.status).toBe(409);
+    expect((await errorOf(refused)).code).toBe("profile_locked");
+    expect((await me(t, token)).profile.photo?.url.split("?")[0]).toBe(before?.url.split("?")[0]);
   });
 });
 

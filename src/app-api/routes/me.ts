@@ -63,7 +63,18 @@ export const meRoutes: Route[] = [
     auth: "member",
     handler: async ({ app, request, member, now }) => {
       const { member: row } = authed(member);
-      updateProfile(app.db, row.id, await parseBody(request, profilePatchSchema), now);
+      const patch = await parseBody(request, profilePatchSchema);
+      // The others in a group have seen this name and rely on this gender (women-only groups, the photo review), so neither changes
+      // while the member is in one. The group type applies to plans made later, so it stays free.
+      const current = getProfile(app.db, row.id);
+      if (
+        current !== null &&
+        (current.first_name !== patch.firstName || current.gender !== patch.gender) &&
+        isInLockedGroup(app.db, row.id)
+      ) {
+        throw new AppError(409, "profile_locked", "your name and gender are locked while you are in a group");
+      }
+      updateProfile(app.db, row.id, patch, now);
       return ok(buildMe(app, row, now));
     },
   },
@@ -89,6 +100,8 @@ export const meRoutes: Route[] = [
     auth: "member",
     handler: async ({ app, request, member, now }) => {
       const { member: row } = authed(member);
+      // The group has seen this face and the operator approved the handle against it: no new photo while the member is in one.
+      if (isInLockedGroup(app.db, row.id)) throw new AppError(409, "profile_locked", "your photo is locked while you are in a group");
       const bytes = await readBytes(request, MAX_PHOTO_BYTES, "file_too_large");
       if (sniffImage(bytes) === null) throw new AppError(400, "unsupported_type", "send a JPEG, PNG or HEIC picture");
       enforce(app.db, app.config.otpPepper, "photo:upload", row.id, app.config.tunables.rate.photoUploadPerMemberDay, now);
