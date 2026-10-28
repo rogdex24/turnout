@@ -54,6 +54,31 @@ describe("housekeeping", () => {
     expect(await t.app.store.list("")).toHaveLength(0);
   });
 
+  test("the file sweep leaves objects outside photos/ alone", async () => {
+    const t = await testApp();
+    await t.app.store.put("photos/orphan.jpg", new Uint8Array([1]), "image/jpeg");
+    await t.app.store.put("tickets/p1/t.png", new Uint8Array([1]), "image/png");
+    t.clock.advance(2 * 60 * 60 * 1000);
+    expect(await sweepFiles(t.app, t.clock())).toEqual(["photos/orphan.jpg"]);
+    expect((await t.app.store.list("")).map((entry) => entry.key)).toEqual(["tickets/p1/t.png"]);
+  });
+
+  test("a pass that fails does not use up the day: the next tick tries again, and a good pass then marks it done", async () => {
+    const t = await testApp();
+    await t.app.store.put("photos/orphan.jpg", new Uint8Array([1]), "image/jpeg");
+    t.clock.advance(2 * 60 * 60 * 1000);
+    const list = t.app.store.list;
+    t.app.store.list = async () => {
+      throw new Error("store down");
+    };
+    await expect(sweepFiles(t.app, t.clock())).rejects.toThrow("store down");
+    expect(t.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = 'sweep:files'").get()).toBeNull();
+    t.app.store.list = list;
+    expect(await sweepFiles(t.app, t.clock())).toEqual(["photos/orphan.jpg"]);
+    expect(t.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = 'sweep:files'").get()).not.toBeNull();
+    expect(await sweepFiles(t.app, t.clock())).toEqual([]);
+  });
+
   test("a step that throws does not stop the others", async () => {
     const t = await testApp();
     t.app.store.list = async () => {

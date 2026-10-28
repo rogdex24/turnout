@@ -9,6 +9,8 @@ import { windowFor } from "./rateLimit.js";
 /** The send counters stay about two months so the spend alert can add up a whole month. */
 const SEND_COUNTER_DAYS = 62;
 const SWEEP_MARKER_KEY = "sweep:files";
+/** The only prefixes the sweep looks at. M3 adds `tickets/` here together with the ticket keys in `referencedFileKeys`. */
+const SWEPT_PREFIXES = ["photos/"] as const;
 
 /** Every file key a row points at. M3 adds the ticket files here. */
 function referencedFileKeys(db: Database): Set<string> {
@@ -28,14 +30,19 @@ export function sweepRows(db: Database, now: Date, revokedRetentionDays: number)
   );
 }
 
-/** Once an IST day: delete stored files no row points at. Returns the keys removed (empty when it already ran today). */
+/**
+ * Once an IST day: delete stored files no row points at. Returns the keys removed (empty when it already ran today). The day is
+ * marked done only after the pass finishes, so a pass that fails (the store is down) is tried again on the next tick.
+ */
 export async function sweepFiles(app: AppContext, now: Date): Promise<string[]> {
   const day = windowFor("ist_day", now);
-  const claimed = app.db
+  const done = app.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = ? AND window_start = ?").get(SWEEP_MARKER_KEY, day.start);
+  if (done !== null) return [];
+  const removed = await sweepOrphans(app.store, referencedFileKeys(app.db), now, SWEPT_PREFIXES);
+  app.db
     .query("INSERT OR IGNORE INTO rate_bucket (bucket_key, window_start, window_seconds, count) VALUES (?, ?, ?, 1)")
     .run(SWEEP_MARKER_KEY, day.start, day.seconds);
-  if (claimed.changes === 0) return [];
-  return sweepOrphans(app.store, referencedFileKeys(app.db), now);
+  return removed;
 }
 
 /** One round of upkeep, run by the ticker. Each step is independent: one failing does not stop the others. */

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { keyFromFilePath, signedLinker, signFileLink, verifyFileLink } from "../src/app-api/fileLinks.js";
 import { fixedClock } from "../src/utils/clock.js";
-import { diskStore, memoryStore, type ObjectStore, s3Store, sweepOrphans } from "../src/utils/objectStore.js";
+import { diskStore, isValidKey, memoryStore, type ObjectStore, s3Store, sweepOrphans } from "../src/utils/objectStore.js";
 
 const SECRET = "test-link-secret-not-a-real-one";
 const clock = fixedClock("2026-11-01T10:00:00Z");
@@ -236,12 +236,36 @@ describe("the nightly sweep", () => {
     const recent = memoryStore({ ...link, now: fixedClock("2026-11-01T09:30:00Z") });
     await recent.put("photos/m1/new.jpg", bytes(1), "image/jpeg");
 
-    const removed = await sweepOrphans(store, new Set(["photos/m1/kept.jpg"]), now);
+    const removed = await sweepOrphans(store, new Set(["photos/m1/kept.jpg"]), now, ["photos/"]);
     expect(removed).toEqual(["photos/m1/orphan.jpg"]);
     expect((await store.list("")).map((entry) => entry.key)).toEqual(["photos/m1/kept.jpg"]);
 
     // A file written 30 minutes ago may still be waiting for its row.
-    expect(await sweepOrphans(recent, new Set(), now)).toEqual([]);
-    expect(await sweepOrphans(recent, new Set(), new Date("2026-11-01T10:31:00Z"))).toEqual(["photos/m1/new.jpg"]);
+    expect(await sweepOrphans(recent, new Set(), now, ["photos/"])).toEqual([]);
+    expect(await sweepOrphans(recent, new Set(), new Date("2026-11-01T10:31:00Z"), ["photos/"])).toEqual(["photos/m1/new.jpg"]);
+  });
+
+  test("looks only at the listed prefixes, so an object elsewhere in the store is never touched", async () => {
+    const mixed = memoryStore({ ...link, now: fixedClock("2026-11-01T06:00:00Z") });
+    await mixed.put("photos/a.jpg", bytes(1), "image/jpeg");
+    await mixed.put("tickets/p1/t.png", bytes(1), "image/png");
+    await mixed.put("exports/all.csv", bytes(1), "text/csv");
+    expect(await sweepOrphans(mixed, new Set(), now, ["photos/"])).toEqual(["photos/a.jpg"]);
+    expect((await mixed.list("")).map((entry) => entry.key)).toEqual(["exports/all.csv", "tickets/p1/t.png"]);
+  });
+
+  test("a key that is not a valid key is skipped, not thrown on, and the rest of the pass still runs", async () => {
+    const inner = memoryStore({ ...link, now: fixedClock("2026-11-01T06:00:00Z") });
+    await inner.put("photos/old.jpg", bytes(1), "image/jpeg");
+    const odd = ["photos/UPPER.JPG", "photos/has space.jpg", "photos/../escape.jpg"];
+    const store: ObjectStore = {
+      ...inner,
+      list: async (prefix) => [...odd.map((key) => ({ key, size: 1, modifiedAt: 0 })), ...(await inner.list(prefix))],
+      delete: async (key) => {
+        if (!isValidKey(key)) throw new Error(`invalid object key: ${key}`);
+        await inner.delete(key);
+      },
+    };
+    expect(await sweepOrphans(store, new Set(), now, ["photos/"])).toEqual(["photos/old.jpg"]);
   });
 });
