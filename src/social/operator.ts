@@ -280,9 +280,11 @@ export function closeReport(
         const others = db.query("SELECT 1 FROM report WHERE subject_id = ? AND status = 'open'").get(report.subject_id);
         const member = getMember(db, report.subject_id);
         if (others === null && member !== null && member.status === "suspended" && member.status_reason === "report") {
-          if (report.subject_status_before === "active") {
+          // A stop reached while they were suspended listed the number, so they come back stopped even if they were active before.
+          const stopListed = member.phone_e164 !== null && banReason(db, pepper, member.phone_e164) === "downvote_stop";
+          if (report.subject_status_before === "active" && !stopListed) {
             db.query("UPDATE member SET status = 'active', status_reason = NULL, updated_at = ? WHERE id = ?").run(at, member.id);
-          } else if (report.subject_status_before === "stopped") {
+          } else if (report.subject_status_before === "active" || report.subject_status_before === "stopped") {
             db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', updated_at = ? WHERE id = ?").run(
               at,
               member.id,
@@ -317,8 +319,8 @@ export function suspendMember(db: Database, memberId: string, now: Date, t: Tuna
 
 /**
  * Puts a suspended or stopped member back to active. A member with an open report is refused: the report has to be closed first.
- * A stopped member's `downvote_stop` row leaves the ban list, and the action row this writes is the point the stop rule counts
- * downvotes from. A suspended member whose number is still listed as a stop (the operator suspended them while stopped) goes back
+ * A stopped member's `downvote_stop` row leaves the ban list, and the time is kept on the member (`stop_baseline_at`) as the point
+ * the stop rule counts downvotes from; the action row alone would be purged after a year. A suspended member whose number is still listed as a stop (the operator suspended them while stopped) goes back
  * to `stopped`. Withdrawn plans stay withdrawn.
  */
 export function reinstateMember(db: Database, pepper: string, memberId: string, now: Date): AccountActionResult {
@@ -334,10 +336,15 @@ export function reinstateMember(db: Database, pepper: string, memberId: string, 
       const stopListed = phone !== null && banReason(db, pepper, phone) === "downvote_stop";
       const at = now.toISOString();
       if (member.status === "suspended" && stopListed) {
-        db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', updated_at = ? WHERE id = ?").run(at, memberId);
+        db.query(
+          "UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', stop_baseline_at = ?1, updated_at = ?1 WHERE id = ?2",
+        ).run(at, memberId);
       } else {
         if (member.status === "stopped" && stopListed) removeBan(db, pepper, phone);
-        db.query("UPDATE member SET status = 'active', status_reason = NULL, updated_at = ? WHERE id = ?").run(at, memberId);
+        db.query("UPDATE member SET status = 'active', status_reason = NULL, stop_baseline_at = ?1, updated_at = ?1 WHERE id = ?2").run(
+          at,
+          memberId,
+        );
       }
       recordAction(db, { action: REINSTATE_ACTION, subjectType: "member", subjectId: memberId, now });
       return { ok: true };

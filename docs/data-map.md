@@ -19,6 +19,7 @@ other people in a group.
 | `member.phone_e164` | Phone number, E.164 | The sign-in identity and where the code is sent | The member, the operator. Never a co-member | Until deletion; nulled on the tombstone |
 | `member.status` | `active`, `suspended`, `stopped`, `banned` or `deleted` | Decides whether the person can sign in and be grouped | The member (their own state), the operator | Until deletion |
 | `member.status_reason` | Short operator reason code | Audit of why a status changed | The operator | Until deletion |
+| `member.stop_baseline_at` | When an operator last reinstated the member | The stop rule counts downvotes from here, and it must outlast the year the action log is kept | Operator | Until deletion; nulled on the tombstone |
 | `member.phone_verified_at` | When a code last proved the phone | Matching needs a verified phone | The member, the operator | Until deletion |
 | `member.created_at` | Row creation time | Audit | Operator | Until deletion |
 | `member.updated_at` | Last change | Audit | Operator | Until deletion |

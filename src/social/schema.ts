@@ -298,6 +298,9 @@ CREATE TABLE IF NOT EXISTS member (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   deleted_at TEXT,
+  -- When an operator last reinstated the member. The stop rule counts only downvotes given after it. Kept here, not read from
+  -- operator_action, because those rows are purged after a year and the baseline must not go with them.
+  stop_baseline_at TEXT,
   -- Only a tombstone has no phone.
   CHECK (status = 'deleted' OR phone_e164 IS NOT NULL)
 );

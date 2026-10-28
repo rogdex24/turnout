@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
 import { blockedResponseSchema } from "@turnout/contract/app/feedback";
 import { groupRevealedSchema } from "@turnout/contract/app/groups";
+import { sweepRows } from "../src/app-api/housekeeping.js";
 import { banReason } from "../src/social/bans.js";
 import { closeFeedback, downvote, REINSTATE_ACTION } from "../src/social/feedback.js";
 import { milestones } from "../src/social/model/schedule.js";
+import { closeReport, reinstateMember } from "../src/social/operator.js";
 import { type TestApp, testApp } from "./appHelpers.js";
 import type { Session } from "./helpers/appFixture.js";
 import { type Setup, setup } from "./helpers/groupFixture.js";
@@ -230,16 +232,48 @@ describe("the stop rule", () => {
     expect(t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 1 });
   });
 
-  test("votes from before an operator reinstatement are not counted again", async () => {
+  test("votes from before an operator reinstatement are not counted again, even once the action row is purged", async () => {
     const t = await testApp();
     const { target } = scene(t, 3, 3);
+    t.db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop' WHERE id = ?").run(target);
+    t.clock.set(new Date("2026-10-01T00:00:00Z"));
+    expect(reinstateMember(t.db, t.app.config.banPepper, target, t.clock())).toEqual({ ok: true });
+    expect(t.db.query("SELECT action FROM operator_action WHERE action = ?").all(REINSTATE_ACTION)).toHaveLength(1);
+    t.clock.set(new Date("2027-12-01T00:00:00Z"));
+    sweepRows(t.db, t.clock(), 30);
+    expect(t.db.query("SELECT action FROM operator_action WHERE action = ?").all(REINSTATE_ACTION)).toHaveLength(0);
+    expect(closeFeedback(t.db, t.app.config.banPepper, t.clock(), t.app.config.tunables).stopped).toBe(0);
+    expect(statusOf(t, target)).toEqual({ status: "active", status_reason: null });
+  });
+
+  test("a member suspended by a report when feedback closes at 3 voters and 3 shows has the stop written, and a dismissal gives stopped", async () => {
+    const t = await testApp();
+    const { target, people, groups } = scene(t, 3, 3);
+    const phone = (t.db.query("SELECT phone_e164 FROM member WHERE id = ?").get(target) as { phone_e164: string }).phone_e164;
+    t.db.query("UPDATE member SET status = 'suspended', status_reason = 'report' WHERE id = ?").run(target);
     t.db
       .query(
-        "INSERT INTO operator_action (id, action, subject_type, subject_id, created_at) VALUES ('op1', ?, 'member', ?, '2026-10-01T00:00:00.000Z')",
+        `INSERT INTO report (id, group_id, reporter_id, subject_id, body, client_id, subject_status_before, created_at, due_at)
+         VALUES ('rp1', ?, ?, ?, 'b', 'c1', 'active', '2026-09-01T20:00:00.000Z', '2026-09-02T20:00:00.000Z')`,
       )
-      .run(REINSTATE_ACTION, target);
-    expect(run(t).stopped).toBe(0);
-    expect(statusOf(t, target)).toEqual({ status: "active", status_reason: null });
+      .run((groups[0] as { groupId: string }).groupId, people[0] as string, target);
+    expect(run(t).stopped).toBe(1);
+    // Still suspended and signed out; the number is listed.
+    expect(statusOf(t, target)).toEqual({ status: "suspended", status_reason: "report" });
+    expect(banReason(t.db, t.app.config.banPepper, phone)).toBe("downvote_stop");
+    expect(closeReport(t.db, t.app.config.banPepper, "rp1", "dismissed", null, t.clock(), t.app.config.tunables)).toMatchObject({
+      ok: true,
+    });
+    expect(statusOf(t, target)).toEqual({ status: "stopped", status_reason: "downvote_stop" });
+  });
+
+  test("an operator-suspended member who reaches the stop is stopped by a reinstatement", async () => {
+    const t = await testApp();
+    const { target } = scene(t, 3, 3);
+    t.db.query("UPDATE member SET status = 'suspended', status_reason = 'operator' WHERE id = ?").run(target);
+    expect(run(t).stopped).toBe(1);
+    expect(reinstateMember(t.db, t.app.config.banPepper, target, t.clock())).toEqual({ ok: true });
+    expect(statusOf(t, target)).toEqual({ status: "stopped", status_reason: "downvote_stop" });
   });
 });
 

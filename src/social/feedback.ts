@@ -6,7 +6,7 @@ import { feedbackWindow, metPairs, stopRuleReached } from "./model/feedback.js";
 import { milestones } from "./model/schedule.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 
-/** The `operator_action` an operator's reinstatement writes. A stop counts only the downvotes given after the latest one. */
+/** The `operator_action` an operator's reinstatement writes. The point the stop rule counts from is `member.stop_baseline_at`, set in the same step. */
 export const REINSTATE_ACTION = "member_reinstate";
 
 export type DownvoteResult = { ok: true; created: boolean } | { ok: false; error: "not_found" | "outside_window" };
@@ -85,20 +85,18 @@ const OPEN_PLANS = "('needs_ticket', 'checking_ticket', 'ticket_rejected', 'find
 /**
  * The stop rule for one person: votes from enough different people at enough different shows, counting from their last reinstatement.
  * An active member who reaches it becomes `stopped`: their open plans are withdrawn, new ones are blocked (a stopped member is not
- * matchable) and the number goes on the ban list as `downvote_stop`, which turns nobody away. Returns true when they were stopped.
+ * matchable) and the number goes on the ban list as `downvote_stop`, which turns nobody away. A suspended member who reaches it
+ * stays suspended (their plans are already withdrawn) and only the number is listed, so that reinstating them or dismissing the
+ * report gives `stopped` and not `active`. Returns true when the number was newly listed.
  */
 function applyStopRule(db: Database, pepper: string, targetId: string, now: Date, t: Tunables): boolean {
-  const member = db.query("SELECT status, phone_e164 FROM member WHERE id = ?").get(targetId) as {
+  const member = db.query("SELECT status, phone_e164, stop_baseline_at FROM member WHERE id = ?").get(targetId) as {
     status: string;
     phone_e164: string | null;
+    stop_baseline_at: string | null;
   } | null;
-  if (member === null || member.status !== "active" || member.phone_e164 === null) return false;
-  const since =
-    (
-      db
-        .query("SELECT MAX(created_at) AS at FROM operator_action WHERE subject_type = 'member' AND subject_id = ? AND action = ?")
-        .get(targetId, REINSTATE_ACTION) as { at: string | null }
-    ).at ?? "";
+  if (member === null || (member.status !== "active" && member.status !== "suspended") || member.phone_e164 === null) return false;
+  const since = member.stop_baseline_at ?? "";
   const votes = db
     .query(
       "SELECT d.voter_id AS voterId, g.event_id AS showId FROM downvote d JOIN show_group g ON g.id = d.group_id WHERE d.target_id = ? AND d.created_at > ?",
@@ -106,6 +104,7 @@ function applyStopRule(db: Database, pepper: string, targetId: string, now: Date
     .all(targetId, since) as { voterId: string; showId: string }[];
   if (!stopRuleReached(votes, t)) return false;
   const at = now.toISOString();
+  if (member.status === "suspended") return writeBan(db, pepper, member.phone_e164, "downvote_stop", now);
   db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', updated_at = ? WHERE id = ?").run(at, targetId);
   writeBan(db, pepper, member.phone_e164, "downvote_stop", now);
   const plans = db.query(`SELECT id FROM plan WHERE member_id = ? AND state IN ${OPEN_PLANS}`).all(targetId) as { id: string }[];

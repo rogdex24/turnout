@@ -58,7 +58,7 @@ export function eraseMember(db: Database, memberId: string, how: EraseKind, now:
       db.query("DELETE FROM auth_session WHERE member_id = ?").run(memberId);
 
       db.query(
-        "UPDATE member SET phone_e164 = NULL, status = 'deleted', status_reason = ?, deleted_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE member SET phone_e164 = NULL, stop_baseline_at = NULL, status = 'deleted', status_reason = ?, deleted_at = ?, updated_at = ? WHERE id = ?",
       ).run(how.kind === "self" ? "self" : "ban", at, at, memberId);
       return { ok: true, fileKeys };
     })
