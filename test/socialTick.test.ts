@@ -6,7 +6,7 @@ import { runGroupingPass } from "../src/social/groups.js";
 import { listNotices } from "../src/social/notices.js";
 import { approveHandle, rejectHandle, setCafe, setStartTime } from "../src/social/operator.js";
 import { createPlan, getPlan } from "../src/social/plans.js";
-import { acquireLease, finishLease, leaseStatus, TICK_LEASE, tick } from "../src/social/tick.js";
+import { acquireLease, finishLease, leaseStatus, markAlertSent, TICK_LEASE, tick } from "../src/social/tick.js";
 import { SHOW_START, seedMember, seedShow, waitingPlan } from "./helpers/socialFixture.js";
 import { memoryDb } from "./helpers.js";
 
@@ -14,6 +14,12 @@ const NOW = new Date("2026-11-01T06:00:00Z");
 const HOUR = 3_600_000;
 const START = Date.parse(SHOW_START);
 const at = (ms: number) => new Date(START + ms);
+/** A tick followed by the delivery the ticker does: each alert it returns is recorded as sent. */
+function fire(db: Database, when: Date) {
+  const { alerts } = tick(db, when);
+  for (const alert of alerts) markAlertSent(db, alert.key, when);
+  return alerts;
+}
 const GENDERS: Gender[] = ["woman", "man", "woman", "man", "non_binary", "woman"];
 
 function setup(people = 4): { db: Database; members: string[]; plans: string[] } {
@@ -44,6 +50,7 @@ test("a show walked through the clock gives each member each notice exactly once
   ];
   const results = steps.map(([, when]) => {
     const first = tick(db, when);
+    for (const alert of first.alerts) markAlertSent(db, alert.key, when);
     const second = tick(db, when);
     expect(second).toMatchObject({ withdrawn: 0, locked: 0, lapsed: 0, grouped: 0, revealed: 0, headOver: 0, finished: 0, alerts: [] });
     return first;
@@ -125,13 +132,13 @@ test("a delisted show calls its groups off and withdraws the rest", () => {
 test("the cafe alert fires once at the lock and once at T-6h, and not after the cafe is set", () => {
   const { db } = setup();
   tick(db, NOW);
-  expect(tick(db, at(-25 * HOUR)).alerts).toEqual([]);
-  const lock = tick(db, at(-24 * HOUR)).alerts;
+  expect(fire(db, at(-25 * HOUR))).toEqual([]);
+  const lock = fire(db, at(-24 * HOUR));
   expect(lock.map((a) => a.key.split(":")[0])).toEqual(["cafe_lock"]);
-  expect(tick(db, at(-23 * HOUR)).alerts).toEqual([]);
-  const late = tick(db, at(-6 * HOUR)).alerts;
+  expect(fire(db, at(-23 * HOUR))).toEqual([]);
+  const late = fire(db, at(-6 * HOUR));
   expect(late.map((a) => a.key.split(":")[0])).toEqual(["cafe_late"]);
-  expect(tick(db, at(-5 * HOUR)).alerts).toEqual([]);
+  expect(fire(db, at(-5 * HOUR))).toEqual([]);
   const text = JSON.stringify([...lock, ...late]);
   expect(text).toContain("Show show-a");
   expect(text).not.toMatch(/Member\d|member_\d|\+1202/);
@@ -142,8 +149,8 @@ test("a group with a cafe raises no cafe alert", () => {
   tick(db, NOW);
   const group = db.query("SELECT id FROM show_group").get() as { id: string };
   setCafe(db, group.id, { name: "Cafe", address: null, lat: null, lng: null }, NOW);
-  expect(tick(db, at(-24 * HOUR)).alerts).toEqual([]);
-  expect(tick(db, at(-6 * HOUR)).alerts).toEqual([]);
+  expect(fire(db, at(-24 * HOUR))).toEqual([]);
+  expect(fire(db, at(-6 * HOUR))).toEqual([]);
 });
 
 test("a handle pending when its show is within 12 hours of the lock raises one alert, and no more once it is answered", () => {
@@ -151,11 +158,36 @@ test("a handle pending when its show is within 12 hours of the lock raises one a
   const pending = seedMember(db, NOW, { handle: "pending" });
   waitingPlan(db, pending, "show-a", NOW);
   const lock = START - 24 * HOUR;
-  expect(tick(db, new Date(lock - 12 * HOUR - 1)).alerts).toEqual([]);
-  const alerts = tick(db, new Date(lock - 12 * HOUR)).alerts;
+  expect(fire(db, new Date(lock - 12 * HOUR - 1))).toEqual([]);
+  const alerts = fire(db, new Date(lock - 12 * HOUR));
   expect(alerts).toHaveLength(1);
   expect(alerts[0]?.key).toStartWith(`handle_due:${pending}:`);
-  expect(tick(db, new Date(lock - 11 * HOUR)).alerts).toEqual([]);
+  expect(fire(db, new Date(lock - 11 * HOUR))).toEqual([]);
+});
+
+test("an alert that was not recorded as sent comes back on the next tick, so a lost delivery is not lost for good", () => {
+  const { db } = setup();
+  tick(db, NOW);
+  const first = tick(db, at(-24 * HOUR)).alerts;
+  expect(first.map((a) => a.key.split(":")[0])).toEqual(["cafe_lock"]);
+  expect(tick(db, at(-24 * HOUR + 30_000)).alerts).toEqual(first);
+  markAlertSent(db, first[0]?.key as string, at(-24 * HOUR));
+  expect(tick(db, at(-24 * HOUR + 60_000)).alerts).toEqual([]);
+});
+
+test("a pending handle alerts once for each show it is waiting on, and the key names the show", () => {
+  const { db } = setup(0);
+  seedShow(db, { id: "show-b", startsAt: new Date(START + 2 * HOUR).toISOString() });
+  const pending = seedMember(db, NOW, { handle: "pending" });
+  waitingPlan(db, pending, "show-a", NOW);
+  waitingPlan(db, pending, "show-b", NOW);
+  const alerts = fire(db, new Date(START - 24 * HOUR - 10 * HOUR));
+  expect(alerts.map((a) => a.key.split(":")[0])).toEqual(["handle_due", "handle_due"]);
+  expect(alerts.map((a) => a.key).some((k) => k.includes("show-a"))).toBe(true);
+  expect(alerts.map((a) => a.key).some((k) => k.includes("show-b"))).toBe(true);
+  expect(new Set(alerts.map((a) => a.key)).size).toBe(2);
+  expect(JSON.stringify(alerts.map((a) => [a.kind, a.text]))).not.toContain(pending);
+  expect(new Set(alerts.map((a) => a.kind)).size).toBe(2);
 });
 
 test("the handle queue lists the earliest show first and counts what waits", () => {

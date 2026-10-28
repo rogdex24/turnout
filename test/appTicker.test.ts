@@ -7,7 +7,7 @@ import { acquireLease, finishLease, leaseStatus, TICK_LEASE } from "../src/socia
 import { BASE, TEST_TOKEN, type TestApp, testApp } from "./appHelpers.js";
 import { cleanPng } from "./fixtures/tickets/index.js";
 import { makePlan, memberSession, type Session } from "./helpers/appFixture.js";
-import { SHOW_START, seedMember, seedShow } from "./helpers/socialFixture.js";
+import { SHOW_START, seedMember, seedShow, waitingPlan } from "./helpers/socialFixture.js";
 import { memoryDb } from "./helpers.js";
 
 const MINUTE = 60_000;
@@ -226,6 +226,30 @@ describe("receipts", () => {
     t.clock.advance(49 * HOUR);
     await pass(t);
     expect(deliveries(t)[0]).toMatchObject({ status: "failed", error_code: "no_receipt" });
+  });
+});
+
+describe("operator alerts", () => {
+  test("an alert whose delivery failed is sent again on the next pass, and once it went out never again", async () => {
+    const t = await testApp();
+    seedShow(t.db, { id: "show-a" });
+    waitingPlan(t.db, seedMember(t.db, t.clock(), { handle: "pending" }), "show-a", t.clock());
+    t.clock.set(new Date(Date.parse(SHOW_START) - 36 * HOUR));
+    const real = t.app.alerts.notify.bind(t.app.alerts);
+    let failing = true;
+    t.app.alerts.notify = async (kind, text) => {
+      if (failing) throw new Error("alert client down");
+      return real(kind, text);
+    };
+    await pass(t);
+    expect(t.alerts.sent).toEqual([]);
+    failing = false;
+    t.clock.advance(30_000);
+    await pass(t);
+    expect(t.alerts.sent.map((a) => a.kind.split(":")[0])).toEqual(["handle_due"]);
+    t.clock.advance(30_000);
+    await pass(t);
+    expect(t.alerts.sent).toHaveLength(1);
   });
 });
 

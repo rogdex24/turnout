@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { createHash } from "node:crypto";
 import { addMinutes } from "./dates.js";
 import {
   callOffGroup,
@@ -18,9 +19,13 @@ import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 import { addNotice } from "./notices.js";
 import { movePlan, type PlanRow, planLockAt } from "./plans.js";
 
-/** An alert for the operator. `key` is unique to the thing that needs a person, so each fires once whatever the tick count. */
+/**
+ * An alert for the operator. `key` is unique to the thing that needs a person, so each fires once whatever the tick count. It
+ * stays on the server. `kind` is what the operator's message is headed with, so it never holds a member id.
+ */
 export interface TickAlert {
   key: string;
+  kind: string;
   text: string;
 }
 
@@ -86,9 +91,17 @@ function lapsePlans(db: Database, now: Date, t: Tunables): number {
   return lapsed;
 }
 
-/** Records that an alert went out. False when it already had, so a later tick stays quiet. */
-function claimAlert(db: Database, key: string, now: Date): boolean {
-  return db.query("INSERT OR IGNORE INTO alert_sent (alert_key, sent_at) VALUES (?, ?)").run(key, now.toISOString()).changes === 1;
+/** True when the alert has not been recorded as sent, whether it was never tried or its delivery was lost. */
+function unsent(db: Database, key: string): boolean {
+  return db.query("SELECT 1 FROM alert_sent WHERE alert_key = ?").get(key) === null;
+}
+
+/**
+ * Records that an alert was delivered, after the notify call returned. Until then a tick returns the alert again, so one that
+ * was lost (a crash between the tick and the send) goes out on the next pass instead of never.
+ */
+export function markAlertSent(db: Database, key: string, now: Date): void {
+  db.query("INSERT OR IGNORE INTO alert_sent (alert_key, sent_at) VALUES (?, ?)").run(key, now.toISOString());
 }
 
 /**
@@ -104,35 +117,39 @@ function operatorAlerts(db: Database, now: Date, t: Tunables): TickAlert[] {
     const m = milestones(group.starts_at, t);
     const title =
       (db.query("SELECT title FROM event WHERE id = ?").get(group.event_id) as { title: string } | null)?.title ?? group.event_id;
-    if (now.getTime() >= Date.parse(m.lockAt) && claimAlert(db, `cafe_lock:${group.id}`, now)) {
+    if (now.getTime() >= Date.parse(m.lockAt) && unsent(db, `cafe_lock:${group.id}`)) {
       alerts.push({
         key: `cafe_lock:${group.id}`,
+        kind: `cafe_lock:${group.id}`,
         text: `A group for ${title} (${group.starts_at}) has locked and has no cafe yet. Group ${group.id}.`,
       });
     }
-    if (now.getTime() >= Date.parse(m.cafeAlertAt) && claimAlert(db, `cafe_late:${group.id}`, now)) {
+    if (now.getTime() >= Date.parse(m.cafeAlertAt) && unsent(db, `cafe_late:${group.id}`)) {
       alerts.push({
         key: `cafe_late:${group.id}`,
+        kind: `cafe_late:${group.id}`,
         text: `A group for ${title} (${group.starts_at}) still has no cafe and the show is under ${t.plan.cafeAlertHoursBefore} hours away. Group ${group.id}.`,
       });
     }
   }
   const handles = db
     .query(
-      `SELECT DISTINCT h.member_id AS memberId, h.submitted_at AS submittedAt, MIN(p.show_starts_at) AS startsAt
-       FROM social_handle h JOIN plan p ON p.member_id = h.member_id
+      `SELECT DISTINCT h.member_id AS memberId, h.submitted_at AS submittedAt, p.event_id AS eventId, p.show_starts_at AS startsAt,
+         e.title AS title
+       FROM social_handle h JOIN plan p ON p.member_id = h.member_id JOIN event e ON e.id = p.event_id
        WHERE h.status = 'pending' AND p.state IN ('needs_ticket', 'checking_ticket', 'ticket_rejected', 'finding_group')
-       GROUP BY h.member_id`,
+       ORDER BY p.show_starts_at, p.event_id`,
     )
-    .all() as { memberId: string; submittedAt: string; startsAt: string }[];
+    .all() as { memberId: string; submittedAt: string; eventId: string; startsAt: string; title: string }[];
   for (const h of handles) {
     const lockAt = Date.parse(planLockAt({ show_starts_at: h.startsAt }, t));
     if (now.getTime() < lockAt - t.plan.handleAlertHours * 60 * 60 * 1000 || now.getTime() >= lockAt) continue;
-    const key = `handle_due:${h.memberId}:${h.submittedAt}`;
-    if (claimAlert(db, key, now))
+    const key = `handle_due:${h.memberId}:${h.eventId}:${h.submittedAt}`;
+    if (unsent(db, key))
       alerts.push({
         key,
-        text: `A handle is still pending and its show locks within ${t.plan.handleAlertHours} hours (${new Date(lockAt).toISOString()}). Member ${h.memberId}.`,
+        kind: `handle_due:${h.eventId}:${createHash("sha256").update(`${h.memberId}:${h.submittedAt}`).digest("hex").slice(0, 8)}`,
+        text: `A handle is still pending and the show ${h.title} (${h.eventId}) locks within ${t.plan.handleAlertHours} hours (${new Date(lockAt).toISOString()}).`,
       });
   }
   return alerts;

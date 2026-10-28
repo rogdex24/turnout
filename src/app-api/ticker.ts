@@ -8,7 +8,7 @@ import {
   recordReceipt,
   releaseClaims,
 } from "../social/pushes.js";
-import { acquireLease, finishLease, TICK_LEASE, tick } from "../social/tick.js";
+import { acquireLease, finishLease, markAlertSent, TICK_LEASE, tick } from "../social/tick.js";
 import { dueTicketFiles, markTicketFileDeleted } from "../social/tickets.js";
 import type { AppContext } from "./context.js";
 import { housekeeping } from "./housekeeping.js";
@@ -112,7 +112,10 @@ export async function runTickerPass(app: AppContext, holder: string): Promise<Pa
     [
       "tick",
       async () => {
-        for (const alert of tick(app.db, app.now(), t).alerts) await app.alerts.notify(alert.key, alert.text);
+        for (const alert of tick(app.db, app.now(), t).alerts) {
+          await app.alerts.notify(alert.kind, alert.text);
+          markAlertSent(app.db, alert.key, app.now());
+        }
       },
     ],
     ["push", () => sendPushes(app, app.now())],

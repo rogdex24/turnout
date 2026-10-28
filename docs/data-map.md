@@ -267,12 +267,12 @@ Which process runs the ticker.
 
 ### `alert_sent`
 
-An operator alert already sent, so each fires once.
+An operator alert already sent, so each fires once. The key holds a member id, so it never goes into the message.
 
 | Column | What | Why | Who sees it | How long |
 | --- | --- | --- | --- | --- |
-| `alert_sent.alert_key` | What the alert was about, for example `handle:<member id>` | Stops a repeat | Server | 30 days |
-| `alert_sent.sent_at` | When it was sent | Audit and the sweep | Server | 30 days |
+| `alert_sent.alert_key` | What the alert was about, for example `handle_due:<member id>:<show id>:<time the handle was submitted>` | Stops a repeat | Server | 30 days |
+| `alert_sent.sent_at` | When the send call returned. A row is written only then, so an alert that was lost is sent again | Audit and the sweep | Server | 30 days |
 
 ## Object store
 
