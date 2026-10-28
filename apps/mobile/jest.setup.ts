@@ -5,3 +5,18 @@ jest.mock("react-native-safe-area-context", () => require("react-native-safe-are
 
 // FlashList measures its views on the device. The library's own setup answers with a fixed phone-sized window so the list renders.
 require("@shopify/flash-list/jestSetup");
+
+// The phone's notification service does not exist in Jest; screens that mount the app layout get one that does nothing.
+jest.mock("@/api/pushNative", () => ({
+  nativePush: {
+    platform: "other",
+    permission: async () => ({ status: "denied", canAskAgain: false }),
+    requestPermission: async () => ({ status: "denied", canAskAgain: false }),
+    expoToken: async () => {
+      throw new Error("no push service in Jest");
+    },
+    setUpChannels: async () => undefined,
+    onTap: () => () => undefined,
+    setForegroundHandler: () => undefined,
+  },
+}));

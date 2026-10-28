@@ -79,6 +79,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           microphonePermission: false,
         },
       ],
+      // Android pushes arrive on `plans` unless the sender names another channel (the app makes `plans`, `show-day` and `thread`). iOS has no
+      // remote push until an Apple account exists (GET /config push.ios is false), so the aps-environment entitlement is left out.
+      ["expo-notifications", { color: colors.light.signal, defaultChannel: "plans", enableRemoteNotifications: false }],
+      // Foreground location only, for the walk time on the meet card. It never leaves the phone, and nothing runs in the background.
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission:
+            "Turnout shows how far you are from your group's cafe while your meet card is live. Your location stays on your phone.",
+          isAndroidBackgroundLocationEnabled: false,
+          isIosBackgroundLocationEnabled: false,
+        },
+      ],
       // The WhatsApp one-tap code: the activity WhatsApp launches and the <queries> for both WhatsApp apps. Android only.
       "./modules/whatsapp-otp/app.plugin.js",
       [

@@ -3,6 +3,8 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import { createSession, revokeOnServer, type Session } from "../api/auth";
 import { type ApiClient, createApiClient, fetchTransport, type Transport } from "../api/client";
 import { type Connectivity, createConnectivity } from "../api/connectivity";
+import { registerCheckin } from "../api/groups";
+import { removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
@@ -54,7 +56,11 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     origin,
     transport,
     now: parts.now,
-    revoke: (accessToken) => revokeOnServer(api)(accessToken),
+    // The phone's push device goes first, while the access token still works; the server ends the session's devices too.
+    revoke: async (accessToken) => {
+      await removeDeviceOnSignOut(api, prefs)(accessToken);
+      await revokeOnServer(api)(accessToken);
+    },
   });
   api = createApiClient({ origin, session, connectivity, transport });
 
@@ -64,6 +70,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     persister.removeClient();
     localFlags.forgetNotice();
   });
+  registerCheckin(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
 

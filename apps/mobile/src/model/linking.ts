@@ -2,6 +2,7 @@
  * Which links may open which screen. Every link the phone hands the app goes through `resolveSystemPath`, which returns an app route
  * or "/" (Home). Nothing the link says is passed on except a show id that has been checked and, for Storybook, a plain story id.
  */
+import { NOTICE_KINDS } from "@turnout/contract/app/notices";
 
 export interface LinkContext {
   /** `go.<host>`, from the build. Null until the domain exists, and then no https link is accepted. */
@@ -12,6 +13,8 @@ export interface LinkContext {
   goEnabled: boolean;
   /** True in a development build, which needs the dev client launcher's own links. */
   devClient: boolean;
+  /** True only in the e2e build, which has a link that acts as a tapped notification (`push?kind=..&noticeId=..&planId=..`) so a flow can test the routing. */
+  pushHook?: boolean;
 }
 
 const MAX_LINK_LENGTH = 2048;
@@ -20,6 +23,7 @@ const SHOW_ID = "[A-Za-z0-9][A-Za-z0-9_-]{0,127}";
 const WEB_PATH = new RegExp(`^/e/(${SHOW_ID})(/go)?/?$`);
 const SCHEME_PATH = new RegExp(`^(?:show|e)/(${SHOW_ID})(/go)?/?$`);
 const APP_PATH = new RegExp(`^/show/(${SHOW_ID})(/go)?/?$`);
+const PUSH_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const STORY_ID = /^[A-Za-z0-9_-]{1,100}$/;
 const LINK_HOST = /^go(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?){2,}$/;
 
@@ -42,6 +46,17 @@ function fromWeb(input: string, ctx: LinkContext): string | null {
   return match === null ? null : showRoute(match[1] as string, match[2], ctx);
 }
 
+/** The e2e push link, as a route with only the three fields a push carries. Anything that is not one of ours is Home. */
+function pushHookRoute(query: string): string {
+  const params = new URLSearchParams(query);
+  const kind = params.get("kind");
+  const noticeId = params.get("noticeId");
+  const planId = params.get("planId");
+  if (kind === null || !NOTICE_KINDS.some((known) => known === kind)) return "/";
+  if (noticeId === null || !PUSH_ID.test(noticeId) || (planId !== null && !PUSH_ID.test(planId))) return "/";
+  return `/push?${new URLSearchParams({ kind, noticeId, ...(planId === null ? {} : { planId }) }).toString()}`;
+}
+
 function fromScheme(input: string, rest: string, ctx: LinkContext): string | null {
   if (ctx.devClient && rest.startsWith("expo-development-client")) return input;
   // `turnout://show/x` and `turnout:///show/x` mean the same thing.
@@ -52,6 +67,7 @@ function fromScheme(input: string, rest: string, ctx: LinkContext): string | nul
     const story = /^story=(.*)$/.exec(query)?.[1];
     return story !== undefined && STORY_ID.test(story) ? `/storybook?story=${story}` : "/storybook";
   }
+  if (path === "push" && ctx.pushHook) return pushHookRoute(query);
   const match = SCHEME_PATH.exec(path);
   return match === null ? null : showRoute(match[1] as string, match[2], ctx);
 }
@@ -60,6 +76,7 @@ function fromScheme(input: string, rest: string, ctx: LinkContext): string | nul
 function fromAppPath(input: string, ctx: LinkContext): string | null {
   const path = input.split("#")[0]?.split("?")[0] ?? "";
   if (path === "/") return "/";
+  if (path === "/push" && ctx.pushHook) return pushHookRoute(input.split("#")[0]?.split("?")[1] ?? "");
   const match = APP_PATH.exec(path);
   return match === null ? null : showRoute(match[1] as string, match[2], ctx);
 }

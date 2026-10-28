@@ -11,3 +11,4 @@ executionOrder:
     - otp-errors
     - browse
     - deeplink-show
+    - push-routing

@@ -10,6 +10,8 @@ export const PREF_KEYS = {
   acceptedNotice: "acceptedNotice",
   userId: "userId",
   analyticsConsent: "analyticsConsent",
+  /** The push token this phone gave the server and the device id it got back, for the member who was signed in. */
+  pushDevice: "pushDevice",
 } as const;
 
 export function memoryKv(): KeyValueStore {

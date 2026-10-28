@@ -35,10 +35,11 @@ export const STALE_TIMES: readonly { prefix: QueryKey; staleTime: number }[] = [
 
 /**
  * Only these are written to disk, so an offline start shows the shows and the person's own state. Everything else (plans, the
- * group, the thread, the after-show screen, the blocked list) is added to this list by the task that builds its screen, with its
- * own rule for what is kept; a key that is not listed is never persisted.
+ * thread, the after-show screen, the blocked list) is added to this list by the task that builds its screen, with its own rule
+ * for what is kept; a key that is not listed is never persisted. The group is kept so the meet card opens with the cafe and the
+ * members with no signal at the venue; the cache is emptied at sign-out.
  */
-export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"]];
+export const PERSISTED_PREFIXES: readonly QueryKey[] = [["me"], ["config"], ["areas"], ["shows", "list"], ["group"]];
 
 export function keyStartsWith(key: QueryKey, prefix: QueryKey): boolean {
   return prefix.length <= key.length && prefix.every((part, index) => part === key[index]);
