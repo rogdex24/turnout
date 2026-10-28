@@ -95,6 +95,7 @@ const shots: Shot[] = [
   { state: "listing", path: "/", plain: true, run: async () => {} },
   { state: "listing-filtered", path: "/?category=comedy&free=true", plain: true, run: async () => {} },
   { state: "event-page", path: "/e/e1", plain: true, run: async () => {} },
+  { state: "go-fallback", path: "/e/e1/go", plain: true, run: async () => {} },
   // The phone sheet at each detent.
   ...(["peek", "half", "full"] as const).map(
     (detent): Shot => ({
