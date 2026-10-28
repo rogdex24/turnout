@@ -5,6 +5,7 @@ import { type Alerts, recordingAlerts } from "../src/app-api/alerts.js";
 import type { AppContext, LogEntry, Route } from "../src/app-api/context.js";
 import { appResponse, createAppContext } from "../src/app-api/index.js";
 import { type FakeOtpSender, fakeOtpSender } from "../src/app-api/vendors/otpSender.js";
+import { type FakePushSender, fakePushSender } from "../src/app-api/vendors/push.js";
 import { type FixedClock, fixedClock } from "../src/utils/clock.js";
 import type { FetchLike } from "../src/utils/http.js";
 import { memoryDb } from "./helpers.js";
@@ -25,6 +26,7 @@ export interface TestApp {
   db: Database;
   clock: FixedClock;
   sender: FakeOtpSender;
+  push: FakePushSender;
   alerts: Alerts & { sent: { kind: string; text: string }[] };
   logs: LogEntry[];
   fetchCalls: { url: string; init: RequestInit }[];
@@ -56,6 +58,7 @@ export async function testApp(options: TestAppOptions = {}): Promise<TestApp> {
   const db = memoryDb();
   const clock = fixedClock(options.start ?? "2026-10-27T06:00:00Z");
   const sender = fakeOtpSender();
+  const push = fakePushSender();
   const alerts = recordingAlerts();
   const logs: LogEntry[] = [];
   const fetchCalls: TestApp["fetchCalls"] = [];
@@ -70,6 +73,7 @@ export async function testApp(options: TestAppOptions = {}): Promise<TestApp> {
     now: clock,
     fetch,
     sender,
+    push,
     log: (entry) => logs.push(entry),
     extraRoutes: options.extraRoutes,
     env: {
@@ -115,5 +119,5 @@ export async function testApp(options: TestAppOptions = {}): Promise<TestApp> {
     if (verified.status !== 200) throw new Error(`verify answered ${verified.status}`);
     return { ...((await verified.json()) as TokenPair), challengeId };
   };
-  return { app, db, clock, sender, alerts, logs, fetchCalls, call, signIn };
+  return { app, db, clock, sender, push, alerts, logs, fetchCalls, call, signIn };
 }

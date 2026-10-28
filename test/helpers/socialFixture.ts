@@ -58,13 +58,15 @@ export interface SeedMember {
   /** `none` leaves the member without a handle. */
   handle?: "approved" | "pending" | "rejected" | "none";
   photo?: boolean;
+  /** Which of the fictional numbers the member has, so a route test can sign in as them. */
+  phoneIndex?: number;
 }
 
 let counter = 0;
 
 /** A member with a profile, a photo and a handle in the state asked for. Phones are in the fictional 555-01xx range. */
 export function seedMember(db: Database, now: Date, options: SeedMember = {}): string {
-  const index = counter++ % PHONES.length;
+  const index = options.phoneIndex ?? counter++ % PHONES.length;
   const phone = PHONES[index] as string;
   const existing = db.query("SELECT id FROM member WHERE phone_e164 = ?").get(phone) as { id: string } | null;
   const member = existing ?? createMember(db, phone, now);

@@ -11,7 +11,12 @@ export const fileRoutes: Route[] = [
     auth: "none",
     handler: async ({ app, url, now }) => {
       const key = keyFromFilePath(url.pathname);
-      if (key === null || !verifyFileLink(app.config.fileLinkSecret, key, url.searchParams.get("exp"), url.searchParams.get("sig"), now))
+      // Ticket files are for the operator's review only. No app link is ever made for one, and a key under tickets/ is the same 404.
+      if (
+        key === null ||
+        key.startsWith("tickets/") ||
+        !verifyFileLink(app.config.fileLinkSecret, key, url.searchParams.get("exp"), url.searchParams.get("sig"), now)
+      )
         throw notFound();
       const object = await app.store.get(key);
       if (object === null) throw notFound();

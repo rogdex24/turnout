@@ -1,4 +1,5 @@
 import { otpRequestSchema, otpVerifyRequestSchema, refreshRequestSchema } from "@turnout/contract/app/auth";
+import { removeSessionDevices } from "../../social/devices.js";
 import { revokeSession } from "../../social/sessions.js";
 import { authed } from "../auth.js";
 import type { Route } from "../context.js";
@@ -42,7 +43,12 @@ export const authRoutes: Route[] = [
     pattern: "/auth/sign-out",
     auth: "member",
     handler: ({ app, member, now }) => {
-      revokeSession(app.db, authed(member).sessionId, now);
+      const { sessionId } = authed(member);
+      // The session's push token goes with it, so a signed-out phone gets no more notices.
+      app.db.transaction(() => {
+        revokeSession(app.db, sessionId, now);
+        removeSessionDevices(app.db, sessionId);
+      })();
       return new Response(null, { status: 204, headers: { "cache-control": "private, no-store" } });
     },
   },
