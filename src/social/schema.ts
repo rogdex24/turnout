@@ -106,6 +106,13 @@ CREATE TABLE IF NOT EXISTS ban_list (
   reason TEXT NOT NULL CHECK (reason IN (${list(BAN_REASONS)})),
   created_at TEXT NOT NULL
 ) WITHOUT ROWID;
+
+-- One row: a keyed fingerprint of BAN_PEPPER, written when the app starts, so the admin can tell it was given the same value.
+CREATE TABLE IF NOT EXISTS ban_pepper_check (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  fingerprint TEXT NOT NULL,
+  written_at TEXT NOT NULL
+);
 `;
 
 const M3_SQL = `-- M3: plans, tickets, groups, notices. A plan keeps snapshots of the show, so a later catalog change never moves a member's plan.

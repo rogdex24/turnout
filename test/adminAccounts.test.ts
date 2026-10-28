@@ -381,6 +381,24 @@ describe("admin ban list", () => {
     expect(s.t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
   });
 
+  test("a pepper that is not the app's is 503 on every route that hashes a number, and nothing changes", async () => {
+    const s = await rig({ pepper: "a-different-pepper-0123456789abcdef" });
+    const [a, b] = s.members as [Session, Session];
+    const report = await fileReport(s, a, b);
+    for (const [method, path, body] of [
+      ["POST", `/api/accounts/${b.memberId}/ban`, undefined],
+      ["POST", "/api/bans/lift", { phone: b.phone }],
+      ["POST", `/api/accounts/${b.memberId}/reinstate`, undefined],
+      ["POST", `/api/reports/${report}/close`, { outcome: "dismissed", note: "ok" }],
+    ] as const) {
+      const response = await s.call(method, path, body);
+      expect([path, response.status]).toEqual([path, 503]);
+    }
+    expect(getMember(s.t.db, b.memberId)?.status).toBe("suspended");
+    expect(s.t.db.query("SELECT status FROM report WHERE id = ?").get(report)).toEqual({ status: "open" });
+    expect(s.t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
+  });
+
   test("without the pepper lifting is 503", async () => {
     const s = await rig({ pepper: null });
     expect((await s.call("POST", "/api/bans/lift", { phone: "+12025550100" })).status).toBe(503);

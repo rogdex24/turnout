@@ -360,6 +360,16 @@ Keyed hash only. It holds no user id, and the phone cannot be read back from it.
 | `ban_list.reason` | `report_upheld`, `downvote_stop` or `operator` | Only the first and last refuse a sign-in | Operator | Same |
 | `ban_list.created_at` | When it was written | Audit | Operator | Same |
 
+### `ban_pepper_check`
+
+One row. It holds a keyed fingerprint of the ban pepper, not the pepper, and no person.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ban_pepper_check.id` | Always 1 | One row | Server | Kept |
+| `ban_pepper_check.fingerprint` | HMAC-SHA256 of a fixed text with `BAN_PEPPER` | The admin compares its own pepper to this, so a ban made there matches the app's hashes | Server, operator | Overwritten at each app start |
+| `ban_pepper_check.written_at` | When the app last wrote it | Audit | Server | Same |
+
 ## Object store
 
 | Prefix | What | Who sees it | How long |

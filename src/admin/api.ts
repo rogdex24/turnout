@@ -12,6 +12,7 @@ import { z } from "zod";
 import { addMuteRule, countMuted, isMuteField, MUTE_FIELDS, type MuteField, removeMuteRule } from "../curation/mute.js";
 import { SOURCE_ADAPTERS } from "../ingestion/sources/registry.js";
 import { accountDetail, failedNotices, pendingHandles, reportQueue, upcomingShows } from "../social/adminReads.js";
+import { pepperCheck } from "../social/bans.js";
 import { normalizePhone } from "../social/model/phone.js";
 import { DEFAULT_TUNABLES } from "../social/model/tunables.js";
 import {
@@ -516,9 +517,13 @@ export function rejectHandleAction(db: Database, memberId: string, body: unknown
 
 // ---- reports, accounts, bans and failed notices ----
 
-/** The ban pepper, or a 503: without the same BAN_PEPPER as the app, a number hashed here would never match one hashed there. */
-function needPepper(pepper: string | null | undefined): string {
+/**
+ * The ban pepper, or a 503: without the same BAN_PEPPER as the app, a number hashed here would never match one hashed there. The app
+ * leaves a fingerprint of its pepper in the database; a different value here answers 503 the same as no value.
+ */
+function needPepper(db: Database, pepper: string | null | undefined): string {
   if (!pepper) throw new HttpError(503, "BAN_PEPPER is not set on the admin process");
+  if (pepperCheck(db, pepper) === "mismatch") throw new HttpError(503, "BAN_PEPPER on the admin process is not the app's value");
   return pepper;
 }
 
@@ -558,7 +563,7 @@ export async function closeReportAction(
   const { outcome, note } = parseBody(closeReportBody, body);
   let result: ReturnType<typeof closeReport>;
   try {
-    result = closeReport(db, needPepper(pepper), reportId, outcome, note, now, DEFAULT_TUNABLES);
+    result = closeReport(db, needPepper(db, pepper), reportId, outcome, note, now, DEFAULT_TUNABLES);
   } catch (error) {
     if (error instanceof OperatorRuleError) throw new HttpError(409, "contact the reporter first, then mark it contacted");
     throw error;
@@ -586,7 +591,7 @@ export function suspendAction(db: Database, memberId: string, now: Date) {
 }
 
 export function reinstateAction(db: Database, pepper: string | null | undefined, memberId: string, now: Date) {
-  const result = reinstateMember(db, needPepper(pepper), memberId, now);
+  const result = reinstateMember(db, needPepper(db, pepper), memberId, now);
   if (!result.ok) {
     throw result.error === "not_allowed"
       ? new HttpError(409, "only a suspended or stopped account can be reinstated, and not while a report about it is open")
@@ -596,7 +601,7 @@ export function reinstateAction(db: Database, pepper: string | null | undefined,
 }
 
 export async function banAction(db: Database, pepper: string | null | undefined, files: AdminFiles | null, memberId: string, now: Date) {
-  const result = banMember(db, needPepper(pepper), memberId, now, DEFAULT_TUNABLES);
+  const result = banMember(db, needPepper(db, pepper), memberId, now, DEFAULT_TUNABLES);
   if (!result.ok) throw ACCOUNT_ERRORS.not_found;
   await deleteStored(files, result.fileKeys);
   return { memberId, status: "banned" as const };
@@ -615,7 +620,7 @@ export function liftBanAction(db: Database, pepper: string | null | undefined, b
   const { phone } = parseBody(liftBody, body);
   const e164 = operatorPhone(phone);
   if (e164 === null) throw bad("phone is not a number this service can hold, send it as +91 and ten digits");
-  if (!liftBan(db, needPepper(pepper), e164, now).ok) throw new HttpError(404, "that number is not on the ban list");
+  if (!liftBan(db, needPepper(db, pepper), e164, now).ok) throw new HttpError(404, "that number is not on the ban list");
   return { lifted: true as const };
 }
 

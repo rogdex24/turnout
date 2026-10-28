@@ -12,6 +12,27 @@ export function banHash(pepper: string, e164: string): string {
   return createHmac("sha256", pepper).update(e164).digest("hex");
 }
 
+const CHECK_TEXT = "turnout-ban-pepper-check";
+
+/** `HMAC-SHA256(BAN_PEPPER, "turnout-ban-pepper-check")`: shows two processes hold one pepper without storing it. */
+function pepperFingerprint(pepper: string): string {
+  return createHmac("sha256", pepper).update(CHECK_TEXT).digest("hex");
+}
+
+/** The app calls this at start. It overwrites, so the row always describes the pepper the app is running with. */
+export function recordPepper(db: Database, pepper: string, now: Date): void {
+  db.query(
+    "INSERT INTO ban_pepper_check (id, fingerprint, written_at) VALUES (1, ?, ?) ON CONFLICT (id) DO UPDATE SET fingerprint = excluded.fingerprint, written_at = excluded.written_at",
+  ).run(pepperFingerprint(pepper), now.toISOString());
+}
+
+/** `unknown` when the app has never started on this database, so there is nothing to compare with. */
+export function pepperCheck(db: Database, pepper: string): "match" | "mismatch" | "unknown" {
+  const row = db.query("SELECT fingerprint FROM ban_pepper_check WHERE id = 1").get() as { fingerprint: string } | null;
+  if (row === null) return "unknown";
+  return row.fingerprint === pepperFingerprint(pepper) ? "match" : "mismatch";
+}
+
 /** Why this number is on the list, or null. */
 export function banReason(db: Database, pepper: string, e164: string): BanReason | null {
   const row = db.query("SELECT reason FROM ban_list WHERE phone_hash = ?").get(banHash(pepper, e164)) as { reason: BanReason } | null;

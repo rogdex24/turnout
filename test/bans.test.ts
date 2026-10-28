@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { banHash, banReason, isPhoneRefused, removeBan, writeBan } from "../src/social/bans.js";
+import { banHash, banReason, isPhoneRefused, pepperCheck, recordPepper, removeBan, writeBan } from "../src/social/bans.js";
 import { eraseMember } from "../src/social/deletion.js";
 import { getMemberByPhone } from "../src/social/members.js";
 import { banMember, liftBan } from "../src/social/operator.js";
@@ -144,5 +144,24 @@ describe("ban list", () => {
     expect(t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
     expect(t.db.query("SELECT detail FROM operator_action WHERE action = 'ban_lift'").all()).toEqual([{ detail: null }]);
     expect((await t.signIn(who.phone)).accessToken.length).toBeGreaterThan(20);
+  });
+
+  test("the app records a fingerprint of the pepper at start: one row, not the pepper, and the same value reads as a match", async () => {
+    const { t, pepper } = await setup();
+    const rows = t.db.query("SELECT fingerprint FROM ban_pepper_check").all() as { fingerprint: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.fingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(rows[0]?.fingerprint).not.toContain(pepper);
+    expect(pepperCheck(t.db, pepper)).toBe("match");
+    expect(pepperCheck(t.db, "another-pepper-0123456789abcdef0123")).toBe("mismatch");
+  });
+
+  test("a restart with the same pepper keeps one row; a database the app never started on has nothing to compare", async () => {
+    const { t, pepper } = await setup();
+    recordPepper(t.db, pepper, NOW);
+    recordPepper(t.db, pepper, NOW);
+    expect(t.db.query("SELECT COUNT(*) AS n FROM ban_pepper_check").get()).toEqual({ n: 1 });
+    t.db.query("DELETE FROM ban_pepper_check").run();
+    expect(pepperCheck(t.db, pepper)).toBe("unknown");
   });
 });

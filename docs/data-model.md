@@ -556,6 +556,7 @@ column is added to a table here and not there.
 | `feedback_close` | Group, when its feedback window closed (so met edges and the stop rule run once) | While the group row is kept |
 | `report` | Group, reporter, subject, optional message, `body`, `client_id`, gender snapshots, the subject's status before, `status`, `outcome`, `due_at`, contact and close fields. Reporter and subject are ids that stay after deletion | 1 year after it is closed |
 | `ban_list` | `phone_hash` (primary key, `HMAC-SHA256(BAN_PEPPER, e164)`), `reason` (`report_upheld`, `downvote_stop`, `operator`), time. No user id | Until the operator lifts it |
+| `ban_pepper_check` | One row: a keyed fingerprint of `BAN_PEPPER` (never the pepper), written when the app starts so the admin can refuse a different value | One row, overwritten at each start |
 
 Rules the schema encodes:
 
