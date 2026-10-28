@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-native";
+import { ClipboardText } from "phosphor-react-native";
 import { View } from "react-native";
 import { Matrix } from "../storybook/Matrix";
 import { TextButton } from "./TextButton";
@@ -30,6 +31,13 @@ export const OnPhoto: Story = {
       <View className="items-end bg-poster-music p-4">
         <TextButton onPhoto title="Skip" onPress={noop} />
       </View>
+    </Matrix>
+  ),
+};
+export const WithIcon: Story = {
+  render: () => (
+    <Matrix padded>
+      <TextButton icon={ClipboardText} title="Paste" onPress={noop} />
     </Matrix>
   ),
 };
