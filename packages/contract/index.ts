@@ -2,6 +2,7 @@ export * from "./app/auth.js";
 export * from "./app/config.js";
 export * from "./app/devices.js";
 export * from "./app/errors.js";
+export * from "./app/feedback.js";
 export * from "./app/groups.js";
 export * from "./app/me.js";
 export * from "./app/notice.js";

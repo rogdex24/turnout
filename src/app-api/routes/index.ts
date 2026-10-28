@@ -2,6 +2,7 @@ import type { AppContext, Route } from "../context.js";
 import { authRoutes } from "./auth.js";
 import { configRoutes } from "./config.js";
 import { deviceRoutes } from "./devices.js";
+import { feedbackRoutes } from "./feedback.js";
 import { fileRoutes } from "./files.js";
 import { groupRoutes } from "./groups.js";
 import { healthRoutes } from "./health.js";
@@ -29,6 +30,7 @@ export function appRoutes(app: AppContext): Route[] {
     ...planRoutes,
     ...groupRoutes,
     ...threadRoutes,
+    ...feedbackRoutes,
     ...noticeRoutes,
     ...deviceRoutes,
   ];

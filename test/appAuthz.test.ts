@@ -80,6 +80,14 @@ const ROWS: Row[] = [
     auth: "member",
     anonymous: 401,
   },
+  {
+    method: "POST",
+    pattern: "/groups/:groupId/downvotes",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/downvotes",
+    auth: "member",
+    anonymous: 401,
+  },
+  { method: "GET", pattern: "/me/blocked", path: "/me/blocked", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/notices", path: "/notices", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/notices/read", path: "/notices/read", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/devices", path: "/devices", auth: "member", anonymous: 401 },
@@ -440,5 +448,45 @@ describe("authorization matrix, people and groups", () => {
     expect(await statusOf(w.t, "POST", `/groups/${w.groupA}/messages`, me)).toBe(403);
     w.t.db.query("UPDATE member SET status = 'banned' WHERE id = ?").run(me.memberId);
     expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)).toBe(401);
+  });
+});
+
+describe("authorization matrix, feedback", () => {
+  const downvoteAs = (w: World, who: Session, groupId: string, memberRef: string) =>
+    w.t.call("POST", `/groups/${groupId}/downvotes`, { token: who.token, body: { memberRef } });
+
+  test("only a current member of a done group can mark someone in it, and a ref from another group is the one 404", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR);
+    const target = w.refOf(w.groupA, w.a[1] as Session);
+    for (const who of [w.b[0] as Session, w.y[0] as Session, w.waiting]) {
+      expect((await downvoteAs(w, who, w.groupA, target)).status).toBe(404);
+    }
+    expect((await downvoteAs(w, me, w.groupA, w.refOf(w.groupB, w.b[1] as Session))).status).toBe(404);
+    expect((await downvoteAs(w, me, w.groupB, w.refOf(w.groupB, w.b[1] as Session))).status).toBe(404);
+    expect(w.t.db.query("SELECT count(*) AS n FROM downvote").get()).toEqual({ n: 0 });
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(204);
+  });
+
+  test("a suspended member is 403 and a banned one 401 on both routes", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR, me);
+    const target = w.refOf(w.groupA, w.a[1] as Session);
+    w.t.db.query("UPDATE member SET status = 'suspended' WHERE id = ?").run(me.memberId);
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(403);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(403);
+    w.t.db.query("UPDATE member SET status = 'banned' WHERE id = ?").run(me.memberId);
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(401);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(401);
+  });
+
+  test("a stopped member can still read their own blocked list", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR, me);
+    w.t.db.query("UPDATE member SET status = 'stopped' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(200);
   });
 });

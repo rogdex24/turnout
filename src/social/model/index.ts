@@ -5,6 +5,7 @@
  */
 
 export * from "./eligibility.js";
+export * from "./feedback.js";
 export * from "./grouping.js";
 export * from "./groupLoss.js";
 export * from "./matchable.js";
