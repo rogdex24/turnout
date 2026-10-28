@@ -10,3 +10,4 @@ executionOrder:
     - onboarding
     - otp-errors
     - browse
+    - deeplink-show

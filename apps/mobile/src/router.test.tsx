@@ -2,6 +2,7 @@ import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { router } from "expo-router";
 import { act, fireEvent, renderRouter, screen, waitFor } from "expo-router/testing-library";
 import type { RawResponse } from "@/api/client";
+import { areasBody, eventPage, SHOWS, showDetailFixture } from "@/api/showFixtures";
 import { json } from "@/api/testing";
 import { common } from "@/copy/common";
 import { you } from "@/copy/you";
@@ -19,7 +20,7 @@ async function launch(options: TestAppOptions, initialUrl = "/") {
 }
 
 const on = (testID: string) => waitFor(() => expect(screen.getByTestId(testID)).toBeOnTheScreen());
-const SCREENS = ["welcome", "notice", "sign-in", "profile", "home", "plans", "you", "start-failed"];
+const SCREENS = ["welcome", "notice", "sign-in", "profile", "home", "show", "plans", "you", "start-failed"];
 /** Only this screen is on show: no other step's screen sits under it or flashed before it. */
 const onlyOpen = (open?: string) => {
   for (const id of SCREENS) if (id !== open) expect(screen.queryByTestId(id)).not.toBeOnTheScreen();
@@ -100,6 +101,35 @@ describe("signed in", () => {
 
   test("a ready account lands on Home at the root", async () => {
     await launch({ me: meFixture() });
+    await on("home");
+    expect(screen).toHavePathname("/");
+  });
+
+  test("a Home card opens the show and system back returns to Home", async () => {
+    await launch({
+      me: meFixture(),
+      routes: {
+        "GET /api/events": json(200, eventPage(SHOWS)),
+        "GET /tools/list_areas": json(200, areasBody()),
+        "GET /api/events/monsoon-theory": json(200, showDetailFixture()),
+      },
+    });
+    await on("home");
+    await fireEvent.press(await screen.findByTestId("show-card-monsoon-theory"));
+    await on("show");
+    expect(screen).toHavePathname("/show/monsoon-theory");
+    expect(await screen.findByTestId("show-ticket")).toBeOnTheScreen();
+    await act(() => router.back());
+    await on("home");
+    expect(screen).toHavePathname("/");
+    expect(screen.queryByTestId("show")).not.toBeOnTheScreen();
+  });
+
+  test("a show link that is opened cold shows the show, and back goes Home", async () => {
+    await launch({ me: meFixture(), routes: { "GET /api/events/monsoon-theory": json(200, showDetailFixture()) } }, "/show/monsoon-theory");
+    await on("show");
+    expect(await screen.findByTestId("show-ticket")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("back"));
     await on("home");
     expect(screen).toHavePathname("/");
   });

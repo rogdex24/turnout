@@ -52,6 +52,13 @@ export function fitDisplaySize(text: string, boxWidth: number, face: keyof typeo
   return minFontSize;
 }
 
+/** The style for a display-face string at `size`, kept inside the face's range from DESIGN.md, with the face's line height. */
+export function displayFaceStyle(face: keyof typeof displayFaces, size: number): { fontSize: number; lineHeight: number } {
+  const { minFontSize, maxFontSize, lineHeightRatio } = displayFaces[face];
+  const fontSize = Math.min(maxFontSize, Math.max(minFontSize, size));
+  return { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) };
+}
+
 function linesNeeded(words: string[], boxWidth: number, size: number): number {
   const charWidth = GLYPH_WIDTH * size;
   const perLine = Math.max(1, Math.floor(boxWidth / charWidth));

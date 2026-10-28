@@ -62,7 +62,7 @@ export interface PriceFields {
 }
 
 /** Indian digit grouping: 1,25,000. */
-function groupIndian(n: number): string {
+export function groupIndian(n: number): string {
   const digits = String(Math.round(n));
   if (digits.length <= 3) return digits;
   const head = digits.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",");
