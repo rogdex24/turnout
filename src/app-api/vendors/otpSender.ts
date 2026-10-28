@@ -13,6 +13,8 @@ export interface OtpSender {
  * `__test/otp` route) can read it. `undeliverablePhones` mimics a number WhatsApp cannot reach, and `failWith` a provider error.
  */
 export interface FakeOtpSender extends OtpSender {
+  /** Marks the sender as one that sends nothing, so a production start can refuse it. */
+  readonly fake: true;
   readonly sent: { phone: string; code: string; wamid: string }[];
   lastCode(phone: string): string | null;
   undeliverablePhones: Set<string>;
@@ -24,6 +26,7 @@ export function fakeOtpSender(): FakeOtpSender {
   const sent: FakeOtpSender["sent"] = [];
   const last = new Map<string, string>();
   const sender: FakeOtpSender = {
+    fake: true,
     sent,
     undeliverablePhones: new Set(),
     failWith: null,

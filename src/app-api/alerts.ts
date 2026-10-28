@@ -12,6 +12,9 @@ export interface Alerts {
 /** A kind of alert is sent at most once an hour, so a loop of failures is one message. */
 const REPEAT_MS = 60 * 60 * 1000;
 
+/** How long the webhook gets to answer before the alert goes to the log instead. */
+export const ALERT_TIMEOUT_MS = 5000;
+
 export interface AlertOptions {
   now: Clock;
   fetch: FetchLike;
@@ -19,10 +22,37 @@ export interface AlertOptions {
   webhookUrl: string | null;
   /** Where a message goes when there is no webhook, or the webhook fails. */
   write?: (line: string) => void;
+  timeoutMs?: number;
 }
 
-export function createAlerts({ now, fetch, webhookUrl, write = (line) => console.error(line) }: AlertOptions): Alerts {
+/**
+ * `notify` never waits for the webhook: it records the alert and sends it in the background, so a slow or dead webhook cannot hold
+ * up the request that raised it. `idle` resolves once every send under way has finished (tests and a clean shutdown use it).
+ */
+export function createAlerts({
+  now,
+  fetch,
+  webhookUrl,
+  write = (line) => console.error(line),
+  timeoutMs = ALERT_TIMEOUT_MS,
+}: AlertOptions): Alerts & { idle(): Promise<void> } {
   const lastSent = new Map<string, number>();
+  const pending = new Set<Promise<void>>();
+
+  async function post(url: string, message: string): Promise<void> {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: message }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!response.ok) write(`${message} (the alert webhook answered ${response.status})`);
+    } catch {
+      write(`${message} (the alert webhook could not be reached)`);
+    }
+  }
+
   return {
     async notify(kind, text) {
       const at = now().getTime();
@@ -34,16 +64,11 @@ export function createAlerts({ now, fetch, webhookUrl, write = (line) => console
         write(message);
         return;
       }
-      try {
-        const response = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: message }),
-        });
-        if (!response.ok) write(`${message} (the alert webhook answered ${response.status})`);
-      } catch {
-        write(`${message} (the alert webhook could not be reached)`);
-      }
+      const sending = post(webhookUrl, message).finally(() => pending.delete(sending));
+      pending.add(sending);
+    },
+    async idle() {
+      while (pending.size > 0) await Promise.all([...pending]);
     },
   };
 }

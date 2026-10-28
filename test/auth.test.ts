@@ -210,6 +210,36 @@ describe("code request", () => {
       expect((await t.call("POST", "/auth/otp", { body: { phone: REVIEWER_PHONE, purpose: "sign_in" } })).status).toBe(200);
   });
 
+  test("the reviewer number's wrong tries are capped at 20 a day; after that even the right code is refused until the next IST day", async () => {
+    const t = await testApp();
+    const body = (code: string, challengeId: string) => ({ challengeId, phone: REVIEWER_PHONE, code, noticeVersion: NOTICE });
+    const challenge = async (n: number): Promise<string> => {
+      const res = await t.call("POST", "/auth/otp", { body: { phone: REVIEWER_PHONE, purpose: "sign_in" }, ip: `198.51.100.${n}` });
+      expect(res.status).toBe(200);
+      return ((await res.json()) as { challengeId: string }).challengeId;
+    };
+    // 4 challenges of 5 wrong tries each: 20 wrong codes.
+    for (let n = 0; n < 4; n++) {
+      const id = await challenge(n);
+      for (let i = 0; i < 5; i++)
+        expect((await errorOf(await t.call("POST", "/auth/otp/verify", { body: body("000000", id) }))).code).toBe("invalid_code");
+    }
+    // A fresh challenge and the right code: refused, and the challenge is left unused.
+    const id = await challenge(10);
+    const refused = await t.call("POST", "/auth/otp/verify", { body: body(REVIEWER_CODE, id) });
+    expect(await errorOf(refused)).toEqual({ status: 400, code: "invalid_code" });
+    expect(
+      (t.db.query("SELECT consumed_at FROM otp_challenge WHERE id = ?").get(id) as { consumed_at: string | null }).consumed_at,
+    ).toBeNull();
+    expect(t.alerts.sent.map((a) => a.kind)).toContain("otp_reviewer_locked");
+    // An ordinary number is not touched by the reviewer's cap.
+    expect((await t.signIn(PHONES[0] as string)).accessToken).toBeString();
+    // The next IST day a new code works again.
+    t.clock.advance(24 * 60 * 60 * 1000);
+    const next = await challenge(11);
+    expect((await t.call("POST", "/auth/otp/verify", { body: body(REVIEWER_CODE, next) })).status).toBe(200);
+  });
+
   test("the status route shows sent, then what the webhook reported; unknown and expired are 404", async () => {
     const t = await testApp();
     const { challengeId } = (await (await t.call("POST", "/auth/otp", { body: { phone: PHONES[0], purpose: "sign_in" } })).json()) as {
@@ -352,6 +382,70 @@ describe("sessions", () => {
     const open = t.db.query("SELECT COUNT(*) AS n FROM auth_session WHERE revoked_at IS NULL").get() as { n: number };
     expect(open.n).toBe(0);
     expect((await t.call("POST", "/auth/refresh", { body: { refreshToken: otherDevice.refreshToken } })).status).toBe(401);
+  });
+
+  describe("refresh grace window", () => {
+    const refresh = (t: Awaited<ReturnType<typeof testApp>>, refreshToken: string) =>
+      t.call("POST", "/auth/refresh", { body: { refreshToken } });
+    const openSessions = (t: Awaited<ReturnType<typeof testApp>>) =>
+      (t.db.query("SELECT COUNT(*) AS n FROM auth_session WHERE revoked_at IS NULL").get() as { n: number }).n;
+
+    test("a repeat of the just-rotated token inside the window rotates the chain again and keeps every session", async () => {
+      const t = await testApp();
+      const first = await t.signIn(PHONES[0] as string);
+      await t.signIn(PHONES[0] as string);
+      // The response to this refresh never reaches the phone.
+      const lost = tokenPairSchema.parse(await (await refresh(t, first.refreshToken)).json());
+      t.clock.advance(10 * 1000);
+      const retry = await refresh(t, first.refreshToken);
+      expect(retry.status).toBe(200);
+      const fresh = tokenPairSchema.parse(await retry.json());
+      expect(fresh.refreshToken).not.toBe(first.refreshToken);
+      expect(fresh.refreshToken).not.toBe(lost.refreshToken);
+      // The replacement the phone never saw is revoked; the other device and the fresh session are still open.
+      const lostRow = t.db.query("SELECT revoked_at FROM auth_session WHERE refresh_hash = ?").get(hashRefreshToken(lost.refreshToken)) as {
+        revoked_at: string | null;
+      };
+      expect(lostRow.revoked_at).not.toBeNull();
+      expect(openSessions(t)).toBe(2);
+    });
+
+    test("the retry leaves the other device and the fresh pair signed in", async () => {
+      const t = await testApp();
+      const first = await t.signIn(PHONES[0] as string);
+      const otherDevice = await t.signIn(PHONES[0] as string);
+      await refresh(t, first.refreshToken);
+      t.clock.advance(10 * 1000);
+      const fresh = tokenPairSchema.parse(await (await refresh(t, first.refreshToken)).json());
+      // Open: the other device and the fresh session.
+      expect(openSessions(t)).toBe(2);
+      expect((await refresh(t, otherDevice.refreshToken)).status).toBe(200);
+      expect((await refresh(t, fresh.refreshToken)).status).toBe(200);
+    });
+
+    test("a repeat after the window is reuse and signs every session out", async () => {
+      const t = await testApp();
+      const first = await t.signIn(PHONES[0] as string);
+      const otherDevice = await t.signIn(PHONES[0] as string);
+      await refresh(t, first.refreshToken);
+      t.clock.advance((t.app.config.tunables.session.refreshGraceSeconds + 1) * 1000);
+      expect(await errorOf(await refresh(t, first.refreshToken))).toEqual({ status: 401, code: "unauthorized" });
+      expect(openSessions(t)).toBe(0);
+      expect((await refresh(t, otherDevice.refreshToken)).status).toBe(401);
+    });
+
+    test("a repeat inside the window is still reuse once the replacement has been used", async () => {
+      const t = await testApp();
+      const first = await t.signIn(PHONES[0] as string);
+      const otherDevice = await t.signIn(PHONES[0] as string);
+      const second = tokenPairSchema.parse(await (await refresh(t, first.refreshToken)).json());
+      t.clock.advance(5 * 1000);
+      expect((await refresh(t, second.refreshToken)).status).toBe(200);
+      t.clock.advance(5 * 1000);
+      expect(await errorOf(await refresh(t, first.refreshToken))).toEqual({ status: 401, code: "unauthorized" });
+      expect(openSessions(t)).toBe(0);
+      expect((await refresh(t, otherDevice.refreshToken)).status).toBe(401);
+    });
   });
 
   test("an unknown, expired or malformed refresh token is 401 or 400", async () => {

@@ -101,7 +101,7 @@ silent, or where it could not be followed as written. Each keeps the plan's inte
 5. **The ban list stands in as `member.status = 'banned'` until M4.** S25 (the keyed-hash ban list) is
    not in this stream. Sign-in refuses a banned member with the generic 403 and refresh revokes the
    session. M4 adds the hashed list and does not change the response.
-6. **Refresh token reuse is strict.** A refresh token that was already traded in signs the member out
+6. **Refresh token reuse is strict (superseded on 2026-10-28 by the grace window below).** A refresh token that was already traded in signs the member out
    everywhere, with no grace window. A client that retries a refresh after a lost response will have to
    sign in again; this is the safe side for a stolen token. Revisit if the field shows many false hits.
 7. **Exact T-24h counts as closed.** `isEligible` closes joining at the instant T-24h, the same as the
@@ -228,3 +228,42 @@ Decision. The four device jobs failed on their first runner run, after the scaff
 Evidence. The failed run is https://github.com/rogdex24/turnout/actions/runs/40613582365. `android-small` passed both flows
 before the screenshot step, so the app, the e2e build and the seeded server work on a device. The last two fixes come from
 https://github.com/rogdex24/turnout/actions/runs/40617294502.
+
+## 2026-10-28: M2 server, review round for PR 9
+
+Decision. Eight review items, each fixed with a test. Where one changes a choice above or the plan, it
+is listed here.
+
+1. **Refresh reuse has a 30 second grace window** (`session.refreshGraceSeconds`). This replaces item 6
+   of the 2026-10-27 entry. A refresh token that was traded in less than 30 seconds ago, whose
+   replacement is still unused, is a retry after a lost response: it is answered by rotating the
+   replacement, and no session is revoked. After the window, or once the replacement has been used,
+   revoked or replaced, the old token is a replay and every session of the member is revoked. The app
+   must single-flight refresh (one call at a time); `AGENTS.md` says so (A1).
+2. **Photos have a 40 MP limit and a daily upload limit.** The pixel count comes from `metadata()`
+   before the decode; more than `photoMaxPixels` (40,000,000) is 413 `file_too_large`. `PUT /me/photo`
+   is limited to 10 per member per IST day (`rate.photoUploadPerMemberDay`), counted before the decode.
+3. **The photo key is opaque:** `photos/<ulid>.jpg`, with no member id. This changes the key shape that
+   item 10 of the 2026-10-27 entry implied; the file link stays signed and short-lived.
+4. **The orphan sweep covers `photos/` only.** It skips keys that fail `isValidKey`, and the day marker
+   is written after a pass that finished, so a failed pass is retried on the next tick. Ticket files
+   join the prefix list when they exist (M3).
+5. **`serve` requires `TURNOUT_ENV`,** and `STAGING_TEST_TOKEN` must be at least 32 characters outside
+   production. Tests and tools that build the app without the CLI still default to development.
+6. **Reviewer wrong tries are capped:** 20 a day per IST day (`otp.reviewerFailCapPerDay`). Past it,
+   a verify for the store-review number answers `invalid_code` even with the right code, and the
+   operator is alerted once an hour (`otp_reviewer_locked`). The reviewer still skips the per phone
+   request limits (a reviewer must always get a code), which is why the verify side needs its own cap.
+   The count is in `rate_bucket` under a keyed hash, so no phone is stored.
+7. **Alerts never block a request and give up after 5 seconds.** `notify` records the alert and sends
+   in the background with `AbortSignal.timeout(5000)`; a failure or timeout goes to the process log.
+   The hourly repeat guard is unchanged and runs before the send.
+8. **`createAppContext` refuses a fake sender when the environment is production,** with a
+   `ConfigError`. The earlier test name claimed more than it checked and now says what it does.
+
+Evidence. `test/auth.test.ts`, `test/appProfile.test.ts`, `test/objectStore.test.ts`,
+`test/appHousekeeping.test.ts`, `test/appApi.test.ts`, `test/mobileServer.test.ts`.
+
+Why. Each is the narrower or safer behaviour that the review asked for. None adds a package or a
+paid service. Item 1 is the one real reversal of an earlier choice: strict reuse would have signed
+members out whenever a response was lost on a bad network.

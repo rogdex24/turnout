@@ -67,4 +67,4 @@ A nightly sweep deletes files that no row points to. To check the sweep, look fo
 
 `TURNOUT_ENV=staging` uses the fake sender and the seed in `scripts/seed-staging.ts`. Re-running the
 seed resets seeded sessions. `POST /__test/otp` and `POST /__test/clock` need `STAGING_TEST_TOKEN`
-and do not exist in production.
+and do not exist in production. The token must be at least 32 characters.

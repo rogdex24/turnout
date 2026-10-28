@@ -107,7 +107,7 @@ other people in a group.
 
 | Prefix | What | Who sees it | How long |
 | --- | --- | --- | --- |
-| `photos/<member id>/` | The member's profile photo, re-encoded to a 1080 px JPEG without EXIF | See `profile.photo_key` | Until deletion or replacement |
+| `photos/<opaque id>.jpg` | The member's profile photo, re-encoded to a 1080 px JPEG without EXIF. The key is a random id, never the member id, so a link to it names no one | See `profile.photo_key` | Until deletion or replacement |
 
 ## Third parties
 

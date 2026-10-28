@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createAlerts, recordingAlerts } from "../src/app-api/alerts.js";
+import { ALERT_TIMEOUT_MS, createAlerts, recordingAlerts } from "../src/app-api/alerts.js";
 import { housekeeping, sweepFiles, sweepRows } from "../src/app-api/housekeeping.js";
 import { PHONES, testApp } from "./appHelpers.js";
 
@@ -54,6 +54,31 @@ describe("housekeeping", () => {
     expect(await t.app.store.list("")).toHaveLength(0);
   });
 
+  test("the file sweep leaves objects outside photos/ alone", async () => {
+    const t = await testApp();
+    await t.app.store.put("photos/orphan.jpg", new Uint8Array([1]), "image/jpeg");
+    await t.app.store.put("tickets/p1/t.png", new Uint8Array([1]), "image/png");
+    t.clock.advance(2 * 60 * 60 * 1000);
+    expect(await sweepFiles(t.app, t.clock())).toEqual(["photos/orphan.jpg"]);
+    expect((await t.app.store.list("")).map((entry) => entry.key)).toEqual(["tickets/p1/t.png"]);
+  });
+
+  test("a pass that fails does not use up the day: the next tick tries again, and a good pass then marks it done", async () => {
+    const t = await testApp();
+    await t.app.store.put("photos/orphan.jpg", new Uint8Array([1]), "image/jpeg");
+    t.clock.advance(2 * 60 * 60 * 1000);
+    const list = t.app.store.list;
+    t.app.store.list = async () => {
+      throw new Error("store down");
+    };
+    await expect(sweepFiles(t.app, t.clock())).rejects.toThrow("store down");
+    expect(t.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = 'sweep:files'").get()).toBeNull();
+    t.app.store.list = list;
+    expect(await sweepFiles(t.app, t.clock())).toEqual(["photos/orphan.jpg"]);
+    expect(t.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = 'sweep:files'").get()).not.toBeNull();
+    expect(await sweepFiles(t.app, t.clock())).toEqual([]);
+  });
+
   test("a step that throws does not stop the others", async () => {
     const t = await testApp();
     t.app.store.list = async () => {
@@ -85,14 +110,44 @@ describe("alerts", () => {
     await alerts.notify("a", "first");
     await alerts.notify("a", "again");
     await alerts.notify("b", "other");
+    await alerts.idle();
     expect(posted).toHaveLength(2);
     expect(JSON.parse(posted[0]?.body ?? "{}")).toEqual({ text: "[turnout alert] a: first" });
     t.clock.advance(61 * 60 * 1000);
     status = 500;
     await alerts.notify("a", "later");
+    await alerts.idle();
     expect(posted).toHaveLength(3);
     expect(written).toHaveLength(1);
     expect(written[0]).toContain("answered 500");
+  });
+
+  test("a webhook that never answers does not hold notify, and is cut off with a signal that aborts", async () => {
+    const t = await testApp();
+    const written: string[] = [];
+    let signal: AbortSignal | null | undefined;
+    const alerts = createAlerts({
+      now: t.clock,
+      webhookUrl: "https://hooks.example.com/alert",
+      write: (line) => written.push(line),
+      timeoutMs: 40,
+      fetch: (_url, init) => {
+        signal = init.signal;
+        return new Promise<Response>((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))));
+      },
+    });
+    const started = performance.now();
+    await alerts.notify("slow", "text");
+    expect(performance.now() - started).toBeLessThan(30);
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal?.aborted).toBe(false);
+    await alerts.idle();
+    expect(signal?.aborted).toBe(true);
+    expect(written).toEqual(["[turnout alert] slow: text (the alert webhook could not be reached)"]);
+  });
+
+  test("the default timeout is 5 seconds", () => {
+    expect(ALERT_TIMEOUT_MS).toBe(5000);
   });
 
   test("without a webhook the alert goes to the log", async () => {

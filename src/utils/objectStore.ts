@@ -198,18 +198,26 @@ export function s3Store(config: S3Config, { ttlSeconds }: { ttlSeconds: number }
   };
 }
 
-/** Deletes objects no row points at, once they are older than the grace period (an upload can land before its row). */
+/**
+ * Deletes objects under `prefixes` that no row points at, once they are older than the grace period (an upload can land before
+ * its row). Only the listed prefixes are looked at, so a stray object elsewhere in the bucket is never touched. A key that is not
+ * a valid key is skipped: the store would refuse to delete it, and one odd object must not stop the pass.
+ */
 export async function sweepOrphans(
   store: ObjectStore,
   referencedKeys: Set<string>,
   now: Date,
+  prefixes: readonly string[],
   graceMs = 60 * 60 * 1000,
 ): Promise<string[]> {
   const removed: string[] = [];
-  for (const entry of await store.list("")) {
-    if (referencedKeys.has(entry.key) || now.getTime() - entry.modifiedAt < graceMs) continue;
-    await store.delete(entry.key);
-    removed.push(entry.key);
+  for (const prefix of prefixes) {
+    for (const entry of await store.list(prefix)) {
+      if (!isValidKey(entry.key) || !entry.key.startsWith(prefix)) continue;
+      if (referencedKeys.has(entry.key) || now.getTime() - entry.modifiedAt < graceMs) continue;
+      await store.delete(entry.key);
+      removed.push(entry.key);
+    }
   }
   return removed;
 }

@@ -5,11 +5,13 @@ import { consentResponseSchema, meResponseSchema } from "@turnout/contract/app/m
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import type { z } from "zod";
 import type { Route } from "../src/app-api/context.js";
-import { loadAppConfig } from "../src/app-api/env.js";
+import { loadAppConfig, STAGING_TEST_TOKEN_MIN_LENGTH } from "../src/app-api/env.js";
 import { ok } from "../src/app-api/http.js";
 import { appResponse, ConfigError, createAppContext } from "../src/app-api/index.js";
 import { enforce } from "../src/app-api/rateLimit.js";
 import { appRoutes } from "../src/app-api/routes/index.js";
+import { fakeOtpSender } from "../src/app-api/vendors/otpSender.js";
+import { memoryStore } from "../src/utils/objectStore.js";
 import { BASE, PHONES, REVIEWER_CODE, REVIEWER_PHONE, TEST_TOKEN, testApp } from "./appHelpers.js";
 import { memoryDb } from "./helpers.js";
 
@@ -141,6 +143,26 @@ describe("GET /config", () => {
 describe("production settings", () => {
   const production = async (env: Record<string, string>) => loadAppConfig({ TURNOUT_ENV: "production", ...env });
 
+  /** Every setting a production start needs. */
+  async function fullProductionEnv(): Promise<Record<string, string>> {
+    const { generateKeyPair, exportPKCS8, exportSPKI } = await import("jose");
+    const pair = await generateKeyPair("ES256", { extractable: true });
+    return {
+      TURNOUT_ENV: "production",
+      ...GRIEVANCE,
+      OTP_PEPPER: "pepper-for-tests",
+      BAN_PEPPER: "ban-pepper-for-tests",
+      FILE_LINK_SECRET: "link-secret-for-tests",
+      AUTH_JWT_PRIVATE_KEY: (await exportPKCS8(pair.privateKey)).replaceAll("\n", "\\n"),
+      AUTH_JWT_PUBLIC_KEY: await exportSPKI(pair.publicKey),
+      WHATSAPP_ACCESS_TOKEN: "a",
+      WHATSAPP_PHONE_NUMBER_ID: "1",
+      WHATSAPP_TEMPLATE_NAME: "t",
+      WHATSAPP_APP_SECRET: "s",
+      WHATSAPP_VERIFY_TOKEN: "v",
+    };
+  }
+
   test("production refuses to start without the grievance block, and says which part", async () => {
     const error = await production({}).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ConfigError);
@@ -164,29 +186,52 @@ describe("production settings", () => {
     expect(error.message).toContain("OBJECT_STORE=memory is not allowed in production");
   });
 
-  test("createAppContext refuses a production start with the fake sender passed in code, too", async () => {
+  test("createAppContext refuses a production start when the settings ask for the fake sender", async () => {
     await expect(
       createAppContext({ db: memoryDb(), env: { TURNOUT_ENV: "production", OTP_SENDER: "fake", ...GRIEVANCE } }),
     ).rejects.toBeInstanceOf(ConfigError);
   });
 
+  test("createAppContext refuses a fake sender passed in code with a production config, and takes a real one", async () => {
+    const env = await fullProductionEnv();
+    const store = memoryStore({ now: () => new Date(), link: (key) => key });
+    const error = (await createAppContext({ db: memoryDb(), env, sender: fakeOtpSender(), store }).catch((e: unknown) => e)) as Error;
+    expect(error).toBeInstanceOf(ConfigError);
+    expect(error.message).toContain("not allowed in production");
+    // The same settings start with a sender that is not the fake one.
+    const real = { send: async () => ({ ok: true as const, wamid: "wamid.example" }) };
+    const app = await createAppContext({ db: memoryDb(), env, sender: real, store });
+    expect(app.config.env).toBe("production");
+    // And the fake is still fine outside production.
+    const staging = await createAppContext({ db: memoryDb(), env: { TURNOUT_ENV: "staging" }, sender: fakeOtpSender(), store });
+    expect(staging.config.env).toBe("staging");
+  });
+
+  test("serve needs TURNOUT_ENV: without it the settings are refused, not read as development", async () => {
+    const error = (await loadAppConfig({}, { requireEnv: true }).catch((e: unknown) => e)) as Error;
+    expect(error).toBeInstanceOf(ConfigError);
+    expect(error.message).toContain("TURNOUT_ENV is required");
+    expect((await loadAppConfig({ TURNOUT_ENV: "  " }, { requireEnv: true }).catch((e: unknown) => e)) as Error).toBeInstanceOf(
+      ConfigError,
+    );
+    expect((await loadAppConfig({ TURNOUT_ENV: "development" }, { requireEnv: true })).env).toBe("development");
+    // Tests and tools that load the settings without the option still default to development.
+    expect((await loadAppConfig({})).env).toBe("development");
+    await expect(createAppContext({ db: memoryDb(), env: {}, requireEnv: true })).rejects.toBeInstanceOf(ConfigError);
+  });
+
+  test("a STAGING_TEST_TOKEN shorter than 32 characters is refused, and 32 is fine", async () => {
+    expect(STAGING_TEST_TOKEN_MIN_LENGTH).toBe(32);
+    const short = (await loadAppConfig({ TURNOUT_ENV: "staging", STAGING_TEST_TOKEN: "a".repeat(31) }).catch((e: unknown) => e)) as Error;
+    expect(short).toBeInstanceOf(ConfigError);
+    expect(short.message).toContain("STAGING_TEST_TOKEN must be at least 32 characters");
+    expect(short.message).not.toContain("a".repeat(31));
+    expect((await loadAppConfig({ TURNOUT_ENV: "staging", STAGING_TEST_TOKEN: "a".repeat(32) })).stagingTestToken).toBe("a".repeat(32));
+    expect((await loadAppConfig({ TURNOUT_ENV: "staging" })).stagingTestToken).toBeNull();
+  });
+
   test("a full production setup loads, with no ephemeral secrets and no staging token", async () => {
-    const { generateKeyPair, exportPKCS8, exportSPKI } = await import("jose");
-    const pair = await generateKeyPair("ES256", { extractable: true });
-    const config = await production({
-      ...GRIEVANCE,
-      OTP_PEPPER: "pepper-for-tests",
-      BAN_PEPPER: "ban-pepper-for-tests",
-      FILE_LINK_SECRET: "link-secret-for-tests",
-      AUTH_JWT_PRIVATE_KEY: (await exportPKCS8(pair.privateKey)).replaceAll("\n", "\\n"),
-      AUTH_JWT_PUBLIC_KEY: await exportSPKI(pair.publicKey),
-      WHATSAPP_ACCESS_TOKEN: "a",
-      WHATSAPP_PHONE_NUMBER_ID: "1",
-      WHATSAPP_TEMPLATE_NAME: "t",
-      WHATSAPP_APP_SECRET: "s",
-      WHATSAPP_VERIFY_TOKEN: "v",
-      STAGING_TEST_TOKEN: "should-be-ignored",
-    });
+    const config = await loadAppConfig({ ...(await fullProductionEnv()), STAGING_TEST_TOKEN: "should-be-ignored" });
     expect(config.otpSender).toBe("whatsapp");
     expect(config.ephemeral).toEqual([]);
     expect(config.stagingTestToken).toBeNull();

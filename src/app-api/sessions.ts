@@ -1,6 +1,6 @@
 import type { TokenPair } from "@turnout/contract/app/auth";
 import { getMember } from "../social/members.js";
-import { getSessionByRefreshHash, insertSession, revokeAllSessions, revokeSession, rotateSession } from "../social/sessions.js";
+import { getSession, getSessionByRefreshHash, insertSession, revokeAllSessions, revokeSession, rotateSession } from "../social/sessions.js";
 import { ulid } from "../utils/ulid.js";
 import type { AppContext } from "./context.js";
 import { unauthorized } from "./errors.js";
@@ -27,13 +27,24 @@ export async function openSession(app: AppContext, memberId: string, now: Date):
 /**
  * Trades a refresh token for a new pair. The old token stops working. A token that was already traded in is a stolen or replayed
  * one, so it signs the member out everywhere. The 30 days start again at each refresh.
+ *
+ * One exception: a phone that lost the response to a refresh sends the same token again. Inside a short grace window, while the
+ * replacement it never saw is still unused, that repeat rotates the chain once more (the replacement is revoked and a fresh pair
+ * is issued) instead of signing everyone out. Outside the window, or once the replacement was used, it is reuse as before.
  */
 export async function refreshSession(app: AppContext, refreshToken: string, now: Date): Promise<TokenPair> {
-  const row = getSessionByRefreshHash(app.db, hashRefreshToken(refreshToken));
-  if (row === null) throw unauthorized();
-  if (row.replaced_at !== null) {
-    revokeAllSessions(app.db, row.member_id, now);
-    throw unauthorized();
+  const presented = getSessionByRefreshHash(app.db, hashRefreshToken(refreshToken));
+  if (presented === null) throw unauthorized();
+  let row = presented;
+  if (presented.replaced_at !== null) {
+    const replacement = presented.replaced_by === null ? null : getSession(app.db, presented.replaced_by);
+    const graceMs = app.config.tunables.session.refreshGraceSeconds * 1000;
+    const inGrace = now.getTime() - new Date(presented.replaced_at).getTime() < graceMs;
+    if (replacement === null || !inGrace || replacement.replaced_at !== null || replacement.revoked_at !== null) {
+      revokeAllSessions(app.db, presented.member_id, now);
+      throw unauthorized();
+    }
+    row = replacement;
   }
   if (row.revoked_at !== null || new Date(row.expires_at).getTime() <= now.getTime()) throw unauthorized();
   const member = getMember(app.db, row.member_id);

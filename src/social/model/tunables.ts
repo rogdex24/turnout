@@ -29,6 +29,8 @@ export interface Tunables {
     digits: number;
     expiresMinutes: number;
     maxAttempts: number;
+    /** Wrong codes the store-review number may send in an IST day. Past this, its verifies are refused until the day ends, right code or not. */
+    reviewerFailCapPerDay: number;
     /** After "I didn't request a code", this number gets no code for this many hours. */
     notRequestedBlockHours: number;
     /** Sends per IST day across everyone. The `OTP_DAILY_CAP` env var overrides it. */
@@ -43,8 +45,12 @@ export interface Tunables {
     refreshDays: number;
     /** Rotated and revoked rows stay this long so a reused token can be recognised. */
     revokedRetentionDays: number;
+    /** A refresh token traded in this recently, whose replacement is still unused, is a retry and not a replay. */
+    refreshGraceSeconds: number;
   };
   fileLinkMinutes: number;
+  /** A profile photo with more pixels than this is refused before it is decoded. */
+  photoMaxPixels: number;
   rate: {
     otpPerPhoneShort: RateRule;
     otpPerPhoneDay: RateRule;
@@ -56,6 +62,7 @@ export interface Tunables {
     messagesPerMinute: RateRule;
     planCreatePerDay: RateRule;
     handleSubmitPerDay: RateRule;
+    photoUploadPerMemberDay: RateRule;
   };
 }
 
@@ -71,13 +78,15 @@ export const DEFAULT_TUNABLES: Tunables = {
     digits: 6,
     expiresMinutes: 10,
     maxAttempts: 5,
+    reviewerFailCapPerDay: 20,
     notRequestedBlockHours: 24,
     dailyCap: 200,
     priceInr: 0.136,
     spendAlertsInr: [500, 1000, 1500],
   },
-  session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7 },
+  session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
   fileLinkMinutes: 5,
+  photoMaxPixels: 40_000_000,
   rate: {
     otpPerPhoneShort: { limit: 3, window: { seconds: 15 * 60 } },
     otpPerPhoneDay: { limit: 10, window: "ist_day" },
@@ -89,6 +98,7 @@ export const DEFAULT_TUNABLES: Tunables = {
     messagesPerMinute: { limit: 30, window: { seconds: 60 } },
     planCreatePerDay: { limit: 10, window: "ist_day" },
     handleSubmitPerDay: { limit: 3, window: "ist_day" },
+    photoUploadPerMemberDay: { limit: 10, window: "ist_day" },
   },
 };
 

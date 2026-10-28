@@ -4,6 +4,7 @@ import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { addMinutes } from "../social/dates.js";
 import { createMember, getMemberByPhone, isPhoneBanned, markPhoneVerified, recordConsent } from "../social/members.js";
 import { normalizePhone } from "../social/model/phone.js";
+import type { RateRule } from "../social/model/tunables.js";
 import { getChallenge, insertChallenge, recordSendFailed, recordSent, voidOpenChallenges } from "../social/otpChallenges.js";
 import { ulid } from "../utils/ulid.js";
 import { OTP_SENDS_KEY } from "./alerts.js";
@@ -11,7 +12,7 @@ import type { AppContext } from "./context.js";
 import type { AppConfig } from "./env.js";
 import { AppError } from "./errors.js";
 import { retryAfter } from "./http.js";
-import { blockPhone, consumeAll, isPhoneBlocked, type LimitEntry, rateKey } from "./rateLimit.js";
+import { addUse, blockPhone, consumeAll, isPhoneBlocked, type LimitEntry, rateKey, usedNow } from "./rateLimit.js";
 import { openSession } from "./sessions.js";
 
 /** The answer for every refusal that must not tell the caller why (a banned number, a recent "I did not ask for this"). */
@@ -144,6 +145,18 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
   const e164 = normalizePhone(input.phone, config.phoneAllowlist);
   if (e164 === null) throw new AppError(400, "bad_phone", "enter an Indian mobile number");
 
+  // The store-review number has a fixed code and may ask for codes without limit, so its wrong tries are capped for the IST day.
+  const failRule: RateRule = { limit: config.tunables.otp.reviewerFailCapPerDay, window: "ist_day" };
+  const failKey = rateKey(config.otpPepper, "otp:reviewer:fail", e164);
+  const reviewer = config.reviewer !== null && config.reviewer.phone === e164;
+  if (reviewer && usedNow(db, failKey, failRule, now) >= failRule.limit) {
+    await app.alerts.notify(
+      "otp_reviewer_locked",
+      "The store-review number has used up its wrong tries for today; its sign-in is refused until the IST day ends.",
+    );
+    throw invalidCode();
+  }
+
   const challenge = getChallenge(db, input.challengeId);
   const at = now.toISOString();
   if (
@@ -163,6 +176,7 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
     .run(challenge.id, max);
   if (counted.changes === 0) throw invalidCode();
   if (!sameHash(challenge.code_hmac, codeHmac(config, challenge.id, input.code))) {
+    if (reviewer) addUse(db, failKey, failRule, now);
     if (challenge.attempts + 1 >= max)
       db.query("UPDATE otp_challenge SET voided_at = ? WHERE id = ? AND voided_at IS NULL").run(at, challenge.id);
     throw invalidCode();
