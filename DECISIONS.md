@@ -443,8 +443,10 @@ Reports, suspension and bans
 Deletion, location and auth
 
 22. **A delete code shares the sign-in limits** and uses the same WhatsApp authentication template.
-    It is refused with the generic `sign_in_unavailable` for a number on the ban list. A sign-in
-    challenge cannot confirm a deletion (403 new error code `forbidden`); another member's is a 400.
+    It is refused with the generic `sign_in_unavailable` only for a number blocked by "I did not
+    request this code" (`isPhoneBlocked`); it does not read the ban list, because a banned member's
+    account is erased and has no session to ask with. A sign-in challenge cannot confirm a deletion
+    (403 new error code `forbidden`); another member's is a 400.
 23. **A self-deletion never writes the ban list.** Only a ban, an upheld report or a stop does.
 24. **Files are deleted after the commit,** and the nightly `sweepFiles` retries any that failed.
 25. **`requireMember` order:** token valid, session belongs to the member, banned or deleted gives 401,

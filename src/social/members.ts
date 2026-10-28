@@ -23,8 +23,9 @@ export function getMemberByPhone(db: Database, phone: string): MemberRow | null 
 }
 
 /**
- * True when this number belongs to a banned member. A live member's number is never on the ban list for a refusing reason (a ban erases
- * the account), so the member's own status is the whole answer here; the list is read in `bans.ts` for numbers with no account.
+ * True when the member row for this number has status `banned`. Nothing sets that status now: a ban erases the account (status
+ * `deleted`, no phone) and writes the ban list, which sign-in reads through `isPhoneRefused` in `bans.ts`. This only checks the row,
+ * for a status that an older database or a later change might still hold; it does not read the ban list.
  */
 export function isPhoneBanned(db: Database, phone: string): boolean {
   return db.query("SELECT 1 FROM member WHERE phone_e164 = ? AND status = 'banned'").get(phone) !== null;

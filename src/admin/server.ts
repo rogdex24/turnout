@@ -60,7 +60,7 @@ export function resolveBind(env: Record<string, string | undefined>): Bind {
 export interface AdminContext {
   /** Read-only handle: every GET. */
   read: Database;
-  /** The only handle that writes: mute rules, and through social/operator.ts the tickets, handles, start times and cafes. */
+  /** The only handle that writes: mute rules, and through social/operator.ts the tickets, handles, start times, cafes, reports, accounts and the ban list. */
   write: Database;
   startRun: StartRun;
   agentRunsDir: string;
