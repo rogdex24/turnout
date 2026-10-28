@@ -147,6 +147,7 @@ describe("authorization matrix, anonymous and bad credentials", () => {
     t.db.query("UPDATE member SET status = 'suspended' WHERE phone_e164 = ?").run(PHONES[2] as string);
     for (const row of memberRows) {
       if (row.pattern === "/auth/sign-out") continue; // signing out must keep working for anyone holding a session
+      if (row.pattern === "/me/delete-code" || (row.method === "DELETE" && row.pattern === "/me")) continue; // a suspended member may erase themselves
       const response = await send(t, row, accessToken);
       expect([row.method, row.pattern, response.status, (await errorOf(response)).code]).toEqual([
         row.method,

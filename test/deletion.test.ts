@@ -243,3 +243,28 @@ describe("eraseMember with a ban", () => {
     expect(t.db.query("SELECT COUNT(*) AS n FROM plan WHERE member_id = ?").get(who.memberId)).toEqual({ n: 0 });
   });
 });
+
+describe("a suspended member's own deletion", () => {
+  test("a member suspended by a report can still ask for a delete code and delete; the open report stays", async () => {
+    const s: Setup = await setup(5);
+    const [a, b] = s.members as [Session, Session];
+    await s.at(-3 * 3_600_000);
+    const ref = (
+      s.t.db.query("SELECT member_ref AS ref FROM group_member WHERE group_id = ? AND member_id = ?").get(s.groupId, b.memberId) as {
+        ref: string;
+      }
+    ).ref;
+    const reported = await s.t.call("POST", "/reports", {
+      token: a.token,
+      body: { groupId: s.groupId, memberRef: ref, body: "They made me uncomfortable.", clientId: "client-000001" },
+    });
+    expect(reported.status).toBe(201);
+    expect(getMember(s.t.db, b.memberId)?.status).toBe("suspended");
+    // The suspension signed them out, and every other route still says why; these two are let through.
+    expect((await s.t.call("GET", "/me", { token: b.token })).status).toBe(403);
+    const issued = await deleteCode(s.t, b);
+    expect((await confirm(s.t, b, issued.challengeId, issued.code)).status).toBe(204);
+    expect(getMember(s.t.db, b.memberId)).toMatchObject({ status: "deleted", phone_e164: null });
+    expect(s.t.db.query("SELECT status FROM report WHERE subject_id = ?").all(b.memberId)).toEqual([{ status: "open" }]);
+  });
+});

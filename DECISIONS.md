@@ -451,9 +451,13 @@ Deletion, location and auth
     suspended gives 403 `account_suspended`, then a revoked session gives 401. A report revokes the
     suspended member's sessions, so the suspended check has to come before the revoked one (this
     reordered `auth.ts`).
-26. **A suspended member cannot delete their own account** until the report closes, since they get 403.
-    This is a gap to put in front of whoever reviews the DPDP erasure duty; see
-    `docs/plans/mobile-accounts.md`.
+26. **A suspended member can erase their own account, for as long as their access token lasts.**
+    `DELETE /me` and `POST /me/delete-code` set `allowSuspended` on the route: `requireMember` lets a
+    suspended member through and ignores the session the suspension revoked. Every other route is
+    still 403. Their open report rows stay (`eraseMember` keeps reports). The window is the 15-minute
+    access token: `/auth/otp/verify` still answers a suspended member 403, so once the token has
+    expired they cannot sign in to delete. Put that remaining gap in front of whoever reviews the
+    DPDP erasure duty; see `docs/plans/mobile-accounts.md`.
 
 Admin
 

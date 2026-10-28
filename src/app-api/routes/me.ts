@@ -151,6 +151,7 @@ export const meRoutes: Route[] = [
     method: "POST",
     pattern: "/me/delete-code",
     auth: "member",
+    allowSuspended: true,
     handler: async ({ app, request, member, ip, now }) => {
       const { member: row } = authed(member);
       await parseEmptyBody(request, deleteCodeRequestSchema);
@@ -162,6 +163,7 @@ export const meRoutes: Route[] = [
     method: "DELETE",
     pattern: "/me",
     auth: "member",
+    allowSuspended: true,
     handler: async ({ app, request, member, now }) => {
       const { member: row } = authed(member);
       const input = await parseBody(request, deleteAccountRequestSchema);
