@@ -108,6 +108,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       variant,
       apiUrl,
       storybook: v.storybook,
+      hasMapsKey: Boolean(mapsKey),
       ...(linkHost ? { linkHost } : {}),
       ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
     },

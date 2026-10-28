@@ -10,7 +10,7 @@ require("@shopify/flash-list/jestSetup");
 jest.mock("@/api/pushNative", () => ({
   nativePush: {
     platform: "other",
-    permission: async () => ({ status: "denied", canAskAgain: false }),
+    permission: async () => ({ status: "undetermined", canAskAgain: true }),
     requestPermission: async () => ({ status: "denied", canAskAgain: false }),
     expoToken: async () => {
       throw new Error("no push service in Jest");
@@ -20,3 +20,21 @@ jest.mock("@/api/pushNative", () => ({
     setForegroundHandler: () => undefined,
   },
 }));
+
+// Nor does the phone's location service; the meet card tests pass their own fake.
+jest.mock("@/api/locationNative", () => ({
+  nativeLocation: {
+    permission: async () => ({ status: "undetermined", canAskAgain: true }),
+    requestPermission: async () => ({ status: "denied", canAskAgain: false }),
+    watch: async () => () => undefined,
+  },
+}));
+
+// The map is a native view with no Jest build. This stand-in draws the map as a view and each pin as a view named by its title.
+jest.mock("react-native-maps", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+  const MapView = ({ children, ...props }: { children?: unknown }) => React.createElement(View, { ...props, testID: "map-view" }, children);
+  const Marker = ({ title }: { title?: string }) => React.createElement(View, { testID: "map-pin", accessibilityLabel: title });
+  return { __esModule: true, default: MapView, Marker };
+});
