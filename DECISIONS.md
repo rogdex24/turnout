@@ -267,3 +267,83 @@ Evidence. `test/auth.test.ts`, `test/appProfile.test.ts`, `test/objectStore.test
 Why. Each is the narrower or safer behaviour that the review asked for. None adds a package or a
 paid service. Item 1 is the one real reversal of an earlier choice: strict reuse would have signed
 members out whenever a response was lost on a bad network.
+
+## 2026-10-28: M3 server, where the build differs from the plan or fills a gap
+
+Context. The plan's section 4 M3 server tasks (S7 to S11, S15a, S19, S24) against the section 5
+contract and the section 6 rules. Each item below is a choice the plan did not settle or a place
+the build differs from it.
+
+1. **Alerts that must fire once use `alert_sent`.** The handle alert, the no-cafe alerts and the
+   other one-time operator alerts record a key in `alert_sent` with `INSERT OR IGNORE`, so a restart
+   or a second ticker does not repeat them. Notices use their own unique `dedupe_key`.
+2. **The `eligible_show` view is a superset.** It lists shows the join rules might allow; the route
+   still applies `isEligible` with the tunables and the clock, so the single 404 holds for a show
+   past T-24h, free, not placed or unlisted.
+3. **A device is linked to the session that registered it.** `device.session_id` lets sign-out
+   remove that device's token. `revokeAllSessions` deletes the member's devices, so a reuse of a
+   refresh token also stops the pushes.
+4. **A plan needs only a pending or approved handle.** A member with a pending handle can make a
+   plan and send a ticket; the grouping pass skips anyone whose handle is not approved. A rejected
+   or missing handle is `handle_required`.
+5. **`plan_exists` carries `planId`,** so the app can open the plan it already has.
+6. **`lock_lapsed` picks its reason from where the plan stopped.** A plan with no group at T-24h
+   ends as `no_group`; the reason depends on the ticket and handle state at that moment, and the
+   ticker writes the `no_group` notice once (`dedupe_key` `no_group:<plan>`).
+7. **Never-pairs are stubbed until M4.** The grouping input has the field and the pass honors it; no
+   code fills it yet.
+8. **A ticket's `sha256` is of the original upload bytes,** with no re-encode, so the same file
+   sent for two plans is flagged as a duplicate in the admin queue.
+9. **A member who joins a group to refill it gets no notice to the existing members.** The size
+   shown in the group response changes; nothing is pushed about it.
+10. **A start-time change updates the plan and open-group snapshots** and is refused with 409
+    `too_late` inside T-24h and `group_locked` once a group has locked.
+11. **A withdrawn or called-off plan sets `group_id` to null,** so the plan stops pointing at a
+    group the member can no longer see. The `group_member` row keeps `left_at`.
+12. **The tick runs in a fixed order** (withdraw members who are gone, lock groups, lapse plans at
+    T-24h, grouping per show, reveal, head-over notices, finish shows, operator alerts) and the lease
+    is released after each pass (`finishLease`), not held across the 30 s gap, so a second process
+    can take over.
+13. **The pending-handle queue sorts by the earliest lock,** then by submit time.
+14. **Test tickets are built in code,** not read from a binary fixture file.
+15. **A member photo key is shared across groups.** The key is the profile's, so the same photo
+    link serves every group the member is in; links are still signed and short lived.
+16. **A ticket retry is idempotent.** Sending the same bytes again for a plan that already holds
+    that file answers 200 with the same ticket instead of a duplicate row.
+17. **`PUSH_SENDER` and `EXPO_ACCESS_TOKEN`.** `fake` or `expo`; production always uses `expo` and
+    refuses `fake`. The token is optional. Push goes after the commit that made the notice.
+18. **Housekeeping runs on each ticker pass** and each sweep is cheap and idempotent: expired OTP
+    rows, sessions, rate buckets, `push_delivery` and notices past retention, `alert_sent` and
+    `operator_action` past their windows. Ticket files due for deletion (T+24h) are dropped from the
+    store by the ticker, and the row keeps no key or hash. The orphan sweep now covers `tickets/` as well as
+    `photos/`.
+19. **`POST /__test/clock` takes an optional `tick`,** so a staging test can move time and run the
+    passes in one call.
+20. **`ErrorExtra`.** `app-api/errors.ts` lets an error body carry one extra field the app needs
+    next to `code` and `message` (for example `planId` on `plan_exists`).
+21. **`POST /plans` answers 201** and `GET /shows/:publicId` returns only a live plan in `plan`.
+22. **`/health` probes a write and reports the ticker's age,** so a stuck ticker is visible to the
+    uptime check without a separate route.
+23. **The app files route never serves `tickets/`.** A ticket file is for the operator only; the
+    key is a 404 there whatever the signature.
+24. **The admin opens ticket files and handle photos through its own signed routes.** The admin
+    cannot import `app-api` (dependency rules), so `src/admin/files.ts` signs and checks 5 minute
+    links with the same `FILE_LINK_SECRET` and opens the same store (`OBJECT_STORE`, `FILES_DIR` or
+    `S3_*`). A signed GET skips the bearer token but keeps the loopback Host check. Images are inline;
+    everything else is an attachment, with `nosniff` and a sandbox policy. With the secret unset or
+    `memory`, no link is made and the queues still work. The handle photo link opens only a pending
+    handle's photo.
+25. **The admin ticket and handle decisions use a two click confirm,** and a reject needs one of the
+    fixed reasons from the contract. A decision on something already decided, or past T-24h, shows
+    the server's 409 message.
+26. **Admin writes for tickets, handles, start times and cafes all go through `operator.ts`.** The
+    `operator_action` row is written in the same transaction. `AGENTS.md` now says "from M3" where
+    it said "from M4".
+
+Evidence. `test/socialPlans.test.ts`, `test/socialTick.test.ts`, `test/appPlans.test.ts`,
+`test/appTickets.test.ts`, `test/appGroups.test.ts`, `test/appNotices.test.ts`,
+`test/appPush.test.ts`, `test/appTicker.test.ts`, `test/appHousekeeping.test.ts`,
+`test/adminSocial.test.ts`, `test/appAuthz.test.ts`.
+
+Why. Each fills a gap the plan left, or applies a layering rule (item 24) that the plan did not
+foresee. None adds a package or a paid service.
