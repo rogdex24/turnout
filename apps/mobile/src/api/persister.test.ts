@@ -62,7 +62,7 @@ describe("cache persister", () => {
   it("writes after the throttle and reads it back", () => {
     jest.useFakeTimers();
     const store = memoryKv();
-    const persister = createCachePersister(store, 1000);
+    const persister = createCachePersister(store, { throttleMs: 1000 });
     const client = testQueryClient();
     client.setQueryData(queryKeys.areas(), ["Bandra"]);
     void persister.persistClient(snapshot(client));
@@ -73,10 +73,23 @@ describe("cache persister", () => {
     expect(restored.clientState.queries[0]?.queryKey).toEqual(["areas"]);
   });
 
+  it("stamps each write with the buster of the moment, so a sign-in during the run is kept", () => {
+    jest.useFakeTimers();
+    const store = memoryKv();
+    let buster = cacheBuster("1.0.0", null);
+    const persister = createCachePersister(store, { throttleMs: 1000, buster: () => buster });
+    const client = testQueryClient();
+    client.setQueryData(queryKeys.areas(), ["Bandra"]);
+    buster = cacheBuster("1.0.0", "u2");
+    void persister.persistClient(snapshot(client));
+    jest.advanceTimersByTime(1000);
+    expect((persister.restoreClient() as PersistedClient).buster).toBe("1.0.0:u2");
+  });
+
   it("writes the last state only", () => {
     jest.useFakeTimers();
     const store = memoryKv();
-    const persister = createCachePersister(store, 1000);
+    const persister = createCachePersister(store, { throttleMs: 1000 });
     const client = testQueryClient();
     client.setQueryData(queryKeys.areas(), ["first"]);
     void persister.persistClient(snapshot(client));
@@ -90,7 +103,7 @@ describe("cache persister", () => {
   it("removes the cache and cancels a pending write on sign-out", () => {
     jest.useFakeTimers();
     const store = memoryKv();
-    const persister = createCachePersister(store, 1000);
+    const persister = createCachePersister(store, { throttleMs: 1000 });
     void persister.persistClient(snapshot(testQueryClient()));
     void persister.removeClient();
     jest.advanceTimersByTime(5000);

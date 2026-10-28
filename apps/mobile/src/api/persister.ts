@@ -35,8 +35,17 @@ export function trimForDisk(client: PersistedClient): PersistedClient {
   return { ...client, clientState: { ...client.clientState, queries } };
 }
 
+export interface PersisterOptions {
+  throttleMs?: number;
+  /**
+   * The buster to stamp on each write. The provider only reads its own buster once, at start, so a person who signs in during this run
+   * would otherwise leave a file stamped for nobody and lose it at the next start.
+   */
+  buster?: () => string;
+}
+
 /** Writes the cache to the (encrypted) store at most once per `throttleMs`; the last state always lands. */
-export function createCachePersister(store: KeyValueStore, throttleMs = 1000): Persister {
+export function createCachePersister(store: KeyValueStore, { throttleMs = 1000, buster }: PersisterOptions = {}): Persister {
   let pending: PersistedClient | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -44,6 +53,7 @@ export function createCachePersister(store: KeyValueStore, throttleMs = 1000): P
     timer = null;
     if (pending === null) return;
     const value = trimForDisk(pending);
+    if (buster) value.buster = buster();
     pending = null;
     store.set(CACHE_STORE_KEY, JSON.stringify(value));
   }
