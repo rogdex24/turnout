@@ -63,6 +63,16 @@ Photos and ticket files are not in the Litestream backup. A lost disk means memb
 A nightly sweep deletes files that no row points to. To check the sweep, look for its marker row
 `sweep:files` in `rate_bucket` (its window start is the last run).
 
+## Tickets, handles, start times and cafes
+
+The admin has Tickets, Handles and Shows pages. Open Tickets and Handles at least twice a day. A ticket
+has to be decided before the show's T-24h lock, and the page shows the minutes left; past the lock
+the plan ends without a group. A handle still pending within 12 hours of its show's lock sends
+one alert (once per submission). A group that has locked with no cafe sends one alert, and one more
+when the show is under the cafe alert window; set the cafe on the Shows page. If a ticket or photo
+link does not show, check that the admin has the same `FILE_LINK_SECRET` and file store settings as
+the server. Every decision here writes an `operator_action` row.
+
 ## Staging
 
 `TURNOUT_ENV=staging` uses the fake sender and the seed in `scripts/seed-staging.ts`. Re-running the

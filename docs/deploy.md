@@ -40,6 +40,11 @@ case. Members get signed, short-lived links (`FILE_LINK_SECRET`, 5 minutes) and 
 | `s3` | `S3_BUCKET`, `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` through Bun's `S3Client` | Only if the host slot comes with an object bucket |
 | `memory` | The process | Tests only, the default when `TURNOUT_ENV=test` |
 
+The admin process reads the same store, so it needs the same `FILE_LINK_SECRET`, `OBJECT_STORE` and
+`FILES_DIR` (or `S3_*`) to show ticket files and handle photos. With the secret unset, or with `memory`,
+the admin shows no file link and the queues still work. The admin signs its own 5 minute links and
+serves them itself; the app's files route never serves a `tickets/` key.
+
 A nightly sweep deletes files no row points to. **Photos and tickets are not in the Litestream
 backup**, which covers the SQLite file only. A lost disk means members upload their photo again;
 back up the files directory separately if that is not acceptable. Keep `FILES_DIR` on the same
