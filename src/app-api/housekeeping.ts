@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { addDays } from "../social/dates.js";
 import { allPhotoKeys } from "../social/profiles.js";
+import { deleteExpiredMessages } from "../social/thread.js";
 import { allTicketKeys } from "../social/tickets.js";
 import { sweepOrphans } from "../utils/objectStore.js";
 import { checkOtpSpend, OTP_SENDS_KEY } from "./alerts.js";
@@ -64,6 +65,7 @@ export async function housekeeping(app: AppContext): Promise<void> {
   const now = app.now();
   const steps: (() => unknown)[] = [
     () => sweepRows(app.db, now, app.config.tunables.session.revokedRetentionDays, app.config.tunables.noticeRetentionDays),
+    () => deleteExpiredMessages(app.db, now, app.config.tunables),
     () => checkOtpSpend(app.db, now, app.alerts, app.config.tunables),
     () => sweepFiles(app, now),
   ];

@@ -10,6 +10,7 @@ import { noticeRoutes } from "./notices.js";
 import { planRoutes } from "./plans.js";
 import { showRoutes } from "./shows.js";
 import { testOnlyRoutes } from "./testOnly.js";
+import { threadRoutes } from "./thread.js";
 import { whatsappWebhookRoutes } from "./whatsappWebhook.js";
 
 /**
@@ -27,6 +28,7 @@ export function appRoutes(app: AppContext): Route[] {
     ...showRoutes,
     ...planRoutes,
     ...groupRoutes,
+    ...threadRoutes,
     ...noticeRoutes,
     ...deviceRoutes,
   ];

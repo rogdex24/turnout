@@ -66,6 +66,20 @@ const ROWS: Row[] = [
     auth: "member",
     anonymous: 401,
   },
+  {
+    method: "GET",
+    pattern: "/groups/:groupId/messages",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/messages",
+    auth: "member",
+    anonymous: 401,
+  },
+  {
+    method: "POST",
+    pattern: "/groups/:groupId/messages",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/messages",
+    auth: "member",
+    anonymous: 401,
+  },
   { method: "GET", pattern: "/notices", path: "/notices", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/notices/read", path: "/notices/read", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/devices", path: "/devices", auth: "member", anonymous: 401 },
@@ -390,5 +404,41 @@ describe("authorization matrix, people and groups", () => {
       const mineIds = (w.t.db.query("SELECT id FROM notice WHERE member_id = ?").all(who.memberId) as { id: string }[]).map((n) => n.id);
       expect(notices.notices.map((n) => n.id).sort()).toEqual([...mineIds].sort());
     }
+  });
+
+  test("the thread: a caller outside the group gets the one 404 at any time, and a co-member only from T-3h", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    const outsiders = [w.b[0] as Session, w.y[0] as Session, w.waiting];
+    const note = { body: "hello", clientId: "client-authz-1" };
+    for (const [offset, mineStatus] of [
+      [-3 * HOUR - MINUTE, 404],
+      [-3 * HOUR, 200],
+    ] as const) {
+      await w.at(offset);
+      expect([offset, await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)]).toEqual([offset, mineStatus]);
+      for (const who of outsiders) {
+        const read = await w.t.call("GET", `/groups/${w.groupA}/messages`, { token: who.token });
+        const write = await w.t.call("POST", `/groups/${w.groupA}/messages`, { token: who.token, body: note });
+        expect([read.status, write.status]).toEqual([404, 404]);
+        expect(await read.json()).toEqual({ error: { code: "not_found", message: "not found" } });
+      }
+    }
+    expect(w.t.db.query("SELECT count(*) AS n FROM message").get()).toEqual({ n: 0 });
+    // a member of another group posts into theirs only
+    const own = await w.t.call("POST", `/groups/${w.groupB}/messages`, { token: (w.b[0] as Session).token, body: note });
+    expect(own.status).toBe(201);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, w.b[0] as Session)).toBe(404);
+  });
+
+  test("a suspended member is 403 on the thread and a banned one 401", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(-3 * HOUR, me);
+    w.t.db.query("UPDATE member SET status = 'suspended' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)).toBe(403);
+    expect(await statusOf(w.t, "POST", `/groups/${w.groupA}/messages`, me)).toBe(403);
+    w.t.db.query("UPDATE member SET status = 'banned' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)).toBe(401);
   });
 });
