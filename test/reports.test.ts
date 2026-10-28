@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
 import { createReportResponseSchema } from "@turnout/contract/app/reports";
 import { purgeClosedReports } from "../src/app-api/housekeeping.js";
+import { reportQueue } from "../src/social/adminReads.js";
 import { banReason, isPhoneRefused } from "../src/social/bans.js";
+import { eraseMember } from "../src/social/deletion.js";
 import { getMember } from "../src/social/members.js";
 import { milestones } from "../src/social/model/schedule.js";
 import { closeReport, markContacted, OperatorRuleError } from "../src/social/operator.js";
@@ -356,6 +358,17 @@ describe("closeReport and markContacted", () => {
     expect(actions(s.t, "report_contacted")).toHaveLength(1);
     expect(reportRows(s.t)[0]).toMatchObject({ contacted_reporter_at: s.t.clock().toISOString() });
     expect(closeReport(s.t.db, pepper(s.t), reportId, "dismissed", "no case", s.t.clock())).toEqual({ ok: true, fileKeys: [] });
+  });
+
+  test("a reporter who deleted their account no longer has to be contacted, and the queue says so", async () => {
+    const s = await setup();
+    const [a, b] = s.members as [Session, Session];
+    await s.at(OPEN);
+    const { reportId } = createReportResponseSchema.parse(await (await report(s, a, b)).json());
+    expect(reportQueue(s.t.db, s.t.clock())[0]).toMatchObject({ contactRequired: true, reporterDeleted: false });
+    expect(eraseMember(s.t.db, a.memberId, { kind: "self" }, s.t.clock(), s.t.app.config.tunables).ok).toBe(true);
+    expect(reportQueue(s.t.db, s.t.clock())[0]).toMatchObject({ contactRequired: false, reporterDeleted: true, reporterPhone: null });
+    expect(closeReport(s.t.db, pepper(s.t), reportId, "dismissed", null, s.t.clock())).toEqual({ ok: true, fileKeys: [] });
   });
 
   test("every other pairing closes without the contact", async () => {

@@ -232,7 +232,8 @@ export function markContacted(db: Database, reportId: string, now: Date): Report
 export type CloseReportResult = { ok: true; fileKeys: string[] } | { ok: false; error: "not_found" | "already_closed" };
 
 /**
- * Closes a report. A report by a woman about a man is refused (throws `OperatorRuleError`) until the reporter has been contacted.
+ * Closes a report. A report by a woman about a man is refused (throws `OperatorRuleError`) until the reporter has been contacted,
+ * unless the reporter has erased their account: there is nobody left to contact.
  *
  * Upheld: the number goes on the ban list as `report_upheld` and the account is erased in the same transaction; the returned file
  * keys are for the caller to delete after the commit. Dismissed: the account goes back to what it was before the report, but only
@@ -253,7 +254,14 @@ export function closeReport(
       const report = getReport(db, reportId);
       if (report === null) return { ok: false, error: "not_found" };
       if (report.status === "closed") return { ok: false, error: "already_closed" };
-      if (report.reporter_gender === "woman" && report.subject_gender === "man" && report.contacted_reporter_at === null) {
+      const reporter = getMember(db, report.reporter_id);
+      const reporterDeleted = reporter === null || reporter.status === "deleted";
+      if (
+        report.reporter_gender === "woman" &&
+        report.subject_gender === "man" &&
+        report.contacted_reporter_at === null &&
+        !reporterDeleted
+      ) {
         throw new OperatorRuleError("contact_required", "contact the person who made this report before closing it");
       }
       const at = now.toISOString();

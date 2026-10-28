@@ -85,6 +85,7 @@ function Report({ report, done, onError }: { report: ReportCard; done: () => voi
             </ul>
           </details>
         )}
+        {report.reporterDeleted && <div className="text-sm">Reporter deleted their account.</div>}
         {report.contactRequired && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {report.contactedReporterAt === null ? (

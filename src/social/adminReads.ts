@@ -182,6 +182,8 @@ export interface ReportItem {
   body: string;
   /** A report by a woman about a man cannot be closed until the operator has been in touch with her. */
   contactRequired: boolean;
+  /** The reporter has since erased their account, so there is nobody to contact and the rule no longer applies. */
+  reporterDeleted: boolean;
   contactedReporterAt: string | null;
   reporter: PersonHistory;
   /** The reporter's number, so the operator can contact them. Null once the account is erased. */
@@ -245,7 +247,8 @@ export function reportQueue(db: Database, now: Date, limit = 100): ReportItem[] 
         minutesToDue,
         overdue: minutesToDue < 0,
         body: r.body,
-        contactRequired: r.reporter_gender === "woman" && r.subject_gender === "man",
+        contactRequired: r.reporter_gender === "woman" && r.subject_gender === "man" && reporter.status !== "deleted",
+        reporterDeleted: reporter.status === "deleted",
         contactedReporterAt: r.contacted_reporter_at,
         reporter,
         reporterPhone: phone,
