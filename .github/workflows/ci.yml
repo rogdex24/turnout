@@ -301,8 +301,9 @@ jobs:
           # 360 dp wide: device-run.sh sets 720x1520 at 320 dpi on top of this profile.
           - target: android-small
             profile: pixel_6
+          # The runner's avdmanager has no pixel_9_pro_xl profile. pixel_7_pro is the same large-phone class (6.7 inch, 1440x3120).
           - target: android-large
-            profile: pixel_9_pro_xl
+            profile: pixel_7_pro
     env:
       SERVER_URL: http://localhost:3917
       SHOT_DIR: ${{ github.workspace }}/visual-shots/${{ matrix.target }}
@@ -334,7 +335,9 @@ jobs:
       - name: Start the seeded server
         run: |
           MOBILE_SERVER_PORT=3917 bun e2e/mobile-server.ts > "$RUNNER_TEMP/mobile-server.log" 2>&1 &
-          timeout 90 bash -c 'until curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null; do sleep 1; done'
+          # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
+          for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
+          curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
       # `script` runs one line at a time. The second line is the one automatic re-run; a flow that needs it often is fixed or
       # quarantined that week (docs/plans/mobile-ci-budget.md).
       - name: Run the flows and the visual capture
@@ -424,7 +427,9 @@ jobs:
       - name: Start the seeded server
         run: |
           MOBILE_SERVER_PORT=3917 bun e2e/mobile-server.ts > "$RUNNER_TEMP/mobile-server.log" 2>&1 &
-          timeout 90 bash -c 'until curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null; do sleep 1; done'
+          # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
+          for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
+          curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
       # The second command is the one automatic re-run (see the Android job).
       - name: Run the flows and the visual capture
         run: |

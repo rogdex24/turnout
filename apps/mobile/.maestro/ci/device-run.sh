@@ -4,7 +4,7 @@
 # Needs on PATH: maestro, jq, and adb (Android) or xcrun (iOS). Environment:
 #   SERVER_URL  the seeded server as the host sees it, for example http://localhost:3917 (the job starts the server)
 #   SHOT_DIR    where the shots go, one folder per story: <story>/<theme>-<text>.png (the job uploads it as visual-shots-<target>)
-# Written for the pinned images in .github/workflows/ci.yml. It has not been run on a runner yet (docs/plans/mobile-visual-testing.md).
+# Written for the pinned images in .github/workflows/ci.yml.
 set -euo pipefail
 
 target="${1:?usage: device-run.sh <android-small|android-large|ios-small|ios-large>}"
@@ -48,12 +48,21 @@ for theme in light dark; do
     jq -c '.[]' "$here/visual/stories.json" | while read -r story; do
       folder="$(jq -r .folder <<< "$story")"
       mkdir -p "$SHOT_DIR/$folder"
+      # Maestro 2 writes a screenshot only inside its own output folder (<out>/<flow>/takeScreenshot/), so each run gets a
+      # fresh folder and the one shot is moved to $SHOT_DIR/<story>/<theme>-<text>.png afterwards.
+      out="$(mktemp -d)"
       maestro test \
+        --test-output-dir "$out" \
         -e "STORY_ID=$(jq -r .id <<< "$story")" \
         -e "READY_TEXT=$(jq -r .ready <<< "$story")" \
-        -e "SHOT=$folder/$theme-$text" \
-        -e "SHOT_DIR=$SHOT_DIR" \
         "$here/visual/capture-story.yaml" < /dev/null
+      shot="$(find "$out" -type f -name capture.png | head -n 1)"
+      if [ -z "$shot" ]; then
+        echo "no capture.png under $out for $folder/$theme-$text" >&2
+        exit 1
+      fi
+      mv "$shot" "$SHOT_DIR/$folder/$theme-$text.png"
+      rm -rf "$out"
     done
   done
 done
