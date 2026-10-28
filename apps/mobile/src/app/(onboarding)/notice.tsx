@@ -1,6 +1,6 @@
 // Board: B3.1
-import { Stub } from "@/screens/boot/Stub";
+import { NoticeScreen } from "@/screens/notice/NoticeScreen";
 
-export default function Screen() {
-  return <Stub name="notice" />;
+export default function Notice() {
+  return <NoticeScreen />;
 }
