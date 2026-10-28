@@ -2,8 +2,6 @@ import type { Database } from "bun:sqlite";
 import { NOTICE_KINDS } from "@turnout/contract/app/notices";
 import { PLAN_REASONS, PLAN_STATES } from "@turnout/contract/app/plans";
 import { TICKET_REJECT_REASONS } from "@turnout/contract/ticket";
-import { HYDERABAD_BOX, PLACED_GEOCODE_STATES } from "../catalog/venue.js";
-import { DEFAULT_TUNABLES } from "./model/tunables.js";
 
 export const MEMBER_STATUSES = ["active", "suspended", "stopped", "banned", "deleted"] as const;
 export const OTP_PURPOSES = ["sign_in", "delete_account"] as const;
@@ -292,14 +290,13 @@ CREATE INDEX IF NOT EXISTS idx_rate_bucket_window ON rate_bucket(window_start);
 ${M3_SQL}`;
 
 /**
- * The shows a group can be made for, before the clock: `listable_event` with the operator's start time applied, the venue's
- * point beside it, and every rule of `isEligible` that a WHERE clause can say. It never leaves out a show `isEligible` accepts.
- * What it cannot say is the closing time (it needs `now`) and the city-centre placeholder radius (it needs a haversine), so a
- * caller still runs `isEligible` over the row. Recreated on every migrate, with the defaults of `tunables.ts`.
+ * The catalog side of "a show a group can be made for": `listable_event` with the operator's start time applied and the venue's
+ * point beside it. It holds no group rule. Category, price, free, a confirmed start, a placed venue and the closing time are
+ * tunables, and `isEligible` (which `getEligibleShow` runs over each row) is the one place that reads them, so the view cannot
+ * drift from the tunables or from the web list's `groupEligibleClauses`. The venue is joined on the left so the view never
+ * drops a show for a rule of its own.
  */
 function eligibleShowSql(): string {
-  const t = DEFAULT_TUNABLES;
-  const categories = t.eligibleCategories.map((c) => `'${c}'`).join(", ");
   return `
 DROP VIEW IF EXISTS eligible_show;
 CREATE VIEW eligible_show AS
@@ -310,15 +307,8 @@ SELECT e.*,
   o.starts_at AS override_starts_at,
   COALESCE(o.starts_at, e.starts_at) AS effective_starts_at
 FROM listable_event e
-JOIN venue v ON v.id = e.venue_id
-LEFT JOIN start_override o ON o.event_id = e.id
-WHERE e.category IN (${categories})
-  AND e.is_free = 0
-  AND e.price_min IS NOT NULL AND e.price_min >= ${t.minPriceInr}
-  AND (e.time_kind = 'timed' OR o.event_id IS NOT NULL)
-  AND v.geocode_state IN (${PLACED_GEOCODE_STATES.map((s) => `'${s}'`).join(", ")})
-  AND v.lat BETWEEN ${HYDERABAD_BOX.minLat} AND ${HYDERABAD_BOX.maxLat}
-  AND v.lng BETWEEN ${HYDERABAD_BOX.minLng} AND ${HYDERABAD_BOX.maxLng};
+LEFT JOIN venue v ON v.id = e.venue_id
+LEFT JOIN start_override o ON o.event_id = e.id;
 `;
 }
 

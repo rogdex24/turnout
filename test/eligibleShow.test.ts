@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import { isEligible, joinUntil } from "../src/social/model/eligibility.js";
+import { isEligible } from "../src/social/model/eligibility.js";
+import { DEFAULT_TUNABLES, type Tunables } from "../src/social/model/tunables.js";
+import { getEligibleShow } from "../src/social/shows.js";
 import { memoryDb } from "./helpers.js";
 
 const NOW = new Date("2026-09-08T12:00:00Z");
@@ -95,59 +97,81 @@ function seeded() {
   return { db, all, ids };
 }
 
-test("the eligible_show view agrees with isEligible on 30 fixture shows", () => {
-  const { db, all, ids } = seeded();
-  expect(all).toHaveLength(30);
-  expect(ids.size).toBe(30);
-  const inView = new Map(
-    (db.query("SELECT id, effective_starts_at AS startsAt FROM eligible_show").all() as { id: string; startsAt: string }[]).map((row) => [
-      row.id,
-      row.startsAt,
-    ]),
-  );
-  let eligible = 0;
-  let overridden = 0;
-  for (const f of all) {
-    const id = ids.get(f.title) as string;
-    const expected = isEligible(
-      {
-        category: f.category,
-        isFree: f.isFree,
-        priceMin: f.priceMin,
-        startsAt: f.startsAt,
-        timeKind: f.timeKind,
-        venuePlaced: f.placed,
-      },
-      f.override === null ? null : { startsAt: f.override },
-      NOW,
-    );
-    // The view has no clock: what it holds, open at NOW, is what isEligible accepts.
-    const start = inView.get(id);
-    const open = start !== undefined && NOW.getTime() < Date.parse(joinUntil(start));
-    expect(open).toBe(expected.eligible);
-    if (expected.eligible) {
-      eligible++;
-      expect(start).toBe(expected.startsAt);
-      if (f.override !== null) overridden++;
+const OPEN_UP: Tunables = {
+  ...DEFAULT_TUNABLES,
+  eligibleCategories: ["comedy", "music", "theatre", "film"],
+  minPriceInr: 0,
+  joinCutoffHours: 2,
+};
+
+for (const [name, tunables] of [
+  ["the defaults", DEFAULT_TUNABLES],
+  ["tunables that open the rules up", OPEN_UP],
+] as const) {
+  test(`getEligibleShow agrees with isEligible on 30 fixture shows under ${name}`, () => {
+    const { db, all, ids } = seeded();
+    expect(all).toHaveLength(30);
+    expect(ids.size).toBe(30);
+    let eligible = 0;
+    let overridden = 0;
+    for (const f of all) {
+      const id = ids.get(f.title) as string;
+      const expected = isEligible(
+        {
+          category: f.category,
+          isFree: f.isFree,
+          priceMin: f.priceMin,
+          startsAt: f.startsAt,
+          timeKind: f.timeKind,
+          venuePlaced: f.placed,
+        },
+        f.override === null ? null : { startsAt: f.override },
+        NOW,
+        tunables,
+      );
+      const show = getEligibleShow(db, id, NOW, tunables);
+      expect(show !== null).toBe(expected.eligible);
+      if (expected.eligible) {
+        eligible++;
+        expect(show?.startsAt).toBe(expected.startsAt);
+        if (f.override !== null) overridden++;
+      }
     }
-  }
-  expect(eligible).toBeGreaterThan(4);
-  expect(overridden).toBeGreaterThan(0);
+    expect(eligible).toBeGreaterThan(4);
+    expect(overridden).toBeGreaterThan(0);
+    db.close();
+  });
+}
+
+test("the open-rules run lets in shows the default rules turn away, so the view cannot be holding the defaults", () => {
+  const { db, all, ids } = seeded();
+  const count = (t: Tunables) => all.filter((f) => getEligibleShow(db, ids.get(f.title) as string, NOW, t) !== null).length;
+  expect(count(OPEN_UP)).toBeGreaterThan(count(DEFAULT_TUNABLES));
   db.close();
 });
 
-test("the view carries the venue point and only placed venues", () => {
+test("the view carries the venue point and the operator's start for the shows listable_event holds", () => {
   const { db } = seeded();
-  const rows = db.query("SELECT venue_lat AS lat, venue_lng AS lng, venue_geocode_state AS state FROM eligible_show").all() as {
-    lat: number;
-    lng: number;
-    state: string;
-  }[];
-  expect(rows.length).toBeGreaterThan(0);
-  for (const row of rows) {
-    expect(row.lat).toBeGreaterThan(17.2);
-    expect(["resolved", "approximate", "manual"]).toContain(row.state);
-  }
+  const rows = db
+    .query(
+      "SELECT id, venue_lat AS lat, venue_geocode_state AS state, effective_starts_at AS startsAt, override_starts_at AS override FROM eligible_show",
+    )
+    .all() as { id: string; lat: number | null; state: string | null; startsAt: string; override: string | null }[];
+  expect(rows.length).toBe((db.query("SELECT COUNT(*) AS n FROM listable_event").get() as { n: number }).n);
+  expect(rows.some((r) => r.lat === null && r.state === "pending")).toBe(true);
+  for (const row of rows)
+    expect(row.startsAt).toBe(
+      row.override ?? (db.query("SELECT starts_at FROM event WHERE id = ?").get(row.id) as { starts_at: string }).starts_at,
+    );
+  db.close();
+});
+
+test("the view holds free shows, date-only shows with no override and unplaced venues too: those rules are isEligible's", () => {
+  const { db, all } = seeded();
+  const ids = new Set((db.query("SELECT id FROM eligible_show").all() as { id: string }[]).map((r) => r.id));
+  expect(all.some((f) => f.isFree && ids.has(f.id))).toBe(true);
+  expect(all.some((f) => f.timeKind === "date-only" && f.override === null && ids.has(f.id))).toBe(true);
+  expect(all.some((f) => !f.placed && ids.has(f.id))).toBe(true);
   db.close();
 });
 
@@ -155,34 +179,7 @@ test("a muted show leaves the view, like it leaves listable_event", () => {
   const { db } = seeded();
   const [row] = db.query("SELECT id FROM eligible_show LIMIT 1").all() as { id: string }[];
   expect(row).toBeDefined();
-  db.query("UPDATE event SET status = 'delisted' WHERE id = ?").run(row!.id);
-  expect(db.query("SELECT 1 FROM eligible_show WHERE id = ?").get(row!.id)).toBeNull();
-  db.close();
-});
-
-test("the view is wider than isEligible only for the city-centre placeholder point, which the caller re-checks", () => {
-  const { db } = seeded();
-  const row = db.query("SELECT id, category, price_min, starts_at FROM eligible_show WHERE override_starts_at IS NULL LIMIT 1").get() as {
-    id: string;
-    category: string;
-    price_min: number;
-    starts_at: string;
-  } | null;
-  expect(row).not.toBeNull();
-  db.query("UPDATE venue SET lat = 17.385, lng = 78.4867 WHERE id = ?").run(`venue-${row?.id}`);
-  expect(db.query("SELECT 1 FROM eligible_show WHERE id = ?").get(row?.id ?? "")).not.toBeNull();
-  const verdict = isEligible(
-    {
-      category: row?.category as string,
-      isFree: false,
-      priceMin: row?.price_min as number,
-      startsAt: row?.starts_at as string,
-      timeKind: "timed",
-      venuePlaced: false,
-    },
-    null,
-    NOW,
-  );
-  expect(verdict.eligible).toBe(false);
+  db.query("UPDATE event SET status = 'delisted' WHERE id = ?").run(row?.id ?? "");
+  expect(db.query("SELECT 1 FROM eligible_show WHERE id = ?").get(row?.id ?? "")).toBeNull();
   db.close();
 });

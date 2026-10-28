@@ -568,6 +568,6 @@ Rules the schema encodes:
 - A notice is inserted in the same transaction as the change it reports, and `dedupe_key` makes a second insert for the
   same milestone fail instead of repeating.
 - `eligible_show` is a view over `listable_event`, `venue` and `start_override`. It is dropped and recreated on every
-  migrate. It holds the group rules that SQL can express (category, price, free, a known start, a placed venue inside
-  Hyderabad) and exposes `effective_starts_at`: the override when there is one, else the source's start. It has no
-  clock and does not know the city-centre placeholder point, so a caller re-runs `isEligible` before acting.
+  migrate. It holds no group rule: it adds the venue point and `effective_starts_at` (the override when there is one, else
+  the source's start) to `listable_event`. The group rules (category, price, free, a known start, a placed venue, the
+  closing time) are tunables and live only in `isEligible`, which `getEligibleShow` runs over the row.
