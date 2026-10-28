@@ -174,7 +174,7 @@ test("group_eligible filters by what is eligible at the boundaries", async () =>
   const titles = new Set(filtered.map((e) => e.title));
   const inList = (spec: Spec) => titles.has(titleFor(Number(spec.id.slice(1))));
   const pick = (f: (s: Spec) => boolean) => all.filter(f);
-  // 498 is out, 499 is in, free and film never, date-only never (no overrides in M2), exactly T-24h is closed.
+  // 498 is out, 499 is in, free and film never, date-only only with an operator start time, exactly T-24h is closed.
   expect(pick((s) => s.priceMin === 498).some(inList)).toBe(false);
   expect(pick((s) => s.isFree).some(inList)).toBe(false);
   expect(pick((s) => s.categories[0] === "film").some(inList)).toBe(false);
@@ -182,6 +182,32 @@ test("group_eligible filters by what is eligible at the boundaries", async () =>
   expect(pick((s) => !s.placed).some(inList)).toBe(false);
   const edge = pick((s) => s.categories[0] === "comedy" && s.priceMin === 499 && s.timeKind === "timed" && s.placed);
   expect(edge.filter(inList).map((s) => s.startsAt)).toEqual([at(24 * 60 + 1), at(3 * 24 * 60)]);
+  db.close();
+});
+
+test("a date-only show becomes eligible once the operator sets a start time, unless that time is inside T-24h", async () => {
+  const { db, all } = await seeded();
+  const dateOnly = all.filter((s) => s.timeKind === "date-only" && s.placed && s.categories[0] === "comedy" && s.priceMin === 1200);
+  expect(dateOnly.length).toBeGreaterThanOrEqual(2);
+  const early = dateOnly.find((s) => s.startsAt === at(3 * 24 * 60)) as Spec;
+  const late = dateOnly.find((s) => s.startsAt === at(24 * 60 + 1)) as Spec;
+  const eventId = (spec: Spec) =>
+    (db.query("SELECT id FROM event WHERE title = ?").get(titleFor(Number(spec.id.slice(1)))) as { id: string }).id;
+  const set = (spec: Spec, startsAt: string) =>
+    db
+      .query("INSERT INTO start_override (event_id, starts_at, set_by, set_at) VALUES (?, ?, 'operator', ?)")
+      .run(eventId(spec), startsAt, NOW.toISOString());
+  const before = await listAll(db, "&to=2026-09-20&group_eligible=1");
+  expect(before.some((e) => e.title === titleFor(Number(early.id.slice(1))))).toBe(false);
+  set(early, at(5 * 24 * 60));
+  set(late, at(10 * 60));
+  const after = await listAll(db, "&to=2026-09-20");
+  const flag = (spec: Spec) => after.find((e) => e.title === titleFor(Number(spec.id.slice(1))))?.group_eligible;
+  expect(flag(early)).toBe(true);
+  expect(flag(late)).toBe(false);
+  const only = await listAll(db, "&to=2026-09-20&group_eligible=1");
+  expect(only.some((e) => e.title === titleFor(Number(early.id.slice(1))))).toBe(true);
+  expect(only.some((e) => e.title === titleFor(Number(late.id.slice(1))))).toBe(false);
   db.close();
 });
 
