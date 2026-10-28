@@ -1,9 +1,15 @@
-# A fresh install walks the Welcome cards with the Next button, then reaches the notice.
-# It is extended as the sign-in (A5) and profile (A6) screens land. Written for CI; it has not run on a device yet.
+# A fresh install walks the Welcome cards with the Next button, reads and agrees to the notice, signs in a new seeded member with the
+# code from the server's test route, and fills the profile form up to the photo. Written for CI; it has not run on a device yet.
+# The system photo picker is not scripted: choosing a picture needs a device-specific picker, so the flow checks that Save asks
+# for the photo and stops there (the photo path is covered by the Jest tests for the profile screen).
 appId: com.turnout.app.e2e
 name: onboarding
 tags:
   - onboarding
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  NEW_MEMBER: "+12025550101"
 ---
 - launchApp:
     clearState: true
@@ -26,3 +32,68 @@ tags:
     visible:
       id: notice
     timeout: 10000
+# The notice shows the grievance officer's block from the server, and Agree waits for it.
+- assertVisible: "How we use your details"
+- extendedWaitUntil:
+    notVisible: "Loading the grievance officer's details"
+    timeout: 15000
+- tapOn:
+    id: agree
+- extendedWaitUntil:
+    visible:
+      id: sign-in
+    timeout: 10000
+
+# Sign in as a member with nothing on the account yet.
+- runFlow:
+    file: ../subflows/send-code.yaml
+    env:
+      PHONE: ${NEW_MEMBER}
+- extendedWaitUntil:
+    visible:
+      id: code
+    timeout: 10000
+- runScript:
+    file: ../scripts/otp-code.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      PHONE: ${NEW_MEMBER}
+- runFlow:
+    file: ../subflows/enter-code.yaml
+    env:
+      CODE: ${output.code}
+- extendedWaitUntil:
+    visible:
+      id: profile
+    timeout: 15000
+
+# Save with nothing filled says what is missing, next to each field.
+- tapOn:
+    id: save
+- assertVisible: "Enter your first name."
+- assertVisible: "Choose one."
+- assertVisible: "Add a photo of your face to continue."
+- assertVisible: "Add your Instagram or LinkedIn."
+
+# The women-only switch appears for women and goes away for men.
+- tapOn:
+    id: first-name
+- inputText: "Ananya"
+- tapOn:
+    id: gender-woman
+- assertVisible:
+    id: women-only
+- tapOn:
+    id: gender-man
+- assertNotVisible:
+    id: women-only
+- tapOn:
+    id: gender-woman
+- tapOn:
+    id: handle
+- inputText: "https://www.instagram.com/ananya.k/"
+- assertVisible: "So we can check you're a real person. Others in your group never see it."
+- tapOn:
+    id: save
+- assertVisible: "Add a photo of your face to continue."

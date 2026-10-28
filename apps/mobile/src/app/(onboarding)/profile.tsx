@@ -1,6 +1,6 @@
 // Board: B3.2
-import { Stub } from "@/screens/boot/Stub";
+import { ProfileScreen } from "@/screens/profile/ProfileScreen";
 
 export default function Screen() {
-  return <Stub name="profile" />;
+  return <ProfileScreen />;
 }

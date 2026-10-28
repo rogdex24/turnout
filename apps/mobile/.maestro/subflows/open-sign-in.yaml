@@ -14,8 +14,12 @@ name: open sign-in
     visible:
       id: notice
     timeout: 10000
+# Agree waits for the grievance officer's details, which the server sends with /config.
+- extendedWaitUntil:
+    notVisible: "Loading the grievance officer's details"
+    timeout: 15000
 - tapOn:
-    id: notice-accept
+    id: agree
 - extendedWaitUntil:
     visible:
       id: sign-in

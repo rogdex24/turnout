@@ -3,9 +3,14 @@ import { View } from "react-native";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
 
-/** The face tile 62 by 76, the small tile 40, and the round 28 used in a pile. Sizes are from the design spec. */
-const BOX = { face: { width: 62, height: 76 }, sm: { width: 40, height: 40 }, xs: { width: 28, height: 28 } } as const;
-const SHAPE = { face: "rounded-face", sm: "rounded-field", xs: "rounded-pill" } as const;
+/** The face tile 62 by 76, the profile photo 96, the small tile 40, and the round 28 used in a pile. Sizes are from the design spec. */
+const BOX = {
+  face: { width: 62, height: 76 },
+  lg: { width: 96, height: 96 },
+  sm: { width: 40, height: 40 },
+  xs: { width: 28, height: 28 },
+} as const;
+const SHAPE = { face: "rounded-face", lg: "rounded-face", sm: "rounded-field", xs: "rounded-pill" } as const;
 
 export interface PersonAvatarProps {
   /** First name only: group surfaces never show a surname or a handle. */

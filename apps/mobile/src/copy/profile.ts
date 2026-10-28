@@ -18,7 +18,11 @@ export const profile = {
   },
   firstName: {
     label: "First name",
-    errors: { required: "Enter your first name.", tooLong: "Use 40 letters or fewer." },
+    errors: {
+      required: "Enter your first name.",
+      tooLong: "Use 40 letters or fewer.",
+      rejected: "We couldn't use that name. Try another.",
+    },
   },
   gender: {
     label: "Gender",

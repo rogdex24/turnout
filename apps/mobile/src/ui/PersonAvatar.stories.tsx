@@ -15,6 +15,7 @@ export const Sizes: Story = {
         <PersonAvatar name="Asha" />
         <PersonAvatar name="Ravi" size="sm" />
         <PersonAvatar name="Meera" size="xs" />
+        <PersonAvatar name="Kiran" size="lg" />
       </View>
     </Matrix>
   ),

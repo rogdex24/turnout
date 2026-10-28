@@ -331,3 +331,20 @@ members out whenever a response was lost on a bad network.
   (`src/api/variant.ts`) lets the development and e2e builds type a full +1 202 555 01xx seed number, the production build never does.
 - Maestro `otp-errors.yaml` waits out the 30 second resend wait, so it takes about a minute. CI passes the server's token to the
   flows as `TEST_TOKEN`, read from the seeded server's log and masked.
+- Notice (A6) is a full screen, which the board left open between a full screen and a sheet. It shows the bundled notice paragraphs
+  and takes the grievance officer's block from `/config`. Agree stays off until those details are on the screen, so nobody agrees
+  to a notice with its contact missing, and a failed load offers Try again. Signed out, agreeing stores the version on the phone;
+  signed in (the notice moved), it calls `POST /me/consent` and writes the new consent into the cached `me`, so the router moves on.
+- Profile photo (A6): no camera option and no media-library permission. The system photo picker needs none, and the
+  `expo-image-picker` plugin blocks the camera and microphone permissions. The picture is always drawn again at 1080 px on its long
+  side and saved as a new JPEG on the phone, which drops EXIF and GPS; the server draws it once more. That the saved file really
+  carries no EXIF is device-only, so that acceptance line is partial (the helper's calls are covered by a Jest test).
+- Saving the profile is a stateless sequence: profile, then photo, then handle (a new photo sends an approved handle back to review,
+  so the handle goes last). The cached `me` is updated after each call, so a retry sends only what is left, and a handle the
+  account already holds is not sent again, since that would put an approved handle back in the queue.
+- A server refusal shows next to its own field: `unsupported_type` and `file_too_large` under the photo, `handle_locked` and the
+  daily limit under the handle, a refused profile under the first name or the women-only switch. Offline, rate limits and server
+  faults with no field say so above Save.
+- The women-only switch is shown only for women and non-binary people, with the system `Switch` coloured from the tokens, and it is
+  cleared (and never sent) when the gender becomes man. `PersonAvatar` gets a 96 dp `lg` size for the profile photo.
+- The Maestro onboarding flow stops at the photo: the system picker is not scripted, so the photo path is covered by Jest tests only.
