@@ -65,6 +65,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       "expo-secure-store",
       "expo-image",
+      // The profile photo comes from the system picker, which needs no permission on Android. No camera and no microphone: both are blocked.
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "Turnout uses the photo you choose as your profile picture, so your group can find you.",
+          cameraPermission: false,
+          microphonePermission: false,
+        },
+      ],
       // The WhatsApp one-tap code: the activity WhatsApp launches and the <queries> for both WhatsApp apps. Android only.
       "./modules/whatsapp-otp/app.plugin.js",
       [
