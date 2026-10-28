@@ -1,6 +1,7 @@
 import path from "node:path";
 import { colors } from "@turnout/design-tokens/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import { androidIntentFilters, resolveLinkHost } from "./config/appLinks.ts";
 import { FONT_FAMILIES } from "./config/fonts.ts";
 import { assertReleaseEnv, parseVariant, resolveApiUrls, resolveMapsKey, VARIANT_CONFIG } from "./config/variants.ts";
 
@@ -19,6 +20,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   assertReleaseEnv(variant, env);
   const apiUrl = resolveApiUrls(variant, env);
   const mapsKey = resolveMapsKey(variant, env);
+  // App links belong to the production package that assetlinks.json names, so the other variants never claim the host.
+  const linkHost = variant === "production" ? resolveLinkHost(env) : null;
+  const intentFilters = androidIntentFilters(linkHost);
 
   // EAS fills this in `eas init`. Without it the app builds and runs, it just cannot fetch updates.
   const easProjectId = env.EAS_PROJECT_ID;
@@ -45,6 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: v.bundleId,
+      ...(intentFilters.length > 0 ? { intentFilters } : {}),
       ...(env.GOOGLE_SERVICES_JSON ? { googleServicesFile: env.GOOGLE_SERVICES_JSON } : {}),
       ...(mapsKey ? { config: { googleMaps: { apiKey: mapsKey } } } : {}),
     },
@@ -90,6 +95,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       variant,
       apiUrl,
       storybook: v.storybook,
+      ...(linkHost ? { linkHost } : {}),
       ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
     },
   };
