@@ -174,14 +174,16 @@ function quotas(counts: number[], sizes: number[], caps: number[]): number[][] |
   return gLeft.every((n) => n === 0) && sLeft.every((n) => n === 0) ? flow : null;
 }
 
+/** The most steps one `newGroups` call may take, counted over every choice of people and every placement together. */
+const SEARCH_STEPS = 60000;
+
 /** Spread the chosen people over the slots by their quotas, keeping never-pairs apart. Null when no way is found. */
-function place(chosen: PoolMember[], quota: number[][], never: ReadonlySet<string>): PoolMember[][] | null {
+function place(chosen: PoolMember[], quota: number[][], never: ReadonlySet<string>, budget: { steps: number }): PoolMember[][] | null {
   const slots = quota[0]!.map((): PoolMember[] => []);
   const left = quota.map((row) => [...row]);
-  let budget = 20000;
   const go = (at: number): boolean => {
     if (at === chosen.length) return true;
-    if (budget-- <= 0) return false;
+    if (budget.steps-- <= 0) return false;
     const who = chosen[at] as PoolMember;
     const gi = GENDERS.indexOf(who.gender);
     // The slot with the most room left first, so the groups fill evenly.
@@ -203,12 +205,15 @@ function place(chosen: PoolMember[], quota: number[][], never: ReadonlySet<strin
 /**
  * New groups from `left` (in approval order) that place the most people. Tries every split into groups of min to max,
  * the largest total first, and keeps the first one the caps allow: a group's gender cap depends on its final size, so
- * the sizes cannot be picked without looking at who is waiting. For a split, a person is taken (earliest approved first)
- * only if the chosen people can still fill the slots, which is Hall's condition per set of genders; the chosen people
- * are then dealt out by a max-flow of genders to slots.
+ * the sizes cannot be picked without looking at who is waiting. For a split, the first set of people tried is the
+ * earliest approved who can still fill the slots, which is Hall's condition per set of genders; the chosen people are
+ * then dealt out by a max-flow of genders to slots. When a never-pair stops that set being placed, the search goes on to
+ * the next set (it drops the latest chosen person for the next one waiting, and so on back to the earliest), so one
+ * pair cannot keep a group from forming. The whole call is capped at `SEARCH_STEPS`: past that it returns no groups.
  */
 function newGroups(left: PoolMember[], groupType: GroupType, never: ReadonlySet<string>, t: Tunables): PoolMember[][] {
   const { min, max } = t.groupSize;
+  const budget = { steps: SEARCH_STEPS };
   for (let total = left.length; total >= min; total--) {
     for (const sizes of splitsOf(total, min, max)) {
       const caps = sizes.map((size) => (groupType === "women_only" ? Number.POSITIVE_INFINITY : genderCap(size, t)));
@@ -218,19 +223,32 @@ function newGroups(left: PoolMember[], groupType: GroupType, never: ReadonlySet<
       })).filter((x) => x.mask > 0);
       const taken = GENDERS.map(() => 0);
       const chosen: PoolMember[] = [];
-      for (const who of left) {
-        if (chosen.length === total) break;
+      const fits = (): boolean =>
+        subsets.every(({ mask, room }) => taken.reduce((sum, n, i) => sum + (mask & (1 << i) ? n : 0), 0) <= room);
+      // One group holds everyone chosen, so a never-pair among them can be refused as soon as it shows.
+      const clashes = (who: PoolMember): boolean => sizes.length === 1 && chosen.some((m) => never.has(pairKey(m.memberId, who.memberId)));
+
+      const search = (from: number): PoolMember[][] | null => {
+        if (chosen.length === total) {
+          const quota = quotas(taken, sizes, caps);
+          return quota === null ? null : place(chosen, quota, never, budget);
+        }
+        if (left.length - from < total - chosen.length || budget.steps-- <= 0) return null;
+        const who = left[from] as PoolMember;
         const gi = GENDERS.indexOf(who.gender);
         taken[gi]!++;
-        const fits = subsets.every(({ mask, room }) => taken.reduce((sum, n, i) => sum + (mask & (1 << i) ? n : 0), 0) <= room);
-        if (fits) chosen.push(who);
-        else taken[gi]!--;
-      }
-      if (chosen.length < total) continue;
-      const quota = quotas(taken, sizes, caps);
-      if (quota === null) continue;
-      const slots = place(chosen, quota, never);
+        if (fits() && !clashes(who)) {
+          chosen.push(who);
+          const found = search(from + 1);
+          if (found !== null) return found;
+          chosen.pop();
+        }
+        taken[gi]!--;
+        return search(from + 1);
+      };
+      const slots = search(0);
       if (slots !== null) return slots;
+      if (budget.steps <= 0) return [];
     }
   }
   return [];

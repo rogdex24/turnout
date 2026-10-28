@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { Gender } from "@turnout/contract/profile";
+import { assign, neverPairSet, type PoolMember } from "../src/social/model/grouping.js";
+import { tunables } from "../src/social/model/tunables.js";
 import { neverPairsAmong } from "../src/social/neverPairs.js";
 import { tick } from "../src/social/tick.js";
 import { testApp } from "./appHelpers.js";
@@ -68,5 +71,43 @@ describe("never pairs", () => {
     const groups = [...groupsOf(t.db).values()];
     expect(groups.length).toBeGreaterThan(0);
     for (const members of groups) expect(members.includes(ids[0] as string) && members.includes(ids[1] as string)).toBe(false);
+  });
+});
+
+const GENDER_OF: Record<string, Gender> = { w: "woman", m: "man" };
+const people = (genders: string): PoolMember[] =>
+  [...genders].map((g, i) => ({
+    memberId: `m${String(i + 1).padStart(2, "0")}`,
+    gender: GENDER_OF[g] as Gender,
+    groupType: "open",
+    approvedAt: `2026-11-01T10:${String(i % 60).padStart(2, "0")}:00.000Z`,
+  }));
+
+describe("a never-pair does not stall a group", () => {
+  test("five people approved in order with m01 and m02 never paired make a group of the other four", () => {
+    const a = assign(people("wmwmw"), [], neverPairSet([["m01", "m02"]]), tunables());
+    expect(a.created).toHaveLength(1);
+    expect(a.created[0]?.memberIds.length).toBe(4);
+    expect(a.created[0]?.memberIds.includes("m01") && a.created[0]?.memberIds.includes("m02")).toBe(false);
+    expect(a.waiting).toHaveLength(1);
+  });
+
+  test("the earliest approved are still taken first when nothing clashes", () => {
+    const a = assign(people("wmwmw"), [], neverPairSet([["m04", "m05"]]), tunables());
+    expect(a.created[0]?.memberIds).toEqual(["m01", "m02", "m03", "m04"]);
+  });
+
+  test("80 people with dense never-pairs are answered within the step cap", () => {
+    const pool = people("wm".repeat(40));
+    const pairs: [string, string][] = [];
+    for (let i = 0; i < pool.length; i++)
+      for (let j = i + 1; j < Math.min(pool.length, i + 25); j++)
+        pairs.push([(pool[i] as PoolMember).memberId, (pool[j] as PoolMember).memberId]);
+    const started = performance.now();
+    const a = assign(pool, [], neverPairSet(pairs), tunables());
+    expect(performance.now() - started).toBeLessThan(3000);
+    const never = neverPairSet(pairs);
+    for (const g of a.created)
+      for (const x of g.memberIds) for (const y of g.memberIds) expect(never.has(x < y ? `${x}|${y}` : `${y}|${x}`)).toBe(false);
   });
 });
