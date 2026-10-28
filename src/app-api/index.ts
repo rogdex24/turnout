@@ -37,6 +37,12 @@ function defaultLog(entry: LogEntry): void {
 
 const TICK_MS = 60 * 1000;
 
+function fakeSender(config: AppConfig): OtpSender {
+  const sender = fakeOtpSender();
+  for (const phone of config.fakeUndeliverable) sender.undeliverablePhones.add(phone);
+  return sender;
+}
+
 /** Reads the settings (refusing to start on a bad one) and builds everything a handler needs. */
 export async function createAppContext(options: AppContextOptions): Promise<AppContext> {
   const config: AppConfig = await loadAppConfig(options.env);
@@ -53,7 +59,7 @@ export async function createAppContext(options: AppContextOptions): Promise<AppC
         : memoryStore({ now, link }));
   const sender =
     options.sender ??
-    (config.otpSender === "whatsapp" && config.whatsapp !== null ? whatsappOtpSender(config.whatsapp, fetch) : fakeOtpSender());
+    (config.otpSender === "whatsapp" && config.whatsapp !== null ? whatsappOtpSender(config.whatsapp, fetch) : fakeSender(config));
   const context: AppContext = {
     db: options.db,
     now,

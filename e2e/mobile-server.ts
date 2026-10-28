@@ -1,23 +1,47 @@
 /**
  * Seeded server for the mobile Maestro flows (`bun e2e/mobile-server.ts`): the real `serve` command on a temp SQLite file, on a free
- * port, seeded with the same fixture events as the browser tests. It prints the URL, runs until SIGINT or SIGTERM, then removes the file.
+ * port, seeded with the same fixture events as the browser tests plus the staging seed (scripts/seed-staging.ts: three shows that a
+ * group can be made for and members in every state), as a staging server: the fake sign-in sender, `--no-ticker` and the `/__test/*`
+ * routes behind a token made fresh for each run. It prints the URL and the token, runs until SIGINT or SIGTERM, then removes the files.
  * CI starts it in the background and passes the URL to the e2e build of the app.
  */
 import { Database } from "bun:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { SEED_PHONES, seedStaging, UNDELIVERABLE_PHONE } from "../scripts/seed-staging.js";
+import { diskStore } from "../src/utils/objectStore.js";
+import { openDb } from "../src/utils/openDb.js";
 import { seed } from "./server.js";
 
-/** Extra flags for `serve`. Add `--no-ticker` here when `serve` gets its in-process ticker (plan section 3, process model), so the flows control time. */
-const SERVE_FLAGS: string[] = [];
+/** `--no-ticker` keeps the background upkeep off, so the flows decide when time moves (`POST /__test/clock`). */
+const SERVE_FLAGS: string[] = ["--no-ticker"];
 
 /**
- * M2 hook (S20): the app seed (members, plans, groups) and the fake OTP and push senders. `serveEnv` is where the sender switches go,
- * for example the fake OTP sender and the staging test token. Both are empty until M2 lands.
+ * The staging settings (S20): the fake sender (it sends nothing, and the flows read the code from `POST /__test/otp`), the seed's
+ * numbers on the allowlist, its undeliverable number, the files in the temp directory and a test token made fresh for each run.
  */
-function seedApp(_file: string): void {}
-const serveEnv: Record<string, string> = {};
+function serveEnv(dir: string, testToken: string): Record<string, string> {
+  return {
+    TURNOUT_ENV: "staging",
+    OTP_SENDER: "fake",
+    STAGING_TEST_TOKEN: testToken,
+    TEST_PHONE_ALLOWLIST: SEED_PHONES.join(","),
+    FAKE_UNDELIVERABLE_PHONES: UNDELIVERABLE_PHONE,
+    FILES_DIR: path.join(dir, "files"),
+    OBJECT_STORE: "disk",
+  };
+}
+
+/** The shows and the members in every state (scripts/seed-staging.ts), with the photos written to the temp files directory. */
+async function seedApp(file: string, dir: string): Promise<void> {
+  const db = openDb(file);
+  try {
+    await seedStaging(db, diskStore({ dir: path.join(dir, "files"), link: () => "" }), new Date());
+  } finally {
+    db.close();
+  }
+}
 
 /**
  * A free port below the OS's ephemeral range (49152 and up), for the reason given in e2e/run.ts: a port picked from that range can be
@@ -36,7 +60,8 @@ function freePort(): number {
   }
 }
 
-export type MobileServer = { url: string; port: number; dbPath: string; stop: () => Promise<void> };
+/** `testToken` goes in the `x-staging-test-token` header of the `/__test/*` routes. It is new for each run and not written anywhere. */
+export type MobileServer = { url: string; port: number; dbPath: string; testToken: string; stop: () => Promise<void> };
 
 /** Seeds a temp database, starts `serve` on it and resolves once `/api/events` answers. */
 export async function startMobileServer(options: { port?: number; timeoutMs?: number } = {}): Promise<MobileServer> {
@@ -44,15 +69,16 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
   const dbPath = path.join(dir, "mobile.sqlite");
   // The real clock, so the fixture events are upcoming and show in the list.
   seed(dbPath, new Date());
-  seedApp(dbPath);
+  await seedApp(dbPath, dir);
   // The seed leaves a WAL file behind; checkpoint it so `serve`'s read-only handle sees one self-contained file.
   const db = new Database(dbPath, { strict: true });
   db.run("PRAGMA wal_checkpoint(TRUNCATE)");
   db.close();
 
+  const testToken = Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString("base64url");
   const port = options.port ?? freePort();
   const child = Bun.spawn([process.execPath, "src/cli.ts", "serve", "--db", dbPath, "--port", String(port), ...SERVE_FLAGS], {
-    env: { ...process.env, ...serveEnv },
+    env: { ...process.env, ...serveEnv(dir, testToken) },
     stdio: ["ignore", "inherit", "inherit"],
   });
   const stop = async () => {
@@ -69,7 +95,7 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
       throw new Error(`serve exited with code ${child.exitCode} before it answered`);
     }
     try {
-      if ((await fetch(`${url}/api/events?limit=1`)).ok) return { url, port, dbPath, stop };
+      if ((await fetch(`${url}/api/events?limit=1`)).ok) return { url, port, dbPath, testToken, stop };
     } catch {
       // not listening yet
     }
@@ -82,6 +108,7 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
 if (import.meta.main) {
   const server = await startMobileServer({ port: process.env.MOBILE_SERVER_PORT ? Number(process.env.MOBILE_SERVER_PORT) : undefined });
   console.log(`mobile server on ${server.url}`);
+  console.log(`STAGING_TEST_TOKEN=${server.testToken}`);
   const shutdown = async () => {
     await server.stop();
     process.exit(0);

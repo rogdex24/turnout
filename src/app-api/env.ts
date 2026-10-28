@@ -35,6 +35,8 @@ export interface AppConfig {
   /** Exact E.164 numbers outside +91 that may sign in (test phones). */
   phoneAllowlist: readonly string[];
   reviewer: { phone: string; code: string } | null;
+  /** Numbers the fake sender reports as unreachable on WhatsApp (staging and tests only). */
+  fakeUndeliverable: readonly string[];
   /** The request header that carries the client address behind the proxy, lower case; null means use the socket's address. */
   trustProxyHeader: string | null;
   minAppVersion: string;
@@ -195,6 +197,11 @@ export async function loadAppConfig(env: Env): Promise<AppConfig> {
   if (production && allowlist.some((entry) => entry !== reviewer?.phone)) {
     problems.push("TEST_PHONE_ALLOWLIST may hold only the reviewer number in production");
   }
+  const fakeUndeliverable = (clean(env.FAKE_UNDELIVERABLE_PHONES) ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  for (const entry of fakeUndeliverable) if (!E164.test(entry)) problems.push("FAKE_UNDELIVERABLE_PHONES entries must be E.164 numbers");
   const phoneAllowlist = [...new Set([...allowlist, ...(reviewer ? [reviewer.phone] : [])])];
 
   // Numbers and switches.
@@ -252,6 +259,7 @@ export async function loadAppConfig(env: Env): Promise<AppConfig> {
     otpSender,
     phoneAllowlist,
     reviewer,
+    fakeUndeliverable,
     trustProxyHeader: clean(env.TRUST_PROXY_HEADER)?.toLowerCase() ?? null,
     minAppVersion,
     support: { email: supportEmail },
