@@ -6,7 +6,7 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | Path | What it does |
 |---|---|
 | `config.yaml` | The workspace: runs `flows/*.yaml` in order |
-| `flows/launch.yaml` | A fresh install opens and shows the home screen |
+| `flows/launch.yaml` | A fresh install opens and shows the Welcome screen |
 | `flows/smoke.yaml` | Checks the seeded server answers, then does the launch check |
 | `visual/capture-story.yaml` | Opens one Storybook story and takes a screenshot (see `visual/README.md`) |
 | `scripts/expect-events.js` | Fails a flow when the seeded server does not answer |

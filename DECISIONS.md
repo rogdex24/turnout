@@ -267,3 +267,39 @@ Evidence. `test/auth.test.ts`, `test/appProfile.test.ts`, `test/objectStore.test
 Why. Each is the narrower or safer behaviour that the review asked for. None adds a package or a
 paid service. Item 1 is the one real reversal of an earlier choice: strict reuse would have signed
 members out whenever a response was lost on a bad network.
+## 2026-10-28: M2 app (A1 to A10), where the build differs from the plan or fills a gap
+
+- `onboardingStep()` returns a fourth step, `sign_in`, between the notice and the profile, so a signed-out phone that has accepted the
+  notice is held on the phone screens and cannot reach the app.
+- Signed out, the notice is "accepted" when the stored version equals `NOTICE_VERSION`. Signed in, it is `me.consent.current`.
+  Signing out clears the stored notice (the welcome flag stays), so the next person on the phone sees the notice.
+- The route guards are two levels of `Stack.Protected`: `(onboarding)` against `(app)` at the root, and one guard per step inside
+  `(onboarding)`. `(onboarding)/index.tsx` redirects `/` to the open step, because with no `/` route in that group a cold start
+  lands on `+not-found`.
+- The root layout keeps the splash up until the session, the disk cache and `/me` have answered, then keeps the last known step while
+  `/me` refetches, so a screen is never shown and then replaced. A first `/me` that fails for lack of a network ends as a retry
+  screen (the query is paused, not errored, so the gate treats a paused first load as failed). The retry marks the network as up
+  before it fetches, because the last failure marked it down and the query would stay paused.
+- Native tabs use SF Symbols and Material icons, not Phosphor (spec line 60 names Phosphor). `expo-router/native-tabs` draws the
+  platform icons itself and cannot take a React component.
+- `openPrefs` and `openCacheStore` live in `mmkvStore.ts`, because `react-native-mmkv` does not load in Jest and the other modules
+  must.
+- `me` is part of the encrypted disk cache so a start without a network still routes. The cache key is 24 random bytes held in the
+  secure store as 32 base64 characters (an AES-256 key for MMKV).
+- There is no `netinfo` package in the plan, so connectivity follows request outcomes: a call that gets no answer is offline, any
+  answer is online.
+- The OTP response has no `resendAfter` field in the contract, so the resend wait is a fixed 30 seconds, extended by `Retry-After`
+  on a 429.
+- The areas tool response has no contract schema, so the schema is local to the app (`/tools/list_areas`).
+- The persister stamps the cache buster on every write. `PersistQueryClientProvider` reads its options only when it mounts, so a
+  buster that changes with sign-in could not be passed as an option.
+- Jest maps `./x.js` to `./x` because the contract package imports its own files with the `.js` suffix.
+- `src/router.test.tsx` mocks `@/providers/boot` and the splash module and uses in-memory stores (`createTestApp`), because MMKV and
+  the native splash do not load in Jest. The test still runs the real session, API client, query client, gates and route tree.
+- The poster placeholder uses the music tone for categories that have no tone of their own.
+- Sheet is a React Native `Modal` with a drag-free layout, not `@gorhom/bottom-sheet`, because that library needs a native gesture
+  setup that cannot be checked without a device. The dependency stays listed for later.
+- The story files type their `meta` as plain `Meta` and pass `args` explicitly, because the typed helper rejects components with
+  required props.
+- A1 acceptance "system back on every pushed screen" is covered by the router test on the pushed screens that exist. The sign-in to
+  code and Home to Show cases are added with A5 and A8. The Android back gesture itself needs a device.
