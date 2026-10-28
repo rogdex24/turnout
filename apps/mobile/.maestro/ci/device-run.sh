@@ -24,6 +24,8 @@ if [ "$platform" = android ]; then
   for scale in window_animation_scale transition_animation_scale animator_duration_scale; do
     adb shell settings put global "$scale" 0
   done
+  # A cold emulator can raise an ANR dialog for the launcher over the app; the dialog is not part of what we test.
+  adb shell settings put global hide_error_dialogs 1
   adb shell settings put global sysui_demo_allowed 1
   adb shell am broadcast -a com.android.systemui.demo -e command enter > /dev/null
   adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941 > /dev/null

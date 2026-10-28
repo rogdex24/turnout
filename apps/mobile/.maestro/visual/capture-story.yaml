@@ -12,6 +12,12 @@ tags:
 - launchApp:
     clearState: true
 - openLink: turnout-e2e://storybook?story=${STORY_ID}
+# The iOS simulator asks "Open in “Turnout (e2e)”?" before it hands a custom-scheme link to the app. Android does not ask.
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
 - extendedWaitUntil:
     visible: ${READY_TEXT}
     timeout: 30000
