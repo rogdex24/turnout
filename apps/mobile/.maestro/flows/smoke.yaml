@@ -1,0 +1,21 @@
+# Smoke flow against the seeded server (`bun e2e/mobile-server.ts`, see .maestro/README.md).
+# SERVER_URL is the address of that server as the machine running Maestro sees it, for example http://localhost:3917.
+# The app reaches the same server through the address baked into the e2e build (10.0.2.2 on Android, localhost on iOS).
+appId: com.turnout.app.e2e
+name: smoke
+tags:
+  - smoke
+env:
+  SERVER_URL: http://localhost:3917
+---
+- runScript:
+    file: ../scripts/expect-events.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 30000
+- assertVisible: "Turnout"

@@ -15,7 +15,7 @@ const web = files("src/web");
 test("the lint guards for the UI are configured", () => {
   const config = JSON.parse(fs.readFileSync("biome.json", "utf8"));
   const plugins = config.plugins.map((p: { path: string }) => p.path);
-  expect(plugins).toEqual(["./lint/no-html-strings.grit", "./lint/no-history-writes.grit"]);
+  expect(plugins).toEqual(["./lint/no-html-strings.grit", "./lint/no-color-literals.grit", "./lint/no-history-writes.grit"]);
   expect(config.linter.rules.security.noDangerouslySetInnerHtml).toBe("error");
   expect(config.linter.rules.correctness.useHookAtTopLevel).toBe("error");
 });

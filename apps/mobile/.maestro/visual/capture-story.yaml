@@ -1,0 +1,19 @@
+# Opens one Storybook story in the e2e build and photographs it. One run, one shot.
+# Run by path with these variables (the device job also sets the theme and the text size on the device first):
+#   maestro test -e STORY_ID=screens-home--placeholder -e READY_TEXT=Turnout -e SHOT=home/dark-largest \
+#     -e SHOT_DIR=/tmp/visual-shots apps/mobile/.maestro/visual/capture-story.yaml
+# The shot lands in $SHOT_DIR/$SHOT.png, which is `<story>/<theme>-<text>.png` and matches the baseline layout in
+# docs/plans/mobile-visual-testing.md. The job creates $SHOT_DIR/<story> beforehand.
+appId: com.turnout.app.e2e
+name: capture story
+tags:
+  - visual
+---
+- launchApp:
+    clearState: true
+- openLink: turnout-e2e://storybook?story=${STORY_ID}
+- extendedWaitUntil:
+    visible: ${READY_TEXT}
+    timeout: 30000
+- waitForAnimationToEnd
+- takeScreenshot: ${SHOT_DIR}/${SHOT}

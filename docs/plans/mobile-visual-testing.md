@@ -49,10 +49,18 @@ apps/mobile/.maestro/visual/baselines/<target>/<story>/<theme>-<text>.png
 For example `apps/mobile/.maestro/visual/baselines/android-small/events-list/dark-largest.png`.
 `<story>` is one folder name per Storybook story, lower case with hyphens.
 
-`apps/mobile` does not exist yet (the scaffold waits until 2026-10-29 19:40 UTC), so the folder
-is created by the first snapshot. The path is fixed in three places that must change together:
-`.gitattributes`, `.lfsconfig` and `DEFAULT_BASELINES_DIR` in `scripts/visual-accept.ts`.
-No PNG is committed in Week 1.
+`apps/mobile` exists now, but the `baselines` folder is still created by the first accepted
+snapshot, because no emulator was available when F20 was written. The path is fixed in three
+places that must change together: `.gitattributes`, `.lfsconfig` and `DEFAULT_BASELINES_DIR` in
+`scripts/visual-accept.ts`. No PNG is committed yet.
+
+The capture side is in the app. `apps/mobile/.maestro/visual/stories.json` lists the stories to
+shoot (`folder`, Storybook `id`, and the text that shows when the story is ready),
+`apps/mobile/.maestro/visual/capture-story.yaml` takes one shot, and
+`apps/mobile/.maestro/ci/device-run.sh <target>` loops the themes and text sizes and leaves
+`<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` passes with a
+notice while a target has no baseline. The one story today is `screens-home--placeholder`
+(folder `home`); the events list story in the example above comes with M2.
 
 ### Git LFS
 
