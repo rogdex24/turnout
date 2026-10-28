@@ -33,7 +33,7 @@ compares them with the baselines at threshold 0.1. The baselines are PNGs in Git
 
 | Part | Values |
 |---|---|
-| Target | `android-small` (360 dp, 720x1520 at 320 dpi), `android-large` (Pixel 9 Pro XL class), `ios-small` (iPhone SE, 3rd generation), `ios-large` (Pro Max) |
+| Target | `android-small` (360 dp, 720x1520 at 320 dpi), `android-large` (Pixel 7 Pro profile, the large-phone class), `ios-small` (iPhone SE, 3rd generation), `ios-large` (Pro Max) |
 | Theme | `light`, `dark` |
 | Text | `default`, `largest` (Android font scale 2.0, iOS `accessibility-extra-extra-extra-large`) |
 

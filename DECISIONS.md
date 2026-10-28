@@ -209,3 +209,22 @@ Deviations from the plan and choices made while scaffolding:
 
 Caveats. The Maps checks, the first baseline accept and every account-dependent step are listed in
 `docs/plans/mobile-accounts.md` under "Needs owner" and "First CI run".
+
+## 2026-10-28: first run of the mobile device jobs
+
+Decision. The four device jobs failed on their first runner run, after the scaffold PR merged. Five fixes:
+
+- The iOS jobs waited for the seeded server with `timeout`, which macOS runners do not have. The wait is now a bounded loop, and
+  the Android jobs use the same loop.
+- Maestro 2 refuses a `takeScreenshot` path outside its own output folder. Each capture now runs with a fresh
+  `--test-output-dir`, and `device-run.sh` moves the shot to `$SHOT_DIR/<story>/<theme>-<text>.png`, so the baseline layout
+  does not change.
+- The runner's avdmanager has no `pixel_9_pro_xl` profile. `android-large` uses `pixel_7_pro`, the same large-phone class.
+- On the iOS simulator, a custom-scheme link opens the system alert "Open in “Turnout (e2e)”?". `capture-story.yaml` taps
+  Open when the alert is there.
+- The cold `pixel_7_pro` emulator showed "Pixel Launcher isn't responding" over the app. `device-run.sh` sets
+  `hide_error_dialogs`, and `launch.yaml` taps Wait if the dialog still shows.
+
+Evidence. The failed run is https://github.com/rogdex24/turnout/actions/runs/40613582365. `android-small` passed both flows
+before the screenshot step, so the app, the e2e build and the seeded server work on a device. The last two fixes come from
+https://github.com/rogdex24/turnout/actions/runs/40617294502.

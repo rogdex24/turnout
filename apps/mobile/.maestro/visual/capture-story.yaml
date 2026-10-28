@@ -1,9 +1,9 @@
 # Opens one Storybook story in the e2e build and photographs it. One run, one shot.
 # Run by path with these variables (the device job also sets the theme and the text size on the device first):
-#   maestro test -e STORY_ID=screens-home--placeholder -e READY_TEXT=Turnout -e SHOT=home/dark-largest \
-#     -e SHOT_DIR=/tmp/visual-shots apps/mobile/.maestro/visual/capture-story.yaml
-# The shot lands in $SHOT_DIR/$SHOT.png, which is `<story>/<theme>-<text>.png` and matches the baseline layout in
-# docs/plans/mobile-visual-testing.md. The job creates $SHOT_DIR/<story> beforehand.
+#   maestro test --test-output-dir /tmp/out -e STORY_ID=screens-home--placeholder -e READY_TEXT=Turnout \
+#     apps/mobile/.maestro/visual/capture-story.yaml
+# Maestro 2 keeps screenshots inside its output folder, so the shot lands at <out>/<flow>/takeScreenshot/capture.png.
+# ci/device-run.sh moves it to $SHOT_DIR/<story>/<theme>-<text>.png, the baseline layout in docs/plans/mobile-visual-testing.md.
 appId: com.turnout.app.e2e
 name: capture story
 tags:
@@ -12,8 +12,14 @@ tags:
 - launchApp:
     clearState: true
 - openLink: turnout-e2e://storybook?story=${STORY_ID}
+# The iOS simulator asks "Open in “Turnout (e2e)”?" before it hands a custom-scheme link to the app. Android does not ask.
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
 - extendedWaitUntil:
     visible: ${READY_TEXT}
     timeout: 30000
 - waitForAnimationToEnd
-- takeScreenshot: ${SHOT_DIR}/${SHOT}
+- takeScreenshot: capture
