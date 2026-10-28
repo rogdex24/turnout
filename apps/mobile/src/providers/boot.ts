@@ -2,6 +2,8 @@ import Constants from "expo-constants";
 import { apiBaseUrl } from "../api/baseUrl";
 import { openCacheStore, openPrefs } from "../api/mmkvStore";
 import { secureStore } from "../api/secureStorage";
+import { createStubWhatsAppOtp } from "../api/whatsappOtp";
+import { createWhatsAppOtp } from "../api/whatsappOtpNative";
 import { type AppDeps, createAppDeps } from "./deps";
 
 let booting: Promise<AppDeps> | null = null;
@@ -26,5 +28,7 @@ async function start(): Promise<AppDeps> {
     cacheStore,
     origin: apiBaseUrl(),
     appVersion: Constants.expoConfig?.version ?? "0.0.0",
+    // The e2e build runs against a fake sender with no WhatsApp on the device, so it takes the stub and the codes come from the test route.
+    whatsappOtp: Constants.expoConfig?.extra?.variant === "e2e" ? createStubWhatsAppOtp({ installed: true }) : createWhatsAppOtp(),
   });
 }

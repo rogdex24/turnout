@@ -7,6 +7,7 @@ import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
 import type { SecretStore } from "../api/secureStorage";
+import { createStubWhatsAppOtp, type WhatsAppOtp } from "../api/whatsappOtp";
 import { createLocalFlags, type LocalFlags } from "./localFlags";
 
 /** Everything the screens reach through context. Built once at start by `bootApp`, or by tests from in-memory parts. */
@@ -20,6 +21,7 @@ export interface AppDeps {
   buster: string;
   prefs: KeyValueStore;
   localFlags: LocalFlags;
+  whatsappOtp: WhatsAppOtp;
   appVersion: string;
 }
 
@@ -31,6 +33,8 @@ export interface DepParts {
   origin: string;
   transport?: Transport;
   appVersion: string;
+  /** The native handshake on Android. Left out, a stub does nothing and the code is typed or pasted. */
+  whatsappOtp?: WhatsAppOtp;
   queryClient?: QueryClient;
   now?: () => number;
 }
@@ -72,6 +76,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     buster: cacheBuster(appVersion, session.getState().userId),
     prefs,
     localFlags,
+    whatsappOtp: parts.whatsappOtp ?? createStubWhatsAppOtp(),
     appVersion,
   };
 }

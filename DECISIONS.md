@@ -311,3 +311,13 @@ members out whenever a response was lost on a bad network.
   device.
 - `jest.setup.ts` mocks `react-native-safe-area-context` with the library's own Jest mock, so any screen that reads insets renders in
   a test without a provider.
+- WhatsApp one-tap (A5) uses Meta's `whatsapp-otp-android-sdk` 0.2.0, not 1.0.0. The 0.2.0 line gives the handshake id back through
+  `processOtpCode`, so the app can drop a code that belongs to an earlier send. The module is a local Expo module in
+  `apps/mobile/modules/whatsapp-otp` with a plain JavaScript config plugin (Expo loads plugins with no build step). Its Kotlin code
+  could not be compiled or run here, so one-tap on a real phone is partial.
+- On iOS and in the e2e build the module is a stub. The stub reports WhatsApp as installed in the e2e build, and `null` (maybe) on iOS,
+  which the screens treat as "maybe installed". The e2e codes come from the `__test/otp` route.
+- `expo-clipboard` 58.0.3 is added for the Paste action on the code screen.
+- Jest `roots` now include `modules`, so the config plugin test runs under `bun run check`.
+- The code screen's "Not there yet?" and the resend wait are two clocks: the prompt shows 60 seconds after the send, or when the
+  resend wait ends if that is later, and Send again stays off until the resend wait ends.

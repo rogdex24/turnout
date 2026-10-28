@@ -65,6 +65,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       "expo-secure-store",
       "expo-image",
+      // The WhatsApp one-tap code: the activity WhatsApp launches and the <queries> for both WhatsApp apps. Android only.
+      "./modules/whatsapp-otp/app.plugin.js",
       [
         "expo-build-properties",
         {

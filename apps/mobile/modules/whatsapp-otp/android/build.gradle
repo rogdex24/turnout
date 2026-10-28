@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.turnout.whatsappotp'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.whatsappotp"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // Meta's SDK for the WhatsApp one-tap and zero-tap code handshake. Pinned: 0.2.0 is the line that returns the handshake id.
+  implementation "com.whatsapp.otp:whatsapp-otp-android-sdk:0.2.0"
+}

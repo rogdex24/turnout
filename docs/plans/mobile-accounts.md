@@ -124,6 +124,7 @@ owner can do, and what stays off until it is done. Status values are as above.
 | Maps key and SHA-1s | Create the restricted key as in "Maps key restriction", then add the SHA-1 rows after the first EAS build | A working map on the `dev`, `preview` and production builds | needs owner |
 | `google-services.json` | Create the Firebase project `turnout-push` when M3 starts and add the file as an EAS file variable | Android push | needs owner (M3) |
 | Sentry and PostHog | Open both accounts and give the engineer the project keys through EAS variables. The packages are installed and not initialised | Error reports and analytics | needs owner (M2) |
+| WhatsApp one-tap sign-in | In the Meta authentication template, add the one-tap autofill button with the Android package name and the 11 character signature hash of each signing key (`apps/mobile/scripts/app-hash.sh` prints it). The Play app-signing key hash is only known once the first Play build is uploaded. Steps are in `docs/mobile/whatsapp-autofill.md` | One-tap code fill on a real phone. Typing and paste work without it | needs owner |
 | Icons and store assets | Provide the app icon, the adaptive icon foreground and the splash mark. The scaffold has none, so `expo prebuild` uses the Expo defaults | Preview and store builds. Play listing assets are F25 | needs owner |
 | Git LFS on the repository | Confirm Git LFS is enabled for the GitHub repository and that its bandwidth allowance covers the visual baselines | `visual-compare.sh` once baselines exist | needs owner |
 
