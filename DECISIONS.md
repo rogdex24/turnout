@@ -373,3 +373,19 @@ members out whenever a response was lost on a bad network.
   the library's own timer.
 - Maestro `browse.yaml` uses the seeded members 0104 (approved handle), 0102 (pending) and 0103 (rejected). It is written for CI and
   has not run on a device. The visual capture story moved from `screens-home--placeholder` to `screens-home--loaded`.
+
+## 2026-10-28: Expo patch pins follow the SDK, Metro resolves the contract's `.js` imports
+
+`mobile-health` failed on PR 15 because Expo published new SDK 58 patches the same day, and
+`expo install --check` compares against what Expo expects now. Thirteen modules in
+`apps/mobile/package.json` moved to the expected patch, still pinned exactly, with the 14-day rule
+waived as for the scaffold. `expo` and `jest-expo` stay excluded.
+
+`build-android` and `build-ios` failed because Metro could not resolve `./category.js` from
+`packages/contract/events.ts`. The contract imports its siblings with a `.js` suffix, which tsc and
+Bun map to the `.ts` file and Metro does not. `apps/mobile/metro.config.js` now retries a relative
+`.js` import from inside `packages/contract` without the suffix. Everything else resolves as before.
+
+Why. A patch release inside the SDK is what Expo tests against, and holding the old pin leaves CI
+red until Renovate's 14-day window passes. The resolver keeps the contract valid ESM for the server
+without a build step for the app.

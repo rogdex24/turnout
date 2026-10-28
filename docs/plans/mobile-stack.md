@@ -32,7 +32,7 @@ Versions that did not qualify, kept so nobody bumps to them by hand before the a
 | Framework | `react` | 19.3.0 | 2026-09-09 | https://www.npmjs.com/package/react | installed (root, web) |
 | Package age | `minimumReleaseAge` in `bunfig.toml` | 1209600 | n/a | https://bun.com/docs/runtime/bunfig | planned (workspaces stream) |
 | Workspaces | `bun` | 1.4.3 | 2026-10-10 | https://docs.expo.dev/guides/monorepos/ | installed |
-| Navigation | `expo-router` | 58.0.27 (planned 58.0.19) | 2026-10-14 | https://docs.expo.dev/router/introduction/ | installed (`apps/mobile`) |
+| Navigation | `expo-router` | 58.0.28 (planned 58.0.19) | 2026-10-14 | https://docs.expo.dev/router/introduction/ | installed (`apps/mobile`) |
 | Components | `@react-native-reusables/cli`, components vendored into `src/ui/primitives` | 0.7.1 (candidate) | 2026-03-14 | https://reactnativereusables.com | planned |
 | Styling | `uniwind` | 1.12.2 (candidate, F8 decides) | 2026-10-05 | https://docs.uniwind.dev | installed (`apps/mobile`); F8 below |
 | Styling | `tailwindcss` | 4.3.3 | 2026-07-16 | https://www.npmjs.com/package/tailwindcss | installed (root, web) |
@@ -47,7 +47,7 @@ Versions that did not qualify, kept so nobody bumps to them by hand before the a
 | Sign-in channel | WhatsApp authentication template, Meta Cloud API, Graph API | v26.0 | n/a | https://developers.facebook.com/docs/whatsapp/cloud-api/ | planned (S28) |
 | Autofill | `com.whatsapp.otp:whatsapp-otp-android-sdk`, wrapped by the local Expo module `whatsapp-otp` | 1.0.0 | 2026-03-26 | https://central.sonatype.com/artifact/com.whatsapp.otp/whatsapp-otp-android-sdk | planned |
 | Maps | `react-native-maps` | 1.29.11 | 2026-09-27 | https://docs.expo.dev/versions/v58.0.0/sdk/map-view/ | installed (`apps/mobile`) |
-| Push | `expo-notifications` | 58.1.6 (planned 58.1.4) | 2026-10-14 | https://docs.expo.dev/versions/v58.0.0/sdk/notifications/ | installed (`apps/mobile`) |
+| Push | `expo-notifications` | 58.1.7 (planned 58.1.4) | 2026-10-14 | https://docs.expo.dev/versions/v58.0.0/sdk/notifications/ | installed (`apps/mobile`) |
 | Push | Firebase project `turnout-push` on Spark (FCM V1) | n/a | n/a | https://firebase.google.com/pricing | planned (M3) |
 | Icons | `phosphor-react-native` | 3.0.6 | 2026-04-23 | https://www.npmjs.com/package/phosphor-react-native | installed (`apps/mobile`) |
 | Icons | `react-native-svg` | 15.16.0 (candidate, Expo pins) | 2026-10-15 | https://docs.expo.dev/versions/v58.0.0/sdk/svg/ | installed (`apps/mobile`) |
@@ -162,3 +162,9 @@ Checks on 2026-10-28:
   newer patches are younger than the 14-day rule, so `apps/mobile/package.json` lists the two in
   `expo.install.exclude`. That keeps `mobile-health` green and hides nothing else. Remove the
   exclusion when Renovate bumps both (`DECISIONS.md`, 2026-10-28).
+- `mobile-health` checks against the SDK 58 versions Expo publishes now, not the ones at scaffold
+  time. On 2026-10-28 Expo shipped a patch for thirteen modules (`expo-clipboard`, `expo-constants`,
+  `expo-dev-client`, `expo-font`, `expo-image`, `expo-image-manipulator`, `expo-linking`,
+  `expo-location`, `expo-notifications`, `expo-router`, `expo-splash-screen`, `expo-system-ui`,
+  `expo-updates`), and the job failed until the exact pins moved to them. Those bumps waive the
+  14-day rule like the scaffold did.
