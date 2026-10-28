@@ -52,7 +52,8 @@ PRs need approval to run, and nothing runs `pull_request_target` with PR code.
 | `STAGING_TEST_TOKEN` | Staging host environment only | The production route table | Guards `POST /__test/otp` and `POST /__test/clock` |
 | `OPERATOR_ALERT_WEBHOOK_URL`, `GRIEVANCE_*` | Host environment | The repo | Production refuses to start without `GRIEVANCE_*` |
 | `REVIEWER_PHONE`, `REVIEWER_OTP` | Host environment, and Play Console app access | The repo | For Google's review; values are given by the user on Wed 11-11 |
-| `APP_LINKS_ANDROID_SHA256` | Host environment | n/a | The Play App Signing SHA-256; not secret, set after the first Play upload |
+| `APP_LINKS_ANDROID_PACKAGE`, `APP_LINKS_ANDROID_SHA256`, `APP_LINKS_IOS_APP_IDS` | Host environment | n/a | Feed `/.well-known/assetlinks.json`. The package is `com.turnout.app`; the SHA-256 is the Play App Signing one, not secret, set after the first Play upload (needs owner). The iOS ids stay empty until the Apple account exists |
+| `APP_LINKS_HOST` | EAS environment variable (plain text), production build only | n/a | The `go.<domain>` host the Android intent filter claims. Unset means no filter, and links work only through the `turnout://` scheme (needs owner: pick the domain and point `go.<domain>` DNS at the server) |
 | `SENTRY_DSN` | Host environment for the server | The repo | |
 | `EXPO_PUBLIC_SENTRY_DSN` | EAS environment variable (plain text) | The repo | The app's Sentry key. It is a client key, not a secret, but it stays out of the repo so each environment has its own |
 | `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_POSTHOG_HOST` | EAS environment variables (plain text) | The repo | The PostHog project key and region host. Also a client key |
