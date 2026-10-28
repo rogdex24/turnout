@@ -57,3 +57,12 @@ export function ticketAsked(prefs: KeyValueStore): boolean {
 export function markTicketAsked(prefs: KeyValueStore): void {
   prefs.set(PREF_KEYS.ticketAsked, "1");
 }
+
+/** The "group confirmed" buzz and animation play once per plan, the first time the person sees that state. */
+export function confirmedPlayed(prefs: KeyValueStore, planId: string): boolean {
+  return prefs.getString(`confirmedPlayed:${planId}`) === "1";
+}
+
+export function markConfirmedPlayed(prefs: KeyValueStore, planId: string): void {
+  prefs.set(`confirmedPlayed:${planId}`, "1");
+}

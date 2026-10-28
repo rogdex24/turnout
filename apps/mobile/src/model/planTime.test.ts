@@ -1,4 +1,4 @@
-import { hasPassed, isRevealed, istDay, istShort, istTime, istWhen, toIstLocal } from "./planTime";
+import { hasPassed, isRevealed, istClock, istDay, istShort, istTime, istWhen, revealFor, toIstLocal } from "./planTime";
 
 describe("Indian time", () => {
   test("shifts a UTC instant by 5 hours 30 minutes", () => {
@@ -41,5 +41,23 @@ describe("the reveal", () => {
   test("stays closed for a time it cannot read", () => {
     expect(isRevealed(new Date(), "later")).toBe(false);
     expect(hasPassed(new Date(), "later")).toBe(false);
+  });
+});
+
+describe("moments said the way people say them", () => {
+  const revealAt = "2026-10-30T11:30:00.000Z";
+  test("the time alone on the same Indian day, the weekday too on another", () => {
+    expect(istClock(revealAt, new Date("2026-10-30T04:00:00Z"))).toBe("5:00 PM");
+    expect(istClock(revealAt, new Date("2026-10-28T09:00:00Z"))).toBe("Fri 5:00 PM");
+  });
+
+  test("compares days on the Indian clock, not the phone's", () => {
+    // 19:00 UTC on the 29th is already 12:30 AM on the 30th in India.
+    expect(istClock(revealAt, new Date("2026-10-29T19:00:00Z"))).toBe("5:00 PM");
+  });
+
+  test("the reveal is 3 hours before the show", () => {
+    expect(revealFor("2026-10-30T14:30:00.000Z")).toBe(revealAt);
+    expect(revealFor("soon")).toBeNull();
   });
 });

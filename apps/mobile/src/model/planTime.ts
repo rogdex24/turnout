@@ -35,3 +35,16 @@ export function hasPassed(now: Date, instant: string): boolean {
   const ms = Date.parse(instant);
   return !Number.isNaN(ms) && now.getTime() >= ms;
 }
+
+/** A moment as people say it: "4:00 PM" when it falls on today's Indian date, else "Sat 4:00 PM". */
+export function istClock(instant: string, now: Date): string {
+  return istDay(instant) === istDay(now.toISOString()) ? istTime(instant) : istShort(instant);
+}
+
+const REVEAL_BEFORE_SHOW_MS = 3 * 60 * 60_000;
+
+/** When the names and the cafe open for a show that starts at `startsAt`: 3 hours before. The server's own `revealAt` wins once there is a group. */
+export function revealFor(startsAt: string): string | null {
+  const ms = Date.parse(startsAt);
+  return Number.isNaN(ms) ? null : new Date(ms - REVEAL_BEFORE_SHOW_MS).toISOString();
+}
