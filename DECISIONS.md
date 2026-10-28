@@ -574,3 +574,144 @@ patch name makes `bun install` fail loudly if the version moves under it.
   entitlement, the simulator keychain answered expo-secure-store with -34018 and the app opened on the start-failed screen.
   `ci/build-ios.sh` now signs to run locally (`CODE_SIGN_IDENTITY=-`, no team) and logs the entitlements. The native cache key
   gains `signed` so the unsigned cached build is not repacked again.
+
+## 2026-10-28: M3 server, where the build differs from the plan or fills a gap
+
+Context. The plan's section 4 M3 server tasks (S7 to S11, S15a, S19, S24) against the section 5
+contract and the section 6 rules. Each item below is a choice the plan did not settle or a place
+the build differs from it.
+
+1. **Alerts that must fire once use `alert_sent`.** The handle alert, the no-cafe alerts and the
+   other one-time operator alerts record a key in `alert_sent` with `INSERT OR IGNORE`, so a restart
+   or a second ticker does not repeat them. Notices use their own unique `dedupe_key`.
+2. **The `eligible_show` view holds no group rule.** It is `listable_event` with the operator's start
+   time and the venue's point. `isEligible` runs over each row with the tunables and the clock, so the
+   single 404 holds for a show past T-24h, free, not placed or unlisted. (Changed in the review round
+   below; the first version baked the default tunables into the view.)
+3. **A device is linked to the session that registered it.** `device.session_id` lets sign-out
+   remove that device's token. `revokeAllSessions` deletes the member's devices, so a reuse of a
+   refresh token also stops the pushes.
+4. **A plan needs only a pending or approved handle.** A member with a pending handle can make a
+   plan and send a ticket; the grouping pass skips anyone whose handle is not approved. A rejected
+   or missing handle is `handle_required`.
+5. **`plan_exists` carries `planId`,** so the app can open the plan it already has.
+6. **`lock_lapsed` picks its reason from where the plan stopped.** A plan with no group at T-24h
+   ends as `no_group`; the reason depends on the ticket and handle state at that moment, and the
+   ticker writes the `no_group` notice once (`dedupe_key` `no_group:<plan>`).
+7. **Never-pairs are stubbed until M4.** The grouping input has the field and the pass honors it; no
+   code fills it yet.
+8. **A ticket's `sha256` is of the original upload bytes,** with no re-encode, so the same file
+   sent for two plans is flagged as a duplicate in the admin queue.
+9. **A member who joins a group to refill it gets no notice to the existing members.** The size
+   shown in the group response changes; nothing is pushed about it.
+10. **A start-time change updates the plan and open-group snapshots** and is refused with 409
+    `too_late` inside T-24h and `group_locked` once a group has locked.
+11. **A withdrawn or called-off plan sets `group_id` to null,** so the plan stops pointing at a
+    group the member can no longer see. The `group_member` row keeps `left_at`.
+12. **The tick runs in a fixed order** (withdraw members who are gone, lock groups, lapse plans at
+    T-24h, grouping per show, reveal, head-over notices, finish shows, operator alerts) and the lease
+    is released after each pass (`finishLease`), not held across the 30 s gap, so a second process
+    can take over.
+13. **The pending-handle queue sorts by the earliest lock,** then by submit time.
+14. **Test tickets are built in code,** not read from a binary fixture file.
+15. **A member photo key is shared across groups.** The key is the profile's, so the same photo
+    link serves every group the member is in; links are still signed and short lived.
+16. **A ticket retry is idempotent.** Sending the same bytes again for a plan that already holds
+    that file answers 200 with the same ticket instead of a duplicate row.
+17. **`PUSH_SENDER` and `EXPO_ACCESS_TOKEN`.** `fake` or `expo`; production always uses `expo` and
+    refuses `fake`. The token is optional. Push goes after the commit that made the notice.
+18. **Housekeeping runs on each ticker pass** and each sweep is cheap and idempotent: expired OTP
+    rows, sessions, rate buckets, `push_delivery` and notices past retention, `alert_sent` and
+    `operator_action` past their windows. Ticket files due for deletion (T+24h) are dropped from the
+    store by the ticker, and the row keeps no key or hash. The orphan sweep now covers `tickets/` as well as
+    `photos/`.
+19. **`POST /__test/clock` takes an optional `tick`,** so a staging test can move time and run the
+    passes in one call.
+20. **`ErrorExtra`.** `app-api/errors.ts` lets an error body carry one extra field the app needs
+    next to `code` and `message` (for example `planId` on `plan_exists`).
+21. **`POST /plans` answers 201** and `GET /shows/:publicId` returns only a live plan in `plan`.
+22. **`/health` probes a write and reports the ticker's age,** so a stuck ticker is visible to the
+    uptime check without a separate route.
+23. **The app files route never serves `tickets/`.** A ticket file is for the operator only; the
+    key is a 404 there whatever the signature.
+24. **The admin opens ticket files and handle photos through its own signed routes.** The admin
+    cannot import `app-api` (dependency rules), so `src/admin/files.ts` signs and checks 5 minute
+    links with the same `FILE_LINK_SECRET` and opens the same store (`OBJECT_STORE`, `FILES_DIR` or
+    `S3_*`). A signed GET skips the bearer token but keeps the loopback Host check. Images are inline;
+    everything else is an attachment, with `nosniff` and a sandbox policy. With the secret unset or
+    `memory`, no link is made and the queues still work. The handle photo link opens only a pending
+    handle's photo.
+25. **The admin ticket and handle decisions use a two click confirm,** and a reject needs one of the
+    fixed reasons from the contract. A decision on something already decided, or past T-24h, shows
+    the server's 409 message.
+26. **Admin writes for tickets, handles, start times and cafes all go through `operator.ts`.** The
+    `operator_action` row is written in the same transaction. `AGENTS.md` now says "from M3" where
+    it said "from M4".
+
+Evidence. `test/socialPlans.test.ts`, `test/socialTick.test.ts`, `test/appPlans.test.ts`,
+`test/appTickets.test.ts`, `test/appGroups.test.ts`, `test/appNotices.test.ts`,
+`test/appPush.test.ts`, `test/appTicker.test.ts`, `test/appHousekeeping.test.ts`,
+`test/adminSocial.test.ts`, `test/appAuthz.test.ts`.
+
+Why. Each fills a gap the plan left, or applies a layering rule (item 24) that the plan did not
+foresee. None adds a package or a paid service.
+
+## 2026-10-28: M3 server, review round for PR 13
+
+Decision. A security review and a logic review of the M3 server each rated it medium risk. Each item
+below is fixed with a test.
+
+1. **Grouping looks at genders when it picks sizes.** It chose sizes first, so nine women and three
+   men placed six people instead of twelve. New groups now try every split of the waiting people into
+   groups of 4 to 6, largest total first, and keep the first split the caps allow. A property test
+   compares the placed count with a brute force search on mixed pools of up to 14.
+2. **Admin writes refuse another site.** The approve routes read no body, so a cross-site form POST to
+   the loopback panel passed. Without a token, every write needs a same-origin `Origin` or
+   `Sec-Fetch-Site`.
+3. **A signed admin file link passes in token mode,** and the admin and app links sign different
+   text, so one kind of link cannot be made from the other.
+4. **The reveal closes** `revealCloseHours` (24) after the start; the group route then answers the
+   single 404. `meetMinutesBefore` and `threadCloseHoursAfterStart` are tunables too.
+5. **Name, gender and photo are locked while the member is in a group** (409 `profile_locked`, as for
+   the handle), so the women-only rule and the photo review cannot be undone after placement.
+6. **Ticket uploads count attempts first.** `rate.ticketAttemptPerMemberHour` (60) is taken before the
+   body is read. The per-plan and per-day limits stay, so a retry of the same file is still free.
+7. **Notices are claimed before they are pushed,** so two passes cannot push one notice twice.
+8. **An operator alert is recorded as sent only after it went out,** and the handle alert is keyed by
+   show, so a failed send is retried and two shows do not share one alert.
+9. **`eligible_show` holds no group rule** (item 2 of the entry above).
+10. **`createPlan` and `addTicket` take the write lock first** (an immediate transaction). Two requests
+    for one show line up, and the one that loses answers `plan_exists` with the winner's `planId`.
+11. **`/health` checks the write lock at most every 5 seconds,** and device registration is limited to
+    20 an hour per member (`rate.deviceRegisterPerMemberHour`).
+
+Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminServer.test.ts`,
+`test/adminSocial.test.ts`, `test/appGroups.test.ts`, `test/schedule.test.ts`, `test/appProfile.test.ts`,
+`test/socialPlans.test.ts`, `test/socialPush.test.ts`, `test/socialTick.test.ts`,
+`test/appTicker.test.ts`, `test/appNotices.test.ts`, `test/eligibleShow.test.ts`.
+
+Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
+service.
+
+## 2026-10-28: M3 app, A14 to A16 (push, meet card, web link)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The push routing hook is in `src/providers`,** not `src/app`, because `routes-are-entry` forbids route files from holding logic. The route files stay thin.
+2. **An e2e-only link, `turnout-e2e://push?kind=..&noticeId=..&planId=..`,** stands in for a tap on a push, because a real push needs a Play-signed build and a Firebase key. The link filter lets it through in the e2e variant only; any other build goes Home.
+3. **The thread and morning-after kinds open the plan** (Home when there is no plan). Those screens are M4. The meet card kinds open `/groups/<groupId>/meet`.
+4. **The push permission is asked only after the person has a plan.** A12 can call `registerDevice` with `mayAsk` when it lands.
+5. **iOS skips registration** (GET /config says push is off) and `enableRemoteNotifications` is false for iOS in `app.config.ts`.
+6. **No notification icon asset is in the repo.** The owner adds a 96x96 white-on-transparent icon.
+7. **The persisted query prefixes include `["group"]`,** so the meet card opens offline with the last cafe and members.
+8. **The venue pin comes from the show, not the group.** GET /groups/:id has the cafe's pin but not the venue's, so the card finds the plan that holds the group in GET /plans, then reads the public show for the venue. That is kept on disk as `["group", id, "context"]` and also supplies the plan id for Leave. Suggested for the server: add the venue's `lat` and `lng` to the revealed group answer, which removes two requests.
+9. **The phone's clock decides** when "I'm here" is on (T-90m to T+60m) and when the location watch runs. The server clock test hook does not move the phone, so `loop-meet.yaml` says the phone's clock has to be aligned.
+10. **The check-in is retried only after a bad connection or a busy server.** A refusal (409 outside the window) does not change on a second try, so `registerReplayable` takes a retry rule and the check-in passes `retryCheckin`.
+11. **No cafe photo,** because the API has none. The Report and group chat cards of the design are left out: they are M4.
+12. **The static map is not to scale.** It is two token-coloured pins on a plain card, for builds with no map. `showsRealMap`: the e2e variant never has the map; iOS draws Apple Maps and needs no key; Android needs `GOOGLE_MAPS_ANDROID_API_KEY` (`extra.hasMapsKey` is true when it is set).
+13. **Safety has two rows:** Call 112 and Leave this plan. Leave opens `/plans/<planId>/cancel`, which `app-m3-plans` builds.
+14. **A16: the website reads `APP_LINKS_HOST` and `PLAY_STORE_URL`.** With no host there is no "Go with a group" link. Until the Play URL is set the fallback page shows "The app is in testing on Android" with a contact link, and the Play badge is a text button. `/e/<id>/go` is served by the site itself. `SiteOptions.supportEmail` feeds "Contact us".
+15. **`router.test.tsx` scripts GET /config and GET /plans by default,** because the signed-in layout now reads both.
+16. **`loop-meet.yaml` is tagged `needs-group-seed` and excluded in `config.yaml`,** because the seed has no plan and group rows for the `meet_card_live` member yet. Neither Maestro flow has run on a device.
+
+Evidence. `src/model/walk.test.ts`, `meetWindow.test.ts`, `meetCard.test.ts`, `src/api/groups.test.ts`, `notifications.test.ts`, `src/providers/useMeetLocation.test.tsx`, `useNotificationRouting.test.tsx`, `src/screens/meet/*.test.tsx`, `test/appLinks.test.ts`, and the Playwright cases in `e2e/`.
