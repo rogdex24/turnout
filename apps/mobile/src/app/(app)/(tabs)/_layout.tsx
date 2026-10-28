@@ -1,15 +1,22 @@
 // Board: B16.1
+
+import { useQuery } from "@tanstack/react-query";
 import { typography } from "@turnout/design-tokens";
 import { NativeTabs } from "expo-router/native-tabs";
+import { plansListQuery } from "@/api/plans";
 import { nav } from "@/copy/nav";
+import { badgeCount } from "@/model/plan";
+import { useApi } from "@/providers/hooks";
 import { useColors } from "@/ui/theme";
 
 /**
  * Three native tabs: Shows, Plans, You. They are the system's own tab bar, so they take SF Symbols on iOS and Material symbols on
- * Android, not the Phosphor icons used inside screens.
+ * Android, not the Phosphor icons used inside screens. The Plans tab carries a count of the plans that are waiting on the person.
  */
 export default function TabsLayout() {
   const colors = useColors();
+  const api = useApi();
+  const waiting = badgeCount(useQuery(plansListQuery(api)).data?.plans ?? []);
   return (
     <NativeTabs
       backgroundColor={colors.surface}
@@ -28,6 +35,7 @@ export default function TabsLayout() {
       <NativeTabs.Trigger name="plans">
         <NativeTabs.Trigger.Icon sf={{ default: "calendar.badge.checkmark", selected: "calendar.badge.checkmark" }} md="event_available" />
         <NativeTabs.Trigger.Label>{nav.tabs.plans}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Badge hidden={waiting === 0}>{String(waiting)}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="you">
         <NativeTabs.Trigger.Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} md="account_circle" />

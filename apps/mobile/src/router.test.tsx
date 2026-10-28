@@ -6,6 +6,7 @@ import { areasBody, eventPage, SHOWS, showDetailFixture } from "@/api/showFixtur
 import { json } from "@/api/testing";
 import { common } from "@/copy/common";
 import { you } from "@/copy/you";
+import { PLANS } from "@/model/planFixtures";
 import { releaseSplash } from "@/providers/splash";
 import { createTestApp, meFixture, type TestApp, type TestAppOptions } from "@/providers/testing";
 
@@ -15,12 +16,13 @@ let mockApp: TestApp;
 jest.mock("@/providers/boot", () => ({ bootApp: () => Promise.resolve(mockApp.deps) }));
 
 async function launch(options: TestAppOptions, initialUrl = "/") {
-  mockApp = await createTestApp(options);
+  // The tab bar and Home both read the person's plans; none unless a test says otherwise.
+  mockApp = await createTestApp({ ...options, routes: { "GET /plans": json(200, { plans: [] }), ...options.routes } });
   await renderRouter("./src/app", { initialUrl });
 }
 
 const on = (testID: string) => waitFor(() => expect(screen.getByTestId(testID)).toBeOnTheScreen());
-const SCREENS = ["welcome", "notice", "sign-in", "profile", "home", "show", "plans", "you", "start-failed"];
+const SCREENS = ["welcome", "notice", "sign-in", "profile", "home", "show", "plans", "plan", "you", "start-failed"];
 /** Only this screen is on show: no other step's screen sits under it or flashed before it. */
 const onlyOpen = (open?: string) => {
   for (const id of SCREENS) if (id !== open) expect(screen.queryByTestId(id)).not.toBeOnTheScreen();
@@ -141,6 +143,30 @@ describe("signed in", () => {
     await on("plans");
     await act(() => router.navigate("/you"));
     await on("you");
+  });
+
+  test("a plan opens from the Plans tab, and system back returns to the tab", async () => {
+    const plan = PLANS.finding_group;
+    await launch({ me: meFixture(), routes: { "GET /plans": json(200, { plans: [plan] }), [`GET /plans/${plan.id}`]: json(200, plan) } });
+    await on("home");
+    await act(() => router.navigate("/plans"));
+    await fireEvent.press(await screen.findByTestId(`plan-row-${plan.id}`));
+    await on("plan");
+    expect(screen).toHavePathname(`/plans/${plan.id}`);
+    onlyOpen("plan");
+    await act(() => router.back());
+    await on("plans");
+  });
+
+  test("the leave sheet opens over the plan and Stay returns to it", async () => {
+    const plan = PLANS.finding_group;
+    await launch({ me: meFixture(), routes: { [`GET /plans/${plan.id}`]: json(200, plan) } });
+    await on("home");
+    await act(() => router.push(`/plans/${plan.id}`));
+    await fireEvent.press(await screen.findByTestId("plan-leave"));
+    await fireEvent.press(await screen.findByTestId("cancel-stay"));
+    await on("plan");
+    expect(screen).toHavePathname(`/plans/${plan.id}`);
   });
 
   test("an onboarding screen is not reachable once the account is ready", async () => {
