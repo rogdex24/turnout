@@ -21,7 +21,8 @@ export const BAN_REASONS = ["report_upheld", "downvote_stop", "operator"] as con
 const list = (values: readonly string[]) => values.map((v) => `'${v}'`).join(", ");
 
 const M4_SQL = `-- M4: thread, feedback, reports and the ban list.
--- Ids are ULIDs, so id order is time order and GET /groups/:groupId/messages?after= pages on it. member_ref is the sender's name
+-- Ids are ULIDs, so id order is time order and GET /groups/:groupId/messages?after= pages on it. postMessage gives each new message an id
+-- above the group's newest, so a message stored late never lands behind a cursor a reader already holds. member_ref is the sender's name
 -- inside the group, copied here so the row still reads after the membership row is gone.
 CREATE TABLE IF NOT EXISTS message (
   id TEXT PRIMARY KEY,

@@ -281,7 +281,7 @@ A thread message. Nobody outside the group reads it, and it is never written to 
 
 | Column | What | Why | Who sees it | How long |
 | --- | --- | --- | --- | --- |
-| `message.id` | Message id (ULID) | Orders the thread and pages `?after=` | Members of the group | 30 days after the show, longer while a report on the group is open |
+| `message.id` | Message id (ULID) | Orders the thread and pages `?after=` (always above the group's newest id when stored) | Members of the group | 30 days after the show, longer while a report on the group is open |
 | `message.group_id` | The group | The thread belongs to one group | Server | Same |
 | `message.member_id` | The sender | Lets the sender's own messages be marked and deleted with the account | Server; never in a response about someone else | Same, or until the sender is deleted |
 | `message.member_ref` | The sender's name inside the group | Co-members see the sender by it | Members of the group | Same |

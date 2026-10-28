@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
 import { messageListResponseSchema, messageSchema } from "@turnout/contract/app/thread";
-import { deleteExpiredMessages } from "../src/social/thread.js";
+import { deleteExpiredMessages, listMessages, postMessage } from "../src/social/thread.js";
 import type { Session } from "./helpers/appFixture.js";
 import { type Setup, setup } from "./helpers/groupFixture.js";
 
@@ -176,6 +176,39 @@ describe("GET /groups/:groupId/messages", () => {
     expect(rest.messages.map((m) => m.body)).toEqual(Array.from({ length: 20 }, (_, i) => `text ${100 + i}`));
     expect(first.messages.slice(0, 2).map((m) => m.isYou)).toEqual([true, false]);
     expect((await read(s, me, `?after=${"x".repeat(41)}`)).status).toBe(400);
+  });
+});
+
+describe("the ?after= cursor", () => {
+  test("a message stored late with an earlier clock reading still comes after the cursor", async () => {
+    const s = await setup();
+    await s.at(-2 * HOUR);
+    const [me, other] = s.members as [Session, Session];
+    const now = s.t.clock();
+    const earlier = new Date(now.getTime() - 5000);
+    // A reader takes the cursor after the first message. The second post read its clock before the first was stored, but commits after it.
+    const first = postMessage(s.t.db, s.groupId, me.memberId, say("first", "client-first-1"), now);
+    const cursor = (first.ok ? first.message.id : "") as string;
+    const second = postMessage(s.t.db, s.groupId, other.memberId, say("second", "client-second-1"), earlier);
+    expect(second.ok && second.message.id > cursor).toBe(true);
+    const page = listMessages(s.t.db, s.groupId, me.memberId, cursor, now);
+    expect(page.ok && page.messages.map((m) => m.body)).toEqual(["second"]);
+    const all = listMessages(s.t.db, s.groupId, me.memberId, undefined, now);
+    expect(all.ok && all.messages.map((m) => m.body)).toEqual(["first", "second"]);
+  });
+
+  test("two messages that read the same millisecond keep the order they were stored in", async () => {
+    const s = await setup();
+    await s.at(-2 * HOUR);
+    const [me, other] = s.members as [Session, Session];
+    const now = s.t.clock();
+    const ids = [
+      postMessage(s.t.db, s.groupId, me.memberId, say("one", "client-same-1"), now),
+      postMessage(s.t.db, s.groupId, other.memberId, say("two", "client-same-2"), now),
+      postMessage(s.t.db, s.groupId, me.memberId, say("three", "client-same-3"), new Date(now.getTime() - 1)),
+    ].map((r) => (r.ok ? r.message.id : ""));
+    expect([...ids].sort()).toEqual(ids);
+    expect(new Set(ids).size).toBe(3);
   });
 });
 

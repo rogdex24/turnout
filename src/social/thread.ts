@@ -1,5 +1,5 @@
 import type { Database } from "bun:sqlite";
-import { ulid } from "../utils/ulid.js";
+import { ulidAfter } from "../utils/ulid.js";
 import { addMinutes } from "./dates.js";
 import { currentMembers, getGroupForMember } from "./groups.js";
 import { canPostThread, canReadThread, type ThreadWindow, threadWindow } from "./model/threadWindow.js";
@@ -121,7 +121,10 @@ export function postMessage(
         if (existing.group_id !== groupId) return { ok: false, error: "client_id_reused" };
         return { ok: true, message: messageByClientId(db, groupId, memberId, input.clientId) as ThreadMessage, created: false };
       }
-      const id = ulid(now);
+      // `now` was read before the body arrived, so another post may have been stored since with a later id. The cursor is the id, so a
+      // new message must sort after the group's newest (the transaction is immediate: nobody else writes between this read and the insert).
+      const newest = db.query("SELECT MAX(id) AS id FROM message WHERE group_id = ?").get(groupId) as { id: string | null };
+      const id = ulidAfter(newest.id ?? "", now);
       db.query("INSERT INTO message (id, group_id, member_id, member_ref, client_id, body, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
         id,
         groupId,

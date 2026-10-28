@@ -35,7 +35,7 @@ export const messageSchema = z.object({
 });
 export type Message = z.infer<typeof messageSchema>;
 
-/** GET /groups/:groupId/messages?after=<id>: up to 100 newer messages, oldest first. */
+/** GET /groups/:groupId/messages?after=<id>: up to 100 newer messages, oldest first. A message stored later always has a larger id, so the last id read is a safe cursor. */
 export const messageListQuerySchema = z.object({ after: z.string().min(1).max(40).optional() }).strict();
 export const messageListResponseSchema = z.object({
   messages: z.array(messageSchema),
