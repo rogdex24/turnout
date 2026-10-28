@@ -1,20 +1,39 @@
 import type { HandleRejectReason } from "@turnout/contract/profile";
 import { HourglassMedium, Info } from "phosphor-react-native";
-import { View } from "react-native";
+import { useEffect, useRef } from "react";
+import { AccessibilityInfo, Platform, View } from "react-native";
 import { profileCheck } from "@/copy/profileCheck";
 import { Icon } from "./primitives/Icon";
 import { Text } from "./primitives/Text";
 import { TextButton } from "./primitives/TextButton";
 
-export type ProfileCheckStripProps = { state: "pending" } | { state: "rejected"; reason: HandleRejectReason | null; onChange: () => void };
+export type ProfileCheckStripProps = (
+  | { state: "pending" }
+  | { state: "rejected"; reason: HandleRejectReason | null; onChange: () => void }
+) & {
+  /** Say the strip out loud as it first appears, for a strip that appears because the person just changed their handle. */
+  announceOnMount?: boolean;
+};
+
+/** The sentence a strip shows: one per state, and for a turned-down handle one per reason. */
+export function checkMessage(props: ProfileCheckStripProps): string {
+  return props.state === "rejected" ? profileCheck.rejected[props.reason ?? "unknown"] : profileCheck.pending;
+}
 
 /**
  * The strip under the area pills while the handle is being checked or was turned down. Neutral and raised, never red. The check
- * never blocks a route, so the strip is information with at most one way forward. It is announced politely when it appears.
+ * never blocks a route, so the strip is information with at most one way forward. A handle that is approved has no strip: there is
+ * nothing to say. A change of state is said once: Android reads the live region, iOS has none, so it is announced there.
  */
 export function ProfileCheckStrip(props: ProfileCheckStripProps) {
   const rejected = props.state === "rejected";
-  const message = rejected ? profileCheck.rejected[props.reason ?? "unknown"] : profileCheck.pending;
+  const message = checkMessage(props);
+  const said = useRef<string | null>(props.announceOnMount ? null : message);
+  useEffect(() => {
+    if (said.current === message) return;
+    said.current = message;
+    if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
+  }, [message]);
   return (
     <View
       accessible={!rejected}

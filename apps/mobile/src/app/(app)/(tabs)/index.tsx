@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <HomeScreen
       onOpenShow={(publicId) => router.push({ pathname: "/show/[publicId]", params: { publicId } })}
-      onChangeHandle={() => router.push("/settings/profile")}
+      onChangeHandle={() => router.push("/settings/social")}
     />
   );
 }

@@ -13,7 +13,7 @@ const CLOCK_EVERY_MS = 60_000;
 
 export interface HomeScreenProps {
   onOpenShow: (publicId: string) => void;
-  /** Opens the profile form so a handle that was turned down can be changed. */
+  /** Opens the Instagram or LinkedIn page so a handle that was turned down can be changed. */
   onChangeHandle: () => void;
 }
 
