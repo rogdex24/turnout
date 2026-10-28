@@ -46,6 +46,8 @@ const deliveries = (t: TestApp) =>
     status: string;
     error_code: string | null;
   }[];
+const claimedAt = (t: TestApp, id: string) =>
+  (t.db.query("SELECT claimed_at FROM notice WHERE id = ?").get(id) as { claimed_at: string | null }).claimed_at;
 const deviceOff = (t: TestApp, id: string) =>
   (t.db.query("SELECT disabled_at FROM device WHERE id = ?").get(id) as { disabled_at: string | null }).disabled_at;
 
@@ -121,9 +123,39 @@ describe("pushes", () => {
     expect(pushState(t, id)).toBe("pending");
     expect(deliveries(t)).toEqual([]);
     expect(t.logs.some((l) => l.method === "TICK" && l.route === "push")).toBe(true);
+    expect(claimedAt(t, id)).toBeNull();
     t.push.unreachable = false;
     t.clock.advance(30_000);
     await pass(t);
+    expect(pushState(t, id)).toBe("sent");
+    expect(t.push.sent).toHaveLength(1);
+  });
+
+  test("a second holder after the lease ran out does not send a notice the first is still sending", async () => {
+    const t = await testApp();
+    const a = await memberSession(t, 0);
+    await register(t, a, TOKEN_A);
+    const id = notice(t, a);
+    let release: () => void = () => {};
+    const stuck = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const real = t.app.push.send.bind(t.app.push);
+    let calls = 0;
+    t.app.push.send = async (messages) => {
+      calls += 1;
+      if (calls === 1) await stuck;
+      return real(messages);
+    };
+    const first = runTickerPass(t.app, "holder-one");
+    await Bun.sleep(20);
+    expect(pushState(t, id)).toBe("sending");
+    expect((await runTickerPass(t.app, "holder-two")).ran).toBe(false);
+    t.db.query("DELETE FROM scheduler_lease").run();
+    expect((await runTickerPass(t.app, "holder-two")).ran).toBe(true);
+    expect(calls).toBe(1);
+    release();
+    await first;
     expect(pushState(t, id)).toBe("sent");
     expect(t.push.sent).toHaveLength(1);
   });

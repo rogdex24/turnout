@@ -4,7 +4,7 @@ import { ulid } from "../utils/ulid.js";
 import { addMinutes } from "./dates.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 
-export type NoticePushState = "pending" | "sent" | "stale" | "no_device" | "not_sent";
+export type NoticePushState = "pending" | "sending" | "sent" | "stale" | "no_device" | "not_sent";
 
 export interface NoticeRow {
   id: string;
@@ -17,6 +17,7 @@ export interface NoticeRow {
   read_at: string | null;
   stale_after: string;
   push_state: NoticePushState;
+  claimed_at: string | null;
   pushed_at: string | null;
 }
 

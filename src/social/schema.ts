@@ -13,7 +13,7 @@ export const HANDLE_ROW_STATUSES = ["pending", "approved", "rejected"] as const;
 export const CONSENT_PURPOSES = ["service"] as const;
 export const GROUP_ROW_STATES = ["confirmed", "locked", "live", "done", "called_off", "dissolved"] as const;
 export const TICKET_STATUSES = ["pending", "approved", "rejected"] as const;
-export const NOTICE_PUSH_STATES = ["pending", "sent", "stale", "no_device", "not_sent"] as const;
+export const NOTICE_PUSH_STATES = ["pending", "sending", "sent", "stale", "no_device", "not_sent"] as const;
 export const PUSH_DELIVERY_STATUSES = ["ticketed", "delivered", "failed", "device_gone"] as const;
 export const DEVICE_PLATFORMS = ["android", "ios"] as const;
 
@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS notice (
   -- After this instant the notice is listed but no longer pushed.
   stale_after TEXT NOT NULL,
   push_state TEXT NOT NULL DEFAULT 'pending' CHECK (push_state IN (${list(NOTICE_PUSH_STATES)})),
+  claimed_at TEXT,
   pushed_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_notice_member ON notice(member_id, id);

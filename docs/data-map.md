@@ -211,7 +211,8 @@ An in-app notice. The push, if any, carries only the kind and two ids.
 | `notice.created_at` | When it was made | Ordering and the stale rule | The member | 30 days |
 | `notice.read_at` | When the app marked it read | Unread badge | The member | 30 days |
 | `notice.stale_after` | When a push for it stops being useful | Past it the notice is listed but not pushed | Server | 30 days |
-| `notice.push_state` | `pending`, `sent`, `stale`, `no_device` or `not_sent` | Sends each push once | Server, operator | 30 days |
+| `notice.push_state` | `pending`, `sending`, `sent`, `stale`, `no_device` or `not_sent` | Sends each push once | Server, operator | 30 days |
+| `notice.claimed_at` | When a ticker pass took the notice to send it | Stops a second pass sending it again while the first is still at it | Server | 30 days |
 | `notice.pushed_at` | When the push was handed to Expo | Audit | Server | 30 days |
 
 ### `push_delivery`

@@ -1,5 +1,13 @@
 import { NOTICE_PUSH_TEXT } from "@turnout/contract/app/notices";
-import { expireReceipts, type PushResult, planPushes, receiptsDue, recordPushResults, recordReceipt } from "../social/pushes.js";
+import {
+  expireReceipts,
+  type PushResult,
+  planPushes,
+  receiptsDue,
+  recordPushResults,
+  recordReceipt,
+  releaseClaims,
+} from "../social/pushes.js";
 import { acquireLease, finishLease, TICK_LEASE, tick } from "../social/tick.js";
 import { dueTicketFiles, markTicketFileDeleted } from "../social/tickets.js";
 import type { AppContext } from "./context.js";
@@ -22,10 +30,10 @@ function logFailure(app: AppContext, step: string, error: unknown): void {
   });
 }
 
-/** Sends the pending notices. A send that cannot reach the push service leaves them pending, to be tried again until they go stale. */
+/** Sends the pending notices, claimed first so a second holder does not send them too. A send that cannot reach the push service releases the claims and leaves them pending, to be tried again until they go stale. */
 async function sendPushes(app: AppContext, now: Date): Promise<void> {
   const platforms = (["android", "ios"] as const).filter((p) => app.config.push[p]);
-  const plan = planPushes(app.db, now, platforms);
+  const plan = planPushes(app.db, now, platforms, app.config.tunables.ticker.leaseSeconds);
   const messages: PushMessage[] = [];
   const owners: { noticeId: string; deviceId: string }[] = [];
   for (const { notice, devices } of plan.jobs) {
@@ -43,7 +51,13 @@ async function sendPushes(app: AppContext, now: Date): Promise<void> {
     }
   }
   if (messages.length === 0) return;
-  const answers = await app.push.send(messages);
+  let answers: Awaited<ReturnType<typeof app.push.send>>;
+  try {
+    answers = await app.push.send(messages);
+  } catch (error) {
+    releaseClaims(app.db, [...new Set(owners.map((o) => o.noticeId))]);
+    throw error;
+  }
   const byNotice = new Map<string, PushResult[]>();
   answers.forEach((answer, index) => {
     const owner = owners[index];
@@ -54,6 +68,10 @@ async function sendPushes(app: AppContext, now: Date): Promise<void> {
     byNotice.set(owner.noticeId, [...(byNotice.get(owner.noticeId) ?? []), result]);
   });
   for (const [noticeId, results] of byNotice) recordPushResults(app.db, noticeId, results, now);
+  releaseClaims(
+    app.db,
+    owners.map((o) => o.noticeId).filter((id) => !byNotice.has(id)),
+  );
 }
 
 /** Reads the receipts Expo has by now, once each, and switches off devices that are gone. */

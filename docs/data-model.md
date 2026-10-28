@@ -544,7 +544,7 @@ column is added to a table here and not there.
 | `ticket_proof` | `plan_id`, `object_key` (never returned by an app route), `mime`, `bytes`, `sha256`, `status`, `reject_reason`, review fields, `file_deleted_at` | The file: until review ends or 24 h after the show starts. The row: until the plan is deleted |
 | `group_member` | Group, member, plan, the opaque `member_ref`, `joined_at`, `left_at`, `checked_in_at` | Until deletion |
 | `device` | Member, the session that registered it, `expo_token` (unique), `platform`, `disabled_at` | Until sign-out, a failed receipt or deletion |
-| `notice` | ULID id, member, `kind`, plan, group, a unique `dedupe_key`, `read_at`, `stale_after`, `push_state` | 30 days |
+| `notice` | ULID id, member, `kind`, plan, group, a unique `dedupe_key`, `read_at`, `stale_after`, `push_state`, `claimed_at` | 30 days |
 | `push_delivery` | Notice, device, the Expo ticket id, `status`, `error_code`, receipt time | 30 days |
 | `operator_action` | Action name, subject type and id, short detail, time | 1 year |
 | `scheduler_lease` | Lease name, holder, expiry, last tick | One row per lease |

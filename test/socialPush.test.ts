@@ -16,6 +16,7 @@ import { memoryDb } from "./helpers.js";
 
 const NOW = new Date("2026-11-01T06:00:00Z");
 const MIN = 60_000;
+const LEASE = 60;
 const after = (ms: number) => new Date(NOW.getTime() + ms);
 
 function setup() {
@@ -100,19 +101,19 @@ test("a pending notice becomes a job for the member's sending devices", () => {
   const { db, memberId, sessionId } = setup();
   const d = registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
   const id = notice(db, memberId, "a");
-  const plan = planPushes(db, after(MIN), ["android"]);
+  const plan = planPushes(db, after(MIN), ["android"], LEASE);
   expect(plan.skipped).toEqual([]);
   expect(plan.jobs.map((j) => [j.notice.id, j.devices.map((x) => x.id)])).toEqual([[id, [d.id]]]);
   expect(recordPushResults(db, id, [{ deviceId: d.id, ticketId: "t1", errorCode: null, gone: false }], after(MIN))).toBe("sent");
   expect(getNotice(db, id)).toMatchObject({ push_state: "sent", pushed_at: after(MIN).toISOString() });
-  expect(planPushes(db, after(2 * MIN), ["android"]).jobs).toEqual([]);
+  expect(planPushes(db, after(2 * MIN), ["android"], LEASE).jobs).toEqual([]);
 });
 
 test("a member on iOS only gets the notice in the list and no send", () => {
   const { db, memberId, sessionId } = setup();
   registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "ios", now: NOW });
   const id = notice(db, memberId, "a");
-  expect(planPushes(db, after(MIN), ["android"])).toEqual({ jobs: [], skipped: [{ noticeId: id, state: "not_sent" }] });
+  expect(planPushes(db, after(MIN), ["android"], LEASE)).toEqual({ jobs: [], skipped: [{ noticeId: id, state: "not_sent" }] });
   expect(getNotice(db, id)?.push_state).toBe("not_sent");
   expect(listNotices(db, memberId, undefined)).toHaveLength(1);
 });
@@ -120,15 +121,15 @@ test("a member on iOS only gets the notice in the list and no send", () => {
 test("a member with no device is closed as no_device", () => {
   const { db, memberId } = setup();
   const id = notice(db, memberId, "a");
-  expect(planPushes(db, after(MIN), ["android"]).skipped).toEqual([{ noticeId: id, state: "no_device" }]);
+  expect(planPushes(db, after(MIN), ["android"], LEASE).skipped).toEqual([{ noticeId: id, state: "no_device" }]);
 });
 
 test("a notice past its time is closed as stale and not sent, yet still listed", () => {
   const { db, memberId, sessionId } = setup();
   registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
   const id = notice(db, memberId, "late", "head_over");
-  expect(planPushes(db, after(19 * MIN), ["android"]).jobs).toHaveLength(1);
-  const plan = planPushes(db, after(20 * MIN), ["android"]);
+  expect(planPushes(db, after(19 * MIN), ["android"], LEASE).jobs).toHaveLength(1);
+  const plan = planPushes(db, after(20 * MIN), ["android"], LEASE);
   expect(plan.jobs).toEqual([]);
   expect(plan.skipped).toEqual([{ noticeId: id, state: "stale" }]);
   expect(listNotices(db, memberId, undefined).map((n) => n.id)).toEqual([id]);
@@ -151,7 +152,7 @@ test("when Expo refuses and the device is gone, the device is switched off and t
   expect(failed).toBe("pending");
   expect(getDevice(db, d1.id)?.disabled_at).not.toBeNull();
   expect(getDevice(db, d2.id)?.disabled_at).toBeNull();
-  expect(planPushes(db, after(3 * MIN), ["android"]).jobs[0]?.devices.map((d) => d.id)).toEqual([d2.id]);
+  expect(planPushes(db, after(3 * MIN), ["android"], LEASE).jobs[0]?.devices.map((d) => d.id)).toEqual([d2.id]);
   expect(
     recordPushResults(db, id, [{ deviceId: d2.id, ticketId: null, errorCode: "DeviceNotRegistered", gone: true }], after(3 * MIN)),
   ).toBe("no_device");
@@ -193,4 +194,44 @@ test("the push record holds the notice, the device and Expo's answer, nothing fr
   const { db } = setup();
   const columns = (db.query("PRAGMA table_info(push_delivery)").all() as { name: string }[]).map((c) => c.name);
   expect(columns).toEqual(["id", "notice_id", "device_id", "expo_ticket_id", "status", "error_code", "created_at", "receipt_checked_at"]);
+});
+
+test("a notice being sent is claimed, so a second planner does not pick it up again", () => {
+  const { db, memberId, sessionId } = setup();
+  registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
+  const id = notice(db, memberId, "a");
+  expect(planPushes(db, after(MIN), ["android"], LEASE).jobs).toHaveLength(1);
+  expect(getNotice(db, id)).toMatchObject({ push_state: "sending", claimed_at: after(MIN).toISOString() });
+  expect(planPushes(db, after(MIN + 30_000), ["android"], LEASE).jobs).toEqual([]);
+});
+
+test("a claim older than the lease is taken again, so a send that died is retried", () => {
+  const { db, memberId, sessionId } = setup();
+  registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
+  const id = notice(db, memberId, "a");
+  planPushes(db, after(MIN), ["android"], LEASE);
+  expect(planPushes(db, after(MIN + LEASE * 1000 - 1), ["android"], LEASE).jobs).toEqual([]);
+  expect(planPushes(db, after(MIN + LEASE * 1000), ["android"], LEASE).jobs.map((j) => j.notice.id)).toEqual([id]);
+  expect(getNotice(db, id)?.claimed_at).toBe(after(MIN + LEASE * 1000).toISOString());
+});
+
+test("a claimed notice that goes stale while it waits is closed, not sent", () => {
+  const { db, memberId, sessionId } = setup();
+  registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
+  const id = notice(db, memberId, "late", "head_over");
+  planPushes(db, after(MIN), ["android"], LEASE);
+  const plan = planPushes(db, after(20 * MIN), ["android"], LEASE);
+  expect(plan).toEqual({ jobs: [], skipped: [{ noticeId: id, state: "stale" }] });
+});
+
+test("a send that got no ticket releases the claim so the next pass tries again", () => {
+  const { db, memberId, sessionId } = setup();
+  const d = registerDevice(db, { memberId, sessionId, expoToken: token(1), platform: "android", now: NOW });
+  const id = notice(db, memberId, "a");
+  planPushes(db, after(MIN), ["android"], LEASE);
+  expect(recordPushResults(db, id, [{ deviceId: d.id, ticketId: null, errorCode: "MessageRateExceeded", gone: false }], after(MIN))).toBe(
+    "pending",
+  );
+  expect(getNotice(db, id)).toMatchObject({ push_state: "pending", claimed_at: null });
+  expect(planPushes(db, after(MIN + 1000), ["android"], LEASE).jobs).toHaveLength(1);
 });
