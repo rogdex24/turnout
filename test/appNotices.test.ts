@@ -115,6 +115,17 @@ describe("devices", () => {
     ]);
   });
 
+  test("twenty registrations an hour for a member, then 429; another member is not held up", async () => {
+    const t = await testApp();
+    const a = await memberSession(t, 0);
+    const b = await memberSession(t, 1);
+    for (let i = 0; i < 20; i++) expect((await register(t, a, { expoPushToken: TOKEN_A, platform: "android" })).status).toBe(200);
+    const refused = await register(t, a, { expoPushToken: TOKEN_A, platform: "android" });
+    expect(refused.status).toBe(429);
+    expect((await errorOf(refused)).code).toBe("rate_limited");
+    expect((await register(t, b, { expoPushToken: TOKEN_B, platform: "android" })).status).toBe(200);
+  });
+
   test("the same token again is the same device, and a token from another member moves to the new member", async () => {
     const t = await testApp();
     const a = await memberSession(t, 0);

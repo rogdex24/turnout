@@ -277,6 +277,21 @@ describe("the lease", () => {
     expect(await pass(t)).toEqual({ ran: true });
   });
 
+  test("/health takes the database write lock at most once in five seconds", async () => {
+    const t = await testApp();
+    let locks = 0;
+    const real = t.db.transaction.bind(t.db);
+    t.db.transaction = ((fn: never) => {
+      locks += 1;
+      return real(fn);
+    }) as typeof t.db.transaction;
+    for (let i = 0; i < 20; i++) expect((await t.call("GET", "/health")).status).toBe(200);
+    expect(locks).toBe(1);
+    t.clock.advance(5_000);
+    await t.call("GET", "/health");
+    expect(locks).toBe(2);
+  });
+
   test("/health shows no tick before the first pass and its age after it", async () => {
     const t = await testApp();
     const first = (await (await t.call("GET", "/health")).json()) as { status: string; ticker: { lastTickAgeSeconds: number | null } };
