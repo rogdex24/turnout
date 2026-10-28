@@ -6,10 +6,17 @@
 import type { Database } from "bun:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import { handleRejectReasonSchema } from "@turnout/contract/profile";
+import { ticketRejectReasonSchema } from "@turnout/contract/ticket";
+import { z } from "zod";
 import { addMuteRule, countMuted, isMuteField, MUTE_FIELDS, type MuteField, removeMuteRule } from "../curation/mute.js";
 import { SOURCE_ADAPTERS } from "../ingestion/sources/registry.js";
+import { pendingHandles, upcomingShows } from "../social/adminReads.js";
+import { approveHandle, approveTicket, rejectHandle, rejectTicket, setCafe, setStartTime } from "../social/operator.js";
+import { ticketQueue } from "../social/tickets.js";
 import { endOfDayIst, startOfDayIst } from "../utils/time.js";
 import { isUuid } from "../utils/uuid.js";
+import { type AdminFiles, signAdminLink } from "./files.js";
 import { hiddenReasons, IS_LISTED_SQL } from "./reasons.js";
 
 export class HttpError extends Error {
@@ -338,4 +345,155 @@ export function deleteMute(db: Database, id: string): void {
   const row = db.prepare("SELECT field, value FROM mute_rule WHERE id = ?").get(id) as { field: MuteField; value: string } | null;
   if (!row) throw new HttpError(404, "no such mute rule");
   removeMuteRule(db, row.field, row.value);
+}
+
+// ---- tickets, shows, cafes and handles ----
+
+/** The body, read with a strict schema: a field the route does not know is a 400, and so is a reason outside the fixed list. */
+function parseBody<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) throw bad(parsed.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "));
+  return parsed.data;
+}
+
+/** A link to an admin file route, or null when the admin has no store or secret to sign with. */
+const fileLink = (files: AdminFiles | null, pathname: string, now: Date): string | null =>
+  files === null ? null : signAdminLink(files, pathname, now);
+
+export const ticketFilePath = (ticketId: string): string => `/api/tickets/${encodeURIComponent(ticketId)}/file`;
+export const handlePhotoPath = (memberId: string): string => `/api/handles/${encodeURIComponent(memberId)}/photo`;
+
+/** Pending tickets, the ones that run out of time first at the top. Duplicates are counts: no other member is named. */
+export function listTickets(db: Database, files: AdminFiles | null, now: Date) {
+  return {
+    tickets: ticketQueue(db, now).map((item) => ({
+      ...item,
+      minutesLeft: Math.max(0, Math.floor((Date.parse(item.lockAt) - now.getTime()) / 60_000)),
+      fileUrl: fileLink(files, ticketFilePath(item.ticketId), now),
+    })),
+  };
+}
+
+export type TicketFile = { key: string; mime: string };
+
+/** The stored file of a ticket that still has one. */
+export function ticketFile(db: Database, ticketId: string): TicketFile {
+  const row = db
+    .prepare("SELECT object_key AS key, mime FROM ticket_proof WHERE id = ? AND object_key IS NOT NULL")
+    .get(ticketId) as TicketFile | null;
+  if (!row) throw new HttpError(404, "no such ticket file");
+  return row;
+}
+
+const rejectTicketBody = z.strictObject({ reason: ticketRejectReasonSchema });
+
+const REVIEW_ERRORS = {
+  not_found: new HttpError(404, "no such ticket"),
+  not_pending: new HttpError(409, "this ticket is not waiting for an answer"),
+  too_late: new HttpError(409, "the plan has passed T-24h, so the ticket can no longer be answered"),
+} as const;
+
+export function approveTicketAction(db: Database, ticketId: string, now: Date) {
+  const result = approveTicket(db, ticketId, now);
+  if (!result.ok) throw REVIEW_ERRORS[result.error];
+  return { ticketId, status: result.ticket.status, planState: result.plan.state };
+}
+
+export function rejectTicketAction(db: Database, ticketId: string, body: unknown, now: Date) {
+  const { reason } = parseBody(rejectTicketBody, body);
+  const result = rejectTicket(db, ticketId, reason, now);
+  if (!result.ok) throw REVIEW_ERRORS[result.error];
+  return { ticketId, status: result.ticket.status, planState: result.plan.state };
+}
+
+/** Shows an operator may act on, with their pool and groups. */
+export const listUpcomingShows = (db: Database, now: Date) => ({ shows: upcomingShows(db, now) });
+
+const ISO_WITH_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
+const startTimeBody = z.strictObject({
+  startsAt: z
+    .string()
+    .refine(
+      (v) => ISO_WITH_ZONE.test(v) && !Number.isNaN(Date.parse(v)),
+      "must be a date and time with a zone, like 2026-11-10T19:30:00+05:30",
+    ),
+});
+
+export function putStartTime(db: Database, eventId: string, body: unknown, now: Date) {
+  const { startsAt } = parseBody(startTimeBody, body);
+  const result = setStartTime(db, eventId, startsAt, now);
+  if (result.ok) return { eventId, startsAt: result.startsAt };
+  if (result.error === "not_found") throw new HttpError(404, "no such event");
+  if (result.error === "too_late") throw new HttpError(409, "that start time is already inside the T-24h window");
+  throw new HttpError(409, "a group for this show has locked, so its time can no longer change");
+}
+
+const cafeBody = z
+  .strictObject({
+    name: z.string().trim().min(1).max(100),
+    address: z.string().trim().min(1).max(200).nullish(),
+    lat: z.number().min(-90).max(90).nullish(),
+    lng: z.number().min(-180).max(180).nullish(),
+  })
+  .refine((c) => (c.lat == null) === (c.lng == null), { message: "send both lat and lng, or neither", path: ["lat"] });
+
+export function putCafe(db: Database, groupId: string, body: unknown, now: Date) {
+  const cafe = parseBody(cafeBody, body);
+  const result = setCafe(
+    db,
+    groupId,
+    { name: cafe.name, address: cafe.address ?? null, lat: cafe.lat ?? null, lng: cafe.lng ?? null },
+    now,
+  );
+  if (result.ok) return { groupId, cafeName: cafe.name };
+  if (result.error === "not_found") throw new HttpError(404, "no such group");
+  throw new HttpError(409, "this group has already met or been called off");
+}
+
+const PROFILE_URLS: Record<string, (handle: string) => string> = {
+  instagram: (handle) => `https://www.instagram.com/${encodeURIComponent(handle)}/`,
+  linkedin: (handle) => `https://www.linkedin.com/in/${encodeURIComponent(handle)}/`,
+};
+
+/** Handles waiting for a check. The operator opens the profile URL; the server never fetches either site. */
+export function listHandles(db: Database, files: AdminFiles | null, params: URLSearchParams, now: Date) {
+  enumParam(params, "status", ["pending"] as const);
+  return {
+    handles: pendingHandles(db).map(({ photoKey, ...h }) => ({
+      ...h,
+      profileUrl: PROFILE_URLS[h.kind]?.(h.handle) ?? null,
+      photoUrl: photoKey === null ? null : fileLink(files, handlePhotoPath(h.memberId), now),
+    })),
+  };
+}
+
+/** The member's profile photo key, for the signed photo route. */
+export function handlePhotoKey(db: Database, memberId: string): string {
+  const row = db
+    .prepare(
+      "SELECT p.photo_key AS key FROM social_handle h JOIN profile p ON p.member_id = h.member_id WHERE h.member_id = ? AND h.status = 'pending' AND p.photo_key IS NOT NULL",
+    )
+    .get(memberId) as { key: string } | null;
+  if (!row) throw new HttpError(404, "no such photo");
+  return row.key;
+}
+
+const rejectHandleBody = z.strictObject({ reason: handleRejectReasonSchema });
+
+const HANDLE_ERRORS = {
+  not_found: new HttpError(404, "no such handle"),
+  not_pending: new HttpError(409, "this handle is not waiting for a check"),
+} as const;
+
+export function approveHandleAction(db: Database, memberId: string, now: Date) {
+  const result = approveHandle(db, memberId, now);
+  if (!result.ok) throw HANDLE_ERRORS[result.error];
+  return { memberId, status: "approved" as const };
+}
+
+export function rejectHandleAction(db: Database, memberId: string, body: unknown, now: Date) {
+  const { reason } = parseBody(rejectHandleBody, body);
+  const result = rejectHandle(db, memberId, reason, now);
+  if (!result.ok) throw HANDLE_ERRORS[result.error];
+  return { memberId, status: "rejected" as const, reason };
 }
