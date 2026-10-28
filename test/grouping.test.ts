@@ -97,6 +97,31 @@ describe("gender caps in open groups", () => {
     expect(placed(a)).toBe(4);
   });
 
+  test("sizes are chosen with the caps in mind: nine women and three men make three groups of four", () => {
+    const a = assign(pool("wwwwwwwwwmmm"), [], NONE, T);
+    expect(sizes(a)).toEqual([4, 4, 4]);
+    expect(placed(a)).toBe(12);
+    expect(a.waiting).toEqual([]);
+  });
+
+  test("eight women and two men place eight, ten women and four men place fourteen", () => {
+    expect(placed(assign(pool("wwwwwwwwmm"), [], NONE, T))).toBe(8);
+    const big = assign(pool("wwwwwwwwwwmmmm"), [], NONE, T);
+    expect(placed(big)).toBe(14);
+    expect(big.waiting).toEqual([]);
+  });
+
+  test("the order of arrival does not stop a mixed pool from filling: two men first, then six women", () => {
+    const a = assign(pool("mmwwwwww"), [], NONE, T);
+    expect(sizes(a)).toEqual([4, 4]);
+  });
+
+  test("a group of six may hold four of one gender, and the sizes use that", () => {
+    // Four women and two men fit one group of six (cap 4); the same eight as two groups of four would need 3 women at most each.
+    const a = assign(pool("wwwwmm"), [], NONE, T);
+    expect(sizes(a)).toEqual([6]);
+  });
+
   test("non-binary is a category of its own", () => {
     expect(sizes(assign(pool("nnnm"), [], NONE, T))).toEqual([4]);
     expect(assign(pool("nnnn"), [], NONE, T).created).toEqual([]);
@@ -169,6 +194,14 @@ describe("existing groups", () => {
   test("the smaller group fills first", () => {
     const a = assign(pool("m", "open", 10), [group("g1", "wmwmw", 1), group("g2", "wmwm", 20)], NONE, T);
     expect(a.joins).toEqual([{ groupId: "g2", memberId: "m10" }]);
+  });
+
+  test("each person goes to the smallest group at that moment, not the one that was smallest at the start", () => {
+    const a = assign(pool("mm", "open", 10), [group("g1", "wmwmw", 1), group("g2", "wmwm", 20)], NONE, T);
+    expect(a.joins).toEqual([
+      { groupId: "g2", memberId: "m10" },
+      { groupId: "g1", memberId: "m11" },
+    ]);
   });
 
   test("the caps count the people already in the group", () => {
