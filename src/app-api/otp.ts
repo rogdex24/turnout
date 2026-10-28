@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { OtpChallengeResponse, OtpDeliveryStatus, OtpRequest, OtpVerifyRequest, TokenPair } from "@turnout/contract/app/auth";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
+import { banReason, isPhoneRefused } from "../social/bans.js";
 import { addMinutes } from "../social/dates.js";
-import { createMember, getMemberByPhone, isPhoneBanned, markPhoneVerified, recordConsent } from "../social/members.js";
+import { createMember, getMemberByPhone, markPhoneVerified, recordConsent } from "../social/members.js";
 import { normalizePhone } from "../social/model/phone.js";
 import type { RateRule } from "../social/model/tunables.js";
 import { getChallenge, insertChallenge, recordSendFailed, recordSent, voidOpenChallenges } from "../social/otpChallenges.js";
@@ -43,7 +44,7 @@ export function generateCode(digits = 6): string {
 }
 
 /**
- * Asks for a sign-in code. Checks run in this order: the ban list, the 24 hour "I did not ask" block, the per phone limits, the
+ * Asks for a sign-in code. Checks run in this order: the ban list (refusing reasons only), the 24 hour "I did not ask" block, the per phone limits, the
  * per address limits, the daily cap. The first two refuse with one generic message; the limits say 429 with `Retry-After`. Nothing
  * is counted and no earlier code is cancelled unless every check passes, and nothing is sent before they have.
  */
@@ -53,7 +54,7 @@ export async function requestOtp(app: AppContext, input: OtpRequest, ip: string,
   if (e164 === null) throw new AppError(400, "bad_phone", "enter an Indian mobile number");
   const reviewer = config.reviewer !== null && config.reviewer.phone === e164;
 
-  if (isPhoneBanned(db, e164) || isPhoneBlocked(db, config.otpPepper, e164, now)) throw unavailable();
+  if (isPhoneRefused(db, config.banPepper, e164) || isPhoneBlocked(db, config.otpPepper, e164, now)) throw unavailable();
 
   const rate = config.tunables.rate;
   const entries: LimitEntry[] = [];
@@ -186,9 +187,11 @@ export async function verifyOtp(app: AppContext, input: OtpVerifyRequest, now: D
     .run(at, challenge.id);
   if (consumed.changes === 0) throw invalidCode();
 
+  // The ban list is read again here: a number can be banned between the request and the code being typed.
+  if (isPhoneRefused(db, config.banPepper, e164)) throw unavailable();
   let member = getMemberByPhone(db, e164);
   if (member === null) {
-    member = createMember(db, e164, now);
+    member = createMember(db, e164, now, banReason(db, config.banPepper, e164) === "downvote_stop");
   } else if (member.status === "banned" || member.deleted_at !== null) {
     throw unavailable();
   } else if (member.status === "suspended") {
