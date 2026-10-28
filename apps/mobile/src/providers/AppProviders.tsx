@@ -1,5 +1,6 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createContext, type ReactNode, use } from "react";
+import { useStartTelemetry } from "../analytics/useStartTelemetry";
 import { dehydrateOptions } from "../api/persister";
 import { CACHE_MAX_AGE_MS } from "../api/queryClient";
 import type { AppDeps } from "./deps";
@@ -14,6 +15,7 @@ export function useDeps(): AppDeps {
 
 /** Hands the wired app to every screen and restores the disk cache before any query runs, so a start without a network still has its shows. */
 export function AppProviders({ deps, children }: { deps: AppDeps; children: ReactNode }) {
+  useStartTelemetry(deps.prefs);
   return (
     <DepsContext value={deps}>
       <PersistQueryClientProvider

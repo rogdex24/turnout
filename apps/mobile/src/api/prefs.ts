@@ -9,6 +9,7 @@ export const PREF_KEYS = {
   welcomeSeen: "welcomeSeen",
   acceptedNotice: "acceptedNotice",
   userId: "userId",
+  analyticsConsent: "analyticsConsent",
 } as const;
 
 export function memoryKv(): KeyValueStore {
@@ -26,4 +27,13 @@ export function welcomeSeen(prefs: KeyValueStore): boolean {
 
 export function acceptedNotice(prefs: KeyValueStore): string | null {
   return prefs.getString(PREF_KEYS.acceptedNotice) ?? null;
+}
+
+/** "Share usage data" is off until the person turns it on: no value means no. */
+export function analyticsConsent(prefs: KeyValueStore): boolean {
+  return prefs.getString(PREF_KEYS.analyticsConsent) === "1";
+}
+
+export function setAnalyticsConsent(prefs: KeyValueStore, on: boolean): void {
+  prefs.set(PREF_KEYS.analyticsConsent, on ? "1" : "0");
 }
