@@ -389,3 +389,41 @@ Bun map to the `.ts` file and Metro does not. `apps/mobile/metro.config.js` now 
 Why. A patch release inside the SDK is what Expo tests against, and holding the old pin leaves CI
 red until Renovate's 14-day window passes. The resolver keeps the contract valid ESM for the server
 without a build step for the app.
+
+## M2 app, A8 to A10
+
+- A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in
+  `src/api/features.ts`) decides what it does. Off, which is the default, Go opens a Coming soon sheet. The show shows no "looking"
+  count while the server sends none: `lookingCount` is null and the line is hidden, not set to zero. `lookingLine` lives in
+  `screens/show`, not in `model`, because it builds copy, and it uses `groupIndian` from `model/showTime` (now exported). How it
+  works uses generic copy that holds for every show. The Buy button's icon sits after the label. The marquee bulbs are static, so
+  nothing runs under Reduce Motion.
+- A9 Sentry and PostHog. Consent is off by default, stored as the `analyticsConsent` pref ("1" or absent), and there is no switch for
+  it yet: "Share usage data" is built with Settings. Nothing is built, loaded or sent before consent, and without a build key
+  (`EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_POSTHOG_HOST`) the whole module does nothing. Both SDKs are
+  loaded with `require` after consent, so a build without consent never runs their code. Turning consent off calls PostHog `optOut`
+  and closes Sentry.
+- PostHog uses memory persistence, so its id is new on each launch and nothing about a device is kept. Session replay,
+  autocapture of screens and geo lookup are off. Events go through a registry (`analytics/events.ts`): five events with fixed keys,
+  strings scrubbed, and any call with a location, handle or person key (lat, area, city, handle, phone, email, name and the like,
+  also inside nested objects) is dropped whole. Sentry gets no user, no request body or headers, no replay, no screenshot, no
+  traces, and every message, breadcrumb and `extra` value is scrubbed of URLs (query, fragment and long token segments), emails,
+  Bearer tokens and phone numbers.
+- Telemetry starts after a frame and a zero timeout, not `InteractionManager`, which this React Native version no longer has.
+- A10 App links. The https host is a build variable, `APP_LINKS_HOST` (`go.<domain>`), because the domain is not decided. It is set
+  for the production variant only: `assetlinks.json` names the production package, so development, e2e and preview builds never
+  claim the host. With it unset there is no intent filter and links work through the custom scheme only, which is what the Maestro
+  flow uses. There is no iOS `associatedDomains` (the plan says so, citing Apple TN3155), so the AASA route is a stub: a 404 until `APP_LINKS_IOS_APP_IDS` is set.
+- Every link goes through `redirectSystemPath` (`src/api/nativeIntent.ts`, re-exported by `src/app/+native-intent.tsx` because
+  dependency-cruiser allows nothing to import a route). The list is short: a show (`/e/<id>` on the host, `show/<id>` or `e/<id>` on
+  the scheme), its `/go`, Home, and, in the app's own scheme only, Storybook with a plain story id (the visual capture flow needs
+  it) and the dev client launcher in a development build. Anything else opens Home. `/go` opens the show while groups are off. A path
+  the router already holds (`/show/<id>`) is accepted too and gets the same checks, because the router test harness and some
+  platforms hand paths back through the same function.
+- The Android filter uses `pathPrefix: "/e/"`, so a `.ics` link on the go host also opens the app, and the app sends it Home. The
+  filter cannot express "no suffix", and the website serves the file when the app is not installed.
+- `assetlinks.json` is served only when both `APP_LINKS_ANDROID_PACKAGE` and one fingerprint are set, and is a 404 otherwise. A
+  fingerprint is normalised to upper-case colon form, and an entry that is not a SHA-256 is dropped without failing the start, so
+  one typo does not hide the others. The one change in `src/cli.ts` reads the env and passes it to `siteResponse`.
+- `adb shell pm get-app-links` cannot be checked here: it needs the DNS host and the Play signing key. That step is listed in
+  `docs/plans/mobile-accounts.md` as needs owner.
