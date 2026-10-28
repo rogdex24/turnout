@@ -29,9 +29,9 @@ export type ShowDetailState =
 
 export interface ShowViewProps {
   detail: ShowDetailState;
-  /** People looking for a group, from the plans server (M3). Null while that is not there, and the line is left out. */
+  /** People looking for a group, from the plans server. Null while it has not answered, and the line is left out. */
   lookingCount: number | null;
-  /** Groups are open in this build. Off in M2: the Go button then opens "Coming soon in this build". */
+  /** Groups are open in this build. Off: the Go button then opens "Coming soon in this build". On: it opens the go sheet. */
   groupsEnabled: boolean;
   onBack: () => void;
   onRetry: () => void;

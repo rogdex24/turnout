@@ -10,6 +10,8 @@ export const PREF_KEYS = {
   acceptedNotice: "acceptedNotice",
   userId: "userId",
   analyticsConsent: "analyticsConsent",
+  goExplained: "goExplained",
+  ticketAsked: "ticketAsked",
 } as const;
 
 export function memoryKv(): KeyValueStore {
@@ -36,4 +38,22 @@ export function analyticsConsent(prefs: KeyValueStore): boolean {
 
 export function setAnalyticsConsent(prefs: KeyValueStore, on: boolean): void {
   prefs.set(PREF_KEYS.analyticsConsent, on ? "1" : "0");
+}
+
+/** The one sentence about how groups work is shown the first time a person goes with a group, then left out. */
+export function goExplained(prefs: KeyValueStore): boolean {
+  return prefs.getString(PREF_KEYS.goExplained) === "1";
+}
+
+export function markGoExplained(prefs: KeyValueStore): void {
+  prefs.set(PREF_KEYS.goExplained, "1");
+}
+
+/** The notification question is asked once, after the first ticket goes up, whatever the answer. */
+export function ticketAsked(prefs: KeyValueStore): boolean {
+  return prefs.getString(PREF_KEYS.ticketAsked) === "1";
+}
+
+export function markTicketAsked(prefs: KeyValueStore): void {
+  prefs.set(PREF_KEYS.ticketAsked, "1");
 }
