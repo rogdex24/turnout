@@ -71,6 +71,41 @@ describe("token", () => {
   });
 });
 
+describe("cross-site writes", () => {
+  const writes: [string, string][] = [
+    ["POST", "/api/tickets/x/approve"],
+    ["POST", "/api/tickets/x/reject"],
+    ["POST", "/api/handles/x/approve"],
+    ["POST", "/api/handles/x/reject"],
+    ["POST", "/api/runs"],
+    ["POST", "/api/mutes"],
+    ["DELETE", "/api/mutes/x"],
+    ["PUT", "/api/events/x/start-time"],
+    ["PUT", "/api/groups/x/cafe"],
+  ];
+
+  test("a write from another site is refused on every write route, whatever it sends as a body", async () => {
+    const ctx = await context();
+    for (const [method, path] of writes) {
+      const form = { "content-type": "application/x-www-form-urlencoded" };
+      expect((await call(ctx, path, { method, headers: { ...form, origin: "http://evil.example" } })).status, `${method} ${path}`).toBe(
+        403,
+      );
+      expect((await call(ctx, path, { method, headers: { "sec-fetch-site": "cross-site" } })).status, `${method} ${path}`).toBe(403);
+      expect((await call(ctx, path, { method, headers: { "sec-fetch-site": "same-site" } })).status, `${method} ${path}`).toBe(403);
+      expect((await call(ctx, path, { method, headers: { origin: "null" } })).status, `${method} ${path}`).toBe(403);
+    }
+  });
+
+  test("the panel's own page, and a client that sends neither header, still reach the route", async () => {
+    const ctx = await context();
+    const same = { origin: "http://127.0.0.1:3001", "sec-fetch-site": "same-origin" };
+    expect((await call(ctx, "/api/tickets/x/approve", { method: "POST", headers: same })).status).toBe(404);
+    expect((await call(ctx, "/api/handles/x/approve", { method: "POST" })).status).toBe(404);
+    expect((await call(ctx, "/api/sources", { headers: { "sec-fetch-site": "cross-site" } })).status).toBe(200);
+  });
+});
+
 describe("routes", () => {
   test("every route answers with the documented status", async () => {
     const ctx = await context();

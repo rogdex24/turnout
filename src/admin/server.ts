@@ -80,7 +80,19 @@ export function guard(request: Request, token?: string): Response | null {
   // Its Host header would be the attacker's name after DNS rebinding, so only
   // accept the loopback names while no token is protecting the panel.
   if (!token && !isLoopback(new URL(request.url).hostname)) return new Response("Forbidden", { status: 403 });
+  // A write must come from the panel's own page. A cross-site form or no-cors fetch needs no preflight and may carry no body at all
+  // (approve has none), so reading the body is no defence: the browser names the origin of every such request instead.
+  if (!token && request.method !== "GET" && request.method !== "HEAD" && !fromOwnPage(request))
+    return new Response("Forbidden", { status: 403 });
   return null;
+}
+
+/** False when the browser says the request began on another site. A client that sends neither header (curl, a script) is not a browser page. */
+function fromOwnPage(request: Request): boolean {
+  const site = request.headers.get("sec-fetch-site");
+  if (site !== null && site !== "same-origin" && site !== "none") return false;
+  const origin = request.headers.get("origin");
+  return origin === null || (URL.canParse(origin) && new URL(origin).host === new URL(request.url).host);
 }
 
 async function readJson(request: Request): Promise<unknown> {
