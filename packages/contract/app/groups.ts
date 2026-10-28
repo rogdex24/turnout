@@ -54,6 +54,7 @@ export type GroupResponse = z.infer<typeof groupResponseSchema>;
 export const memberPhotoResponseSchema = z.object({ photo: fileLinkSchema });
 export type MemberPhotoResponse = z.infer<typeof memberPhotoResponseSchema>;
 
-/** POST /groups/:groupId/checkin takes no body and no coordinates. */
+/** POST /groups/:groupId/checkin takes no body and no coordinates: a body with any field is refused. */
+export const checkinRequestSchema = z.object({}).strict();
 export const checkinResponseSchema = z.object({ checkedIn: z.literal(true) });
 export type CheckinResponse = z.infer<typeof checkinResponseSchema>;

@@ -4,9 +4,9 @@ import { appRoutes } from "../src/app-api/routes/index.js";
 import { PHONES, type TestApp, testApp } from "./appHelpers.js";
 
 /**
- * The authorization matrix for the routes M2 ships. The row list is checked against the route table in both directions, so a
- * route added without a row fails here, and a row for a route that is gone fails too. M3 adds a row for each of its routes and the
- * group and "not yet" fixtures the plan describes.
+ * The authorization matrix for the routes M2 and M3 ship. The row list is checked against the route table in both directions, so a
+ * route added without a row fails here, and a row for a route that is gone fails too. The group and "not yet" fixtures the plan
+ * describes follow the first block.
  */
 interface Row {
   method: string;
@@ -35,6 +35,37 @@ const ROWS: Row[] = [
   { method: "PUT", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/me/consent", path: "/me/consent", auth: "member", anonymous: 401 },
+  { method: "GET", pattern: "/shows/:publicId", path: "/shows/show-a", auth: "member", anonymous: 401 },
+  { method: "GET", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },
+  { method: "GET", pattern: "/plans/:planId", path: "/plans/01hzzzzzzzzzzzzzzzzzzzzzzz", auth: "member", anonymous: 401 },
+  {
+    method: "POST",
+    pattern: "/plans/:planId/withdraw",
+    path: "/plans/01hzzzzzzzzzzzzzzzzzzzzzzz/withdraw",
+    auth: "member",
+    anonymous: 401,
+  },
+  { method: "PUT", pattern: "/plans/:planId/ticket", path: "/plans/01hzzzzzzzzzzzzzzzzzzzzzzz/ticket", auth: "member", anonymous: 401 },
+  { method: "GET", pattern: "/groups/:groupId", path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz", auth: "member", anonymous: 401 },
+  {
+    method: "GET",
+    pattern: "/groups/:groupId/members/:memberRef/photo",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/members/ref/photo",
+    auth: "member",
+    anonymous: 401,
+  },
+  {
+    method: "POST",
+    pattern: "/groups/:groupId/checkin",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/checkin",
+    auth: "member",
+    anonymous: 401,
+  },
+  { method: "GET", pattern: "/notices", path: "/notices", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/notices/read", path: "/notices/read", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/devices", path: "/devices", auth: "member", anonymous: 401 },
+  { method: "DELETE", pattern: "/devices/:deviceId", path: "/devices/01hzzzzzzzzzzzzzzzzzzzzzzz", auth: "member", anonymous: 401 },
   // The staging routes: they answer 404 without the token, so a production-like caller cannot tell they exist.
   { method: "POST", pattern: "/__test/otp", path: "/__test/otp", auth: "none", anonymous: 404 },
   { method: "POST", pattern: "/__test/clock", path: "/__test/clock", auth: "none", anonymous: 404 },
@@ -44,7 +75,7 @@ const errorOf = async (response: Response) => errorBodySchema.parse(await respon
 const memberRows = ROWS.filter((row) => row.auth === "member");
 const send = (t: TestApp, row: Row, token?: string) => t.call(row.method, row.path, { token, body: row.method === "GET" ? undefined : {} });
 
-describe("authorization matrix, M2 routes", () => {
+describe("authorization matrix, anonymous and bad credentials", () => {
   test("every route in the table has a row and every row has a route", async () => {
     const t = await testApp();
     const inTable = appRoutes(t.app).map((route) => `${route.method} ${route.pattern} ${route.auth}`);

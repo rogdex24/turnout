@@ -43,6 +43,9 @@ export type GroupType = z.infer<typeof groupTypeSchema>;
 export const createPlanRequestSchema = z.object({ eventId: z.string().min(1).max(120), groupType: groupTypeSchema }).strict();
 export type CreatePlanRequest = z.infer<typeof createPlanRequestSchema>;
 
+/** POST /plans/:planId/withdraw takes no body: a body with any field is refused. */
+export const withdrawRequestSchema = z.object({}).strict();
+
 /** What a plan carries of its show: a snapshot taken when the plan was made, so a later change at the source cannot move the plan. */
 export const showSnapshotSchema = z.object({
   title: z.string(),

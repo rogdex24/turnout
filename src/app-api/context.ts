@@ -6,6 +6,7 @@ import type { ObjectStore } from "../utils/objectStore.js";
 import type { Alerts } from "./alerts.js";
 import type { AppConfig } from "./env.js";
 import type { OtpSender } from "./vendors/otpSender.js";
+import type { PushSender } from "./vendors/push.js";
 
 /** One line per request: what happened, never to whom beyond a hash, and never a body, phone, handle, token or message. */
 export interface LogEntry {
@@ -27,6 +28,7 @@ export interface AppContext {
   config: AppConfig;
   store: ObjectStore;
   sender: OtpSender;
+  push: PushSender;
   alerts: Alerts;
   fetch: FetchLike;
   log: (entry: LogEntry) => void;

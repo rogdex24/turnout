@@ -22,7 +22,7 @@ import {
 import { compareVersions } from "@turnout/contract/app/config";
 import { EXPO_PUSH_TOKEN, registerDeviceRequestSchema } from "@turnout/contract/app/devices";
 import { ERROR_CODES, errorBodySchema, errorCodeSchema } from "@turnout/contract/app/errors";
-import { checkinResponseSchema, groupBeforeRevealSchema, groupRevealedSchema } from "@turnout/contract/app/groups";
+import { checkinRequestSchema, checkinResponseSchema, groupBeforeRevealSchema, groupRevealedSchema } from "@turnout/contract/app/groups";
 import { consentRequestSchema, handleResponseSchema, MAX_PHOTO_BYTES, meResponseSchema } from "@turnout/contract/app/me";
 import { NOTICE_PARAGRAPHS, NOTICE_TEXT, NOTICE_VERSION } from "@turnout/contract/app/notice";
 import {
@@ -188,11 +188,21 @@ describe("app contract: errors, config and the notice", () => {
       "women_only",
       "bad_handle",
       "handle_locked",
+      "plan_exists",
+      "not_matchable",
+      "plan_closed",
+      "too_late",
+      "screenshot_required",
+      "bad_ticket",
+      "outside_window",
     ]) {
       expect(errorCodeSchema.safeParse(code).success).toBe(true);
     }
     expect(errorBodySchema.safeParse({ error: { code: "Not A Code", message: "x" } }).success).toBe(false);
     expect(errorBodySchema.safeParse({ error: { code: "not_found", message: "nope" } }).success).toBe(true);
+    expect(errorBodySchema.safeParse({ error: { code: "plan_exists", message: "x", planId: "01H" } }).success).toBe(true);
+    expect(errorBodySchema.safeParse({ error: { code: "not_matchable", message: "x", missing: ["photo", "handle"] } }).success).toBe(true);
+    expect(errorBodySchema.safeParse({ error: { code: "not_matchable", message: "x", missing: ["passport"] } }).success).toBe(false);
   });
 
   test("the notice has a date version, readable text, and none of the banned wording", () => {
@@ -290,6 +300,8 @@ describe("app contract: plans, groups, notices and devices", () => {
     ]);
     expect(checkinResponseSchema.safeParse({ checkedIn: true }).success).toBe(true);
     expect(checkinResponseSchema.safeParse({ checkedIn: false }).success).toBe(false);
+    expect(checkinRequestSchema.safeParse({}).success).toBe(true);
+    expect(checkinRequestSchema.safeParse({ lat: 12.9, lng: 77.6 }).success).toBe(false);
   });
 
   test("every notice kind has a push line, and no line holds a name, a place or a banned word", () => {

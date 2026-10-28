@@ -43,6 +43,10 @@ export interface AppConfig {
   support: { email: string };
   grievance: { name: string; address: string; email: string; phone: string };
   push: { android: boolean; ios: boolean };
+  /** `expo` sends through Expo's push service; `fake` sends nothing (tests, development, staging). */
+  pushSender: "expo" | "fake";
+  /** Optional: only needed when the Expo project turns on enhanced push security. */
+  expoAccessToken: string | null;
   alertWebhookUrl: string | null;
   stagingTestToken: string | null;
   objectStore: "disk" | "s3" | "memory";
@@ -225,6 +229,12 @@ export async function loadAppConfig(env: Env, options: { requireEnv?: boolean } 
   for (const platform of platforms)
     if (platform && platform !== "android" && platform !== "ios") problems.push("PUSH_PLATFORMS holds android, ios or both");
 
+  const pushChoice = clean(env.PUSH_SENDER);
+  if (pushChoice !== undefined && pushChoice !== "expo" && pushChoice !== "fake") problems.push("PUSH_SENDER must be expo or fake");
+  if (production && pushChoice === "fake") problems.push("PUSH_SENDER=fake is not allowed in production");
+  // Like the code sender, a served production process always pushes for real; the other environments send nothing unless asked.
+  const pushSender: "expo" | "fake" = production || pushChoice === "expo" ? "expo" : "fake";
+
   const store = clean(env.OBJECT_STORE) ?? (turnoutEnv === "test" ? "memory" : "disk");
   if (store !== "disk" && store !== "s3" && store !== "memory") problems.push("OBJECT_STORE must be disk, s3 or memory");
   if (production && store === "memory") problems.push("OBJECT_STORE=memory is not allowed in production");
@@ -278,6 +288,8 @@ export async function loadAppConfig(env: Env, options: { requireEnv?: boolean } 
     support: { email: supportEmail },
     grievance,
     push: { android: platforms.includes("android"), ios: platforms.includes("ios") },
+    pushSender,
+    expoAccessToken: clean(env.EXPO_ACCESS_TOKEN) ?? null,
     alertWebhookUrl,
     // The staging test routes exist only outside production, and only with a token.
     stagingTestToken: production ? null : stagingTestToken,

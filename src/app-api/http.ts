@@ -3,7 +3,7 @@ import { ERROR_CODES, type ErrorCode } from "@turnout/contract/app/errors";
 import type { z } from "zod";
 import { requireMember } from "./auth.js";
 import type { AppContext, Method, RequestContext, Route } from "./context.js";
-import { AppError, invalidRequest, notFound } from "./errors.js";
+import { AppError, type ErrorExtra, invalidRequest, notFound } from "./errors.js";
 
 /** Every app API path starts with this. */
 export const API_BASE = "/api/app/v1";
@@ -26,12 +26,16 @@ export function ok(body: unknown, headers: Record<string, string> = {}): Respons
   return json(200, body, headers);
 }
 
-export function errorBody(code: ErrorCode, message: string): { error: { code: ErrorCode; message: string } } {
-  return { error: { code, message } };
+export function errorBody(
+  code: ErrorCode,
+  message: string,
+  extra: ErrorExtra = {},
+): { error: { code: ErrorCode; message: string } & ErrorExtra } {
+  return { error: { code, message, ...extra } };
 }
 
 export function errorResponse(error: AppError): Response {
-  return json(error.status, errorBody(error.code, error.message), error.headers);
+  return json(error.status, errorBody(error.code, error.message, error.extra), error.headers);
 }
 
 /** `Retry-After` whole seconds, at least 1. */
@@ -97,6 +101,20 @@ export async function parseBody<S extends z.ZodType>(request: Request, schema: S
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw validationError(parsed.error);
   return parsed.data;
+}
+
+/** The body of a request that needs none: nothing at all is fine, and so is `{}`. Anything else is refused. */
+export async function parseEmptyBody<S extends z.ZodType>(request: Request, schema: S): Promise<void> {
+  const bytes = await readBytes(request, 256);
+  if (bytes.length === 0) return;
+  let value: unknown;
+  try {
+    value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  } catch {
+    throw invalidRequest("the body must be empty or JSON");
+  }
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw validationError(parsed.error);
 }
 
 export function parseQuery<S extends z.ZodType>(url: URL, schema: S): z.output<S> {

@@ -24,7 +24,7 @@ the repository, in EAS, or in CI, except the items `docs/plans/mobile-accounts.m
 
 | `TURNOUT_ENV` | Sender | Secrets and keys | Test routes | Notes |
 |---|---|---|---|---|
-| `production` | WhatsApp only. `OTP_SENDER=fake` is refused | All required; startup fails with the list of missing names | None. `/__test/*` is not in the route table | Needs the `GRIEVANCE_*` block |
+| `production` | WhatsApp and Expo push only. `OTP_SENDER=fake` and `PUSH_SENDER=fake` are refused | All required; startup fails with the list of missing names | None. `/__test/*` is not in the route table | Needs the `GRIEVANCE_*` block |
 | `staging` | Fake by default; never messages anyone | A missing secret is replaced by a random one for that run (sessions end at a restart) and the log says which | `POST /__test/otp` and `POST /__test/clock`, only with `STAGING_TEST_TOKEN` | Sign-in only for numbers in `TEST_PHONE_ALLOWLIST` |
 | `development` | Fake unless `OTP_SENDER=whatsapp` | Same as staging | Same as staging | Must be set on purpose: `serve` refuses to start when `TURNOUT_ENV` is unset |
 | `test` | Injected by the test | Fixed per test | In tests | In-memory object store |
@@ -61,7 +61,9 @@ wrong.
 - Review account for the Play app access form: `REVIEWER_PHONE`, `REVIEWER_OTP` (production only).
 - Staging only: `STAGING_TEST_TOKEN` (at least 32 characters), `TEST_PHONE_ALLOWLIST`, `FAKE_UNDELIVERABLE_PHONES`.
 - Files: `OBJECT_STORE`, `FILES_DIR`, `S3_*`.
-- Behaviour: `MIN_APP_VERSION`, `PUSH_PLATFORMS` (Android only until the Apple account exists),
+- Push: `PUSH_SENDER` (`expo` or `fake`; production always uses `expo` and refuses `fake`), `EXPO_ACCESS_TOKEN` (optional, needed
+  only with Expo's enhanced push security), `PUSH_PLATFORMS` (Android only until the Apple account exists).
+- Behaviour: `MIN_APP_VERSION`,
   `TRUST_PROXY_HEADER` (set to the proxy's header name only when a proxy you control sets it).
 - Later: `APP_LINKS_ANDROID_SHA256`, `SENTRY_DSN`.
 
