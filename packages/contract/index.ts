@@ -8,6 +8,7 @@ export * from "./app/me.js";
 export * from "./app/notice.js";
 export * from "./app/notices.js";
 export * from "./app/plans.js";
+export * from "./app/reports.js";
 export * from "./app/thread.js";
 export * from "./category.js";
 export * from "./events.js";

@@ -9,6 +9,7 @@ import { healthRoutes } from "./health.js";
 import { meRoutes } from "./me.js";
 import { noticeRoutes } from "./notices.js";
 import { planRoutes } from "./plans.js";
+import { reportRoutes } from "./reports.js";
 import { showRoutes } from "./shows.js";
 import { testOnlyRoutes } from "./testOnly.js";
 import { threadRoutes } from "./thread.js";
@@ -31,6 +32,7 @@ export function appRoutes(app: AppContext): Route[] {
     ...groupRoutes,
     ...threadRoutes,
     ...feedbackRoutes,
+    ...reportRoutes,
     ...noticeRoutes,
     ...deviceRoutes,
   ];

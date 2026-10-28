@@ -45,6 +45,11 @@ export function sweepRows(db: Database, now: Date, revokedRetentionDays: number,
   db.query("DELETE FROM operator_action WHERE created_at < ?").run(addDays(now, -OPERATOR_ACTION_DAYS).toISOString());
 }
 
+/** A closed report is kept `retentionDays` after it closed (a year), then deleted. An open one is never touched. Returns how many went. */
+export function purgeClosedReports(db: Database, now: Date, retentionDays: number): number {
+  return db.query("DELETE FROM report WHERE status = 'closed' AND closed_at < ?").run(addDays(now, -retentionDays).toISOString()).changes;
+}
+
 /**
  * Once an IST day: delete stored files no row points at. Returns the keys removed (empty when it already ran today). The day is
  * marked done only after the pass finishes, so a pass that fails (the store is down) is tried again on the next tick.
@@ -66,6 +71,7 @@ export async function housekeeping(app: AppContext): Promise<void> {
   const steps: (() => unknown)[] = [
     () => sweepRows(app.db, now, app.config.tunables.session.revokedRetentionDays, app.config.tunables.noticeRetentionDays),
     () => deleteExpiredMessages(app.db, now, app.config.tunables),
+    () => purgeClosedReports(app.db, now, app.config.tunables.report.retentionDays),
     () => checkOtpSpend(app.db, now, app.alerts, app.config.tunables),
     () => sweepFiles(app, now),
   ];

@@ -2,12 +2,17 @@ import type { Database } from "bun:sqlite";
 import type { HandleRejectReason } from "@turnout/contract/profile";
 import type { TicketRejectReason } from "@turnout/contract/ticket";
 import { ulid } from "../utils/ulid.js";
+import { banReason, removeBan } from "./bans.js";
+import { eraseMember } from "./deletion.js";
+import { REINSTATE_ACTION } from "./feedback.js";
 import { type GroupRow, getGroup, runGroupingPass } from "./groups.js";
 import { getHandle } from "./handles.js";
+import { getMember } from "./members.js";
 import { joinUntil } from "./model/eligibility.js";
 import { meetAt } from "./model/schedule.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 import { addNotice } from "./notices.js";
+import { getReport, removeFromGroups } from "./reports.js";
 import { type ReviewResult, reviewTicket } from "./tickets.js";
 
 /**
@@ -18,7 +23,7 @@ export function recordAction(
   db: Database,
   action: {
     action: string;
-    subjectType: "ticket" | "event" | "group" | "member";
+    subjectType: "ticket" | "event" | "group" | "member" | "report" | "ban";
     subjectId: string;
     detail?: Record<string, string | number | null>;
     now: Date;
@@ -188,6 +193,171 @@ export function rejectHandle(
         t,
       );
       return { ok: true };
+    })
+    .immediate();
+}
+
+/** Raised when a rule the operator's own tools must keep would be broken. Nothing was written. */
+export class OperatorRuleError extends Error {
+  constructor(
+    readonly code: "contact_required",
+    message: string,
+  ) {
+    super(message);
+    this.name = "OperatorRuleError";
+  }
+}
+
+export type ReportActionResult = { ok: true } | { ok: false; error: "not_found" | "already_closed" };
+
+/**
+ * Records that the operator has been in touch with the person who made the report. A report by a woman about a man cannot be
+ * closed until this is done. A second call changes nothing and writes no second action.
+ */
+export function markContacted(db: Database, reportId: string, now: Date): ReportActionResult {
+  return db
+    .transaction((): ReportActionResult => {
+      const report = getReport(db, reportId);
+      if (report === null) return { ok: false, error: "not_found" };
+      if (report.status === "closed") return { ok: false, error: "already_closed" };
+      const changed = db
+        .query("UPDATE report SET contacted_reporter_at = ? WHERE id = ? AND contacted_reporter_at IS NULL")
+        .run(now.toISOString(), reportId).changes;
+      if (changed > 0) recordAction(db, { action: "report_contacted", subjectType: "report", subjectId: reportId, now });
+      return { ok: true };
+    })
+    .immediate();
+}
+
+export type CloseReportResult = { ok: true; fileKeys: string[] } | { ok: false; error: "not_found" | "already_closed" };
+
+/**
+ * Closes a report. A report by a woman about a man is refused (throws `OperatorRuleError`) until the reporter has been contacted.
+ *
+ * Upheld: the number goes on the ban list as `report_upheld` and the account is erased in the same transaction; the returned file
+ * keys are for the caller to delete after the commit. Dismissed: the account goes back to what it was before the report, but only
+ * when no other report about the same person is still open; plans that were withdrawn stay withdrawn. The note is kept on the
+ * report; the action row holds the outcome code only.
+ */
+export function closeReport(
+  db: Database,
+  pepper: string,
+  reportId: string,
+  outcome: "upheld" | "dismissed",
+  note: string | null,
+  now: Date,
+  t: Tunables = DEFAULT_TUNABLES,
+): CloseReportResult {
+  return db
+    .transaction((): CloseReportResult => {
+      const report = getReport(db, reportId);
+      if (report === null) return { ok: false, error: "not_found" };
+      if (report.status === "closed") return { ok: false, error: "already_closed" };
+      if (report.reporter_gender === "woman" && report.subject_gender === "man" && report.contacted_reporter_at === null) {
+        throw new OperatorRuleError("contact_required", "contact the person who made this report before closing it");
+      }
+      const at = now.toISOString();
+      db.query("UPDATE report SET status = 'closed', outcome = ?, closed_at = ?, close_note = ? WHERE id = ?").run(
+        outcome,
+        at,
+        note,
+        reportId,
+      );
+      recordAction(db, { action: "report_close", subjectType: "report", subjectId: reportId, detail: { outcome }, now });
+      let fileKeys: string[] = [];
+      if (outcome === "upheld") {
+        const erased = eraseMember(db, report.subject_id, { kind: "ban", pepper, reason: "report_upheld" }, now, t);
+        if (erased.ok) fileKeys = erased.fileKeys;
+      } else {
+        const others = db.query("SELECT 1 FROM report WHERE subject_id = ? AND status = 'open'").get(report.subject_id);
+        const member = getMember(db, report.subject_id);
+        if (others === null && member !== null && member.status === "suspended" && member.status_reason === "report") {
+          if (report.subject_status_before === "active") {
+            db.query("UPDATE member SET status = 'active', status_reason = NULL, updated_at = ? WHERE id = ?").run(at, member.id);
+          } else if (report.subject_status_before === "stopped") {
+            db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', updated_at = ? WHERE id = ?").run(
+              at,
+              member.id,
+            );
+          }
+        }
+      }
+      return { ok: true, fileKeys };
+    })
+    .immediate();
+}
+
+export type AccountActionResult = { ok: true } | { ok: false; error: "not_found" | "not_allowed" };
+
+/** Suspends an active or stopped member: signed out, plans withdrawn, out of done groups. They get a 403 until reinstated. */
+export function suspendMember(db: Database, memberId: string, now: Date, t: Tunables = DEFAULT_TUNABLES): AccountActionResult {
+  return db
+    .transaction((): AccountActionResult => {
+      const member = getMember(db, memberId);
+      if (member === null || member.status === "deleted") return { ok: false, error: "not_found" };
+      if (member.status !== "active" && member.status !== "stopped") return { ok: false, error: "not_allowed" };
+      db.query("UPDATE member SET status = 'suspended', status_reason = 'operator', updated_at = ? WHERE id = ?").run(
+        now.toISOString(),
+        memberId,
+      );
+      removeFromGroups(db, memberId, now, t);
+      recordAction(db, { action: "member_suspend", subjectType: "member", subjectId: memberId, now });
+      return { ok: true };
+    })
+    .immediate();
+}
+
+/**
+ * Puts a suspended or stopped member back to active. A member with an open report is refused: the report has to be closed first.
+ * A stopped member's `downvote_stop` row leaves the ban list, and the action row this writes is the point the stop rule counts
+ * downvotes from. A suspended member whose number is still listed as a stop (the operator suspended them while stopped) goes back
+ * to `stopped`. Withdrawn plans stay withdrawn.
+ */
+export function reinstateMember(db: Database, pepper: string, memberId: string, now: Date): AccountActionResult {
+  return db
+    .transaction((): AccountActionResult => {
+      const member = getMember(db, memberId);
+      if (member === null || member.status === "deleted") return { ok: false, error: "not_found" };
+      if (member.status !== "suspended" && member.status !== "stopped") return { ok: false, error: "not_allowed" };
+      if (db.query("SELECT 1 FROM report WHERE subject_id = ? AND status = 'open'").get(memberId) !== null) {
+        return { ok: false, error: "not_allowed" };
+      }
+      const phone = member.phone_e164;
+      const stopListed = phone !== null && banReason(db, pepper, phone) === "downvote_stop";
+      const at = now.toISOString();
+      if (member.status === "suspended" && stopListed) {
+        db.query("UPDATE member SET status = 'stopped', status_reason = 'downvote_stop', updated_at = ? WHERE id = ?").run(at, memberId);
+      } else {
+        if (member.status === "stopped" && stopListed) removeBan(db, pepper, phone);
+        db.query("UPDATE member SET status = 'active', status_reason = NULL, updated_at = ? WHERE id = ?").run(at, memberId);
+      }
+      recordAction(db, { action: REINSTATE_ACTION, subjectType: "member", subjectId: memberId, now });
+      return { ok: true };
+    })
+    .immediate();
+}
+
+export type BanMemberResult = { ok: true; fileKeys: string[] } | { ok: false; error: "not_found" };
+
+/** Bans a member: the number goes on the ban list as `operator` and the account is erased. The caller deletes the returned files after the commit. */
+export function banMember(db: Database, pepper: string, memberId: string, now: Date, t: Tunables = DEFAULT_TUNABLES): BanMemberResult {
+  return db
+    .transaction((): BanMemberResult => {
+      const erased = eraseMember(db, memberId, { kind: "ban", pepper, reason: "operator" }, now, t);
+      if (!erased.ok) return erased;
+      recordAction(db, { action: "member_ban", subjectType: "member", subjectId: memberId, now });
+      return { ok: true, fileKeys: erased.fileKeys };
+    })
+    .immediate();
+}
+
+/** Takes a number off the ban list, whatever the reason. The number is hashed inside; the action row holds no number and no hash. */
+export function liftBan(db: Database, pepper: string, e164: string, now: Date): { ok: boolean } {
+  return db
+    .transaction(() => {
+      const removed = removeBan(db, pepper, e164);
+      if (removed) recordAction(db, { action: "ban_lift", subjectType: "ban", subjectId: "ban_list", now });
+      return { ok: removed };
     })
     .immediate();
 }

@@ -16,6 +16,7 @@
     "./app/notices": "./app/notices.ts",
     "./app/plans": "./app/plans.ts",
     "./app/feedback": "./app/feedback.ts",
+    "./app/reports": "./app/reports.ts",
     "./app/thread": "./app/thread.ts",
     "./category": "./category.ts",
     "./events": "./events.ts",
