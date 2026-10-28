@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/** The copy lint (plan section 6): no word that promises an identity check, and no guilt copy. Reads every file in src/copy as text. */
+/** The copy lint (plan section 6): no word that promises an identity check, and no guilt copy. Reads every .ts and .tsx file under src/copy, subfolders included, as text. */
 const BANNED: [RegExp, string][] = [
   [/\bverified\b/i, "verified"],
   [/\bID[- ]check(ed)?\b/i, "ID check"],
@@ -13,7 +13,7 @@ const BANNED: [RegExp, string][] = [
 ];
 
 const dir = __dirname;
-const files = fs.readdirSync(dir).filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f));
+const files = fs.readdirSync(dir, { recursive: true, encoding: "utf8" }).filter((f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f));
 
 test.each(files)("%s has no banned copy", (file) => {
   const text = fs.readFileSync(path.join(dir, file), "utf8");

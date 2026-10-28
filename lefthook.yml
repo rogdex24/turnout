@@ -4,7 +4,7 @@
 
 pre-commit:
   # check-server: types (six projects, the mobile app is the last), lint, DESIGN.md lint, unit tests, dependency rules.
-  # check-mobile: the app's ESLint (React Compiler and Expo env rules) and Jest. It runs only when a mobile file is staged.
+  # check-mobile: the app's ESLint (React Compiler and Expo env rules) and Jest. It runs only when a file under apps/mobile or packages, or the root package.json, is staged.
   jobs:
     - name: format staged files
       glob: "*.{ts,tsx,js,json,css}"
@@ -13,7 +13,10 @@ pre-commit:
     - name: check-server
       run: bun run check:server
     - name: check-mobile
-      glob: "apps/mobile/**"
+      glob:
+        - "apps/mobile/**"
+        - "packages/**"
+        - "package.json"
       run: bun run check:mobile
     - name: gitleaks-staged
       run: gitleaks git --staged --redact --no-banner
