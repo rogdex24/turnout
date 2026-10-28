@@ -385,3 +385,14 @@ Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminSe
 
 Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
 service.
+
+## 2026-10-28: Expo patch pins follow the SDK
+
+`mobile-health` failed on PR 14 because Expo published new SDK 58 patches the same day, and
+`expo install --check` compares against what Expo expects now. Eleven modules in
+`apps/mobile/package.json` moved to the expected patch, still pinned exactly, with the 14-day rule
+waived as for the scaffold. `expo` and `jest-expo` stay excluded.
+
+Why. A patch release inside the SDK is what Expo tests against. Holding the old pin would leave CI
+red until Renovate's 14-day window passes. The cost: each Expo patch day can break `mobile-health`
+until someone bumps the pins.
