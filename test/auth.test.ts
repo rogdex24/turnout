@@ -210,6 +210,36 @@ describe("code request", () => {
       expect((await t.call("POST", "/auth/otp", { body: { phone: REVIEWER_PHONE, purpose: "sign_in" } })).status).toBe(200);
   });
 
+  test("the reviewer number's wrong tries are capped at 20 a day; after that even the right code is refused until the next IST day", async () => {
+    const t = await testApp();
+    const body = (code: string, challengeId: string) => ({ challengeId, phone: REVIEWER_PHONE, code, noticeVersion: NOTICE });
+    const challenge = async (n: number): Promise<string> => {
+      const res = await t.call("POST", "/auth/otp", { body: { phone: REVIEWER_PHONE, purpose: "sign_in" }, ip: `198.51.100.${n}` });
+      expect(res.status).toBe(200);
+      return ((await res.json()) as { challengeId: string }).challengeId;
+    };
+    // 4 challenges of 5 wrong tries each: 20 wrong codes.
+    for (let n = 0; n < 4; n++) {
+      const id = await challenge(n);
+      for (let i = 0; i < 5; i++)
+        expect((await errorOf(await t.call("POST", "/auth/otp/verify", { body: body("000000", id) }))).code).toBe("invalid_code");
+    }
+    // A fresh challenge and the right code: refused, and the challenge is left unused.
+    const id = await challenge(10);
+    const refused = await t.call("POST", "/auth/otp/verify", { body: body(REVIEWER_CODE, id) });
+    expect(await errorOf(refused)).toEqual({ status: 400, code: "invalid_code" });
+    expect(
+      (t.db.query("SELECT consumed_at FROM otp_challenge WHERE id = ?").get(id) as { consumed_at: string | null }).consumed_at,
+    ).toBeNull();
+    expect(t.alerts.sent.map((a) => a.kind)).toContain("otp_reviewer_locked");
+    // An ordinary number is not touched by the reviewer's cap.
+    expect((await t.signIn(PHONES[0] as string)).accessToken).toBeString();
+    // The next IST day a new code works again.
+    t.clock.advance(24 * 60 * 60 * 1000);
+    const next = await challenge(11);
+    expect((await t.call("POST", "/auth/otp/verify", { body: body(REVIEWER_CODE, next) })).status).toBe(200);
+  });
+
   test("the status route shows sent, then what the webhook reported; unknown and expired are 404", async () => {
     const t = await testApp();
     const { challengeId } = (await (await t.call("POST", "/auth/otp", { body: { phone: PHONES[0], purpose: "sign_in" } })).json()) as {

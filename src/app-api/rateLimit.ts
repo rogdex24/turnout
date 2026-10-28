@@ -59,6 +59,19 @@ export function consumeAll(db: Database, entries: readonly LimitEntry[], now: Da
     .immediate();
 }
 
+/** How many uses the counter holds in the window `now` falls in. Reads only. */
+export function usedNow(db: Database, key: string, rule: RateRule, now: Date): number {
+  return used(db, key, windowFor(rule.window, now).start);
+}
+
+/** Adds one use to a counter without checking it, for a count that is kept apart from the check. */
+export function addUse(db: Database, key: string, rule: RateRule, now: Date): void {
+  const window = windowFor(rule.window, now);
+  db.query(
+    "INSERT INTO rate_bucket (bucket_key, window_start, window_seconds, count) VALUES (?, ?, ?, 1) ON CONFLICT (bucket_key, window_start) DO UPDATE SET count = count + 1",
+  ).run(key, window.start, window.seconds);
+}
+
 /** Counts one use of a limit and throws 429 with `Retry-After` when it is used up. */
 export function enforce(db: Database, pepper: string, scope: string, subject: string, rule: RateRule, now: Date): void {
   const result = consumeAll(db, [{ name: scope, key: rateKey(pepper, scope, subject), rule }], now);

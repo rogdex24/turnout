@@ -29,6 +29,8 @@ export interface Tunables {
     digits: number;
     expiresMinutes: number;
     maxAttempts: number;
+    /** Wrong codes the store-review number may send in an IST day. Past this, its verifies are refused until the day ends, right code or not. */
+    reviewerFailCapPerDay: number;
     /** After "I didn't request a code", this number gets no code for this many hours. */
     notRequestedBlockHours: number;
     /** Sends per IST day across everyone. The `OTP_DAILY_CAP` env var overrides it. */
@@ -76,6 +78,7 @@ export const DEFAULT_TUNABLES: Tunables = {
     digits: 6,
     expiresMinutes: 10,
     maxAttempts: 5,
+    reviewerFailCapPerDay: 20,
     notRequestedBlockHours: 24,
     dailyCap: 200,
     priceInr: 0.136,
