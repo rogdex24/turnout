@@ -43,6 +43,8 @@ export interface Tunables {
     refreshDays: number;
     /** Rotated and revoked rows stay this long so a reused token can be recognised. */
     revokedRetentionDays: number;
+    /** A refresh token traded in this recently, whose replacement is still unused, is a retry and not a replay. */
+    refreshGraceSeconds: number;
   };
   fileLinkMinutes: number;
   rate: {
@@ -76,7 +78,7 @@ export const DEFAULT_TUNABLES: Tunables = {
     priceInr: 0.136,
     spendAlertsInr: [500, 1000, 1500],
   },
-  session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7 },
+  session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
   fileLinkMinutes: 5,
   rate: {
     otpPerPhoneShort: { limit: 3, window: { seconds: 15 * 60 } },

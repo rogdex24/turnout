@@ -122,6 +122,7 @@ Lint rules that guard architecture: `lint/no-html-strings.grit` (no string-built
 - A new source is one file in `ingestion/sources/` plus one line in `registry.ts` plus a fixture test.
 - No co-member data (names, photos, handles, the meet card) leaves the server before T-3h of the show (`social/model/tunables.ts`).
 - One 404 `not_found` for a thing that does not exist, is not yours, or is not yet visible. The three cases are never told apart (`app-api/errors.ts` `notFound`).
+- A refresh token traded in is reuse and signs the member out everywhere, except for a retry inside `tunables.session.refreshGraceSeconds` (30 s) while its replacement is still unused (`app-api/sessions.ts`). The app must single-flight refresh (A1): one refresh in flight at a time, every caller waiting on it, and the new pair stored before the next call is made.
 - No location is stored on the server. The app opens the cafe link on the device.
 - No handle appears in any response to another member. Only the operator sees it (`packages/contract`, `test/contract.test.ts`).
 - No secrets or personal data in the repo: no real phone, email, name or token in code, tests, docs or fixtures. `scripts/pii-scan.ts` and `test/noRealPhones.test.ts` enforce it; tests build a valid Indian number at run time (`test/appHelpers.ts` `indianMobile`).
