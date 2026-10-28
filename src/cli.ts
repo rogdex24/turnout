@@ -9,6 +9,7 @@ import { runSync } from "./ingestion/sync.js";
 import { migrate } from "./migrate.js";
 import { openDb } from "./utils/openDb.js";
 import { isUuid } from "./utils/uuid.js";
+import { appLinksFromEnv, rejectedAppLinkVars } from "./web/appLinks.js";
 import { siteResponse } from "./web/index.js";
 import { buildMapAssets } from "./web/map/assets.js";
 
@@ -163,6 +164,11 @@ async function main(): Promise<void> {
     if (app.config.ephemeral.length > 0) {
       console.warn(`Not set, so random for this run (sessions end at a restart): ${app.config.ephemeral.join(", ")}`);
     }
+    const appLinks = appLinksFromEnv(process.env);
+    const rejectedLinks = rejectedAppLinkVars(process.env);
+    if (rejectedLinks.length > 0) {
+      console.warn(`Ignored a malformed value, so app link files may be 404: ${rejectedLinks.join(", ")}`);
+    }
     const stopTicker = rest.includes("--no-ticker") ? undefined : startTicker(app);
     const server = Bun.serve({
       port,
@@ -171,7 +177,7 @@ async function main(): Promise<void> {
       fetch: (request, bunServer) =>
         new URL(request.url).pathname.startsWith(APP_PREFIX)
           ? appResponse(app, request, bunServer.requestIP(request)?.address ?? null)
-          : siteResponse(siteDb, request, app.now, { grievance: app.config.grievance }),
+          : siteResponse(siteDb, request, app.now, { grievance: app.config.grievance, appLinks }),
     });
     process.once("SIGTERM", () => {
       stopTicker?.();

@@ -52,9 +52,11 @@ PRs need approval to run, and nothing runs `pull_request_target` with PR code.
 | `STAGING_TEST_TOKEN` | Staging host environment only | The production route table | Guards `POST /__test/otp` and `POST /__test/clock` |
 | `OPERATOR_ALERT_WEBHOOK_URL`, `GRIEVANCE_*` | Host environment | The repo | Production refuses to start without `GRIEVANCE_*` |
 | `REVIEWER_PHONE`, `REVIEWER_OTP` | Host environment, and Play Console app access | The repo | For Google's review; values are given by the user on Wed 11-11 |
-| `APP_LINKS_ANDROID_SHA256` | Host environment | n/a | The Play App Signing SHA-256; not secret, set after the first Play upload |
-| `SENTRY_DSN` | Host environment for the server; the app key is decided in M2 | The repo | |
-| PostHog project key | Decided in M2 | The repo | |
+| `APP_LINKS_ANDROID_PACKAGE`, `APP_LINKS_ANDROID_SHA256`, `APP_LINKS_IOS_APP_IDS` | Host environment | n/a | Feed `/.well-known/assetlinks.json`. The package is `com.turnout.app`; the SHA-256 is the Play App Signing one, not secret, set after the first Play upload (needs owner). The iOS ids stay empty until the Apple account exists |
+| `APP_LINKS_HOST` | EAS environment variable (plain text), production build only | n/a | The `go.<domain>` host the Android intent filter claims. Unset means no filter, and links work only through the `turnout://` scheme (needs owner: pick the domain and point `go.<domain>` DNS at the server) |
+| `SENTRY_DSN` | Host environment for the server | The repo | |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS environment variable (plain text) | The repo | The app's Sentry key. It is a client key, not a secret, but it stays out of the repo so each environment has its own |
+| `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_POSTHOG_HOST` | EAS environment variables (plain text) | The repo | The PostHog project key and region host. Also a client key |
 
 ## Maps key restriction
 
@@ -123,7 +125,8 @@ owner can do, and what stays off until it is done. Status values are as above.
 | API host | Decide the API host name. It is the value of `EXPO_PUBLIC_API_URL`. The plan leaves it open until the host slot is found (S21) | The variable above | needs owner |
 | Maps key and SHA-1s | Create the restricted key as in "Maps key restriction", then add the SHA-1 rows after the first EAS build | A working map on the `dev`, `preview` and production builds | needs owner |
 | `google-services.json` | Create the Firebase project `turnout-push` when M3 starts and add the file as an EAS file variable | Android push | needs owner (M3) |
-| Sentry and PostHog | Open both accounts and give the engineer the project keys through EAS variables. The packages are installed and not initialised | Error reports and analytics | needs owner (M2) |
+| Sentry and PostHog | Open both accounts and set `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_KEY` and `EXPO_PUBLIC_POSTHOG_HOST` as EAS variables for `preview` and `production`. The code is in `apps/mobile/src/analytics`: with no key it does nothing, and with a key it still sends nothing until the person turns on "Share usage data" (the switch is built with Settings) | Error reports and analytics | needs owner (M2) |
+| WhatsApp one-tap sign-in | In the Meta authentication template, add the one-tap autofill button with the Android package name and the 11 character signature hash of each signing key (`apps/mobile/scripts/app-hash.sh` prints it). The Play app-signing key hash is only known once the first Play build is uploaded. Steps are in `docs/mobile/whatsapp-autofill.md` | One-tap code fill on a real phone. Typing and paste work without it | needs owner |
 | Icons and store assets | Provide the app icon, the adaptive icon foreground and the splash mark. The scaffold has none, so `expo prebuild` uses the Expo defaults | Preview and store builds. Play listing assets are F25 | needs owner |
 | Git LFS on the repository | Confirm Git LFS is enabled for the GitHub repository and that its bandwidth allowance covers the visual baselines | `visual-compare.sh` once baselines exist | needs owner |
 

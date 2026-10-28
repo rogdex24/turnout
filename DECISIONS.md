@@ -386,18 +386,173 @@ Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminSe
 Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
 service.
 
-## 2026-10-28: Expo patch pins follow the SDK
+## 2026-10-28: M2 app (A1 to A10), where the build differs from the plan or fills a gap
 
-`mobile-health` failed on PR 14 because Expo published new SDK 58 patches the same day, and
-`expo install --check` compares against what Expo expects now. Eleven modules in
+- `onboardingStep()` returns a fourth step, `sign_in`, between the notice and the profile, so a signed-out phone that has accepted the
+  notice is held on the phone screens and cannot reach the app.
+- Signed out, the notice is "accepted" when the stored version equals `NOTICE_VERSION`. Signed in, it is `me.consent.current`.
+  Signing out clears the stored notice (the welcome flag stays), so the next person on the phone sees the notice.
+- The route guards are two levels of `Stack.Protected`: `(onboarding)` against `(app)` at the root, and one guard per step inside
+  `(onboarding)`. `(onboarding)/index.tsx` redirects `/` to the open step, because with no `/` route in that group a cold start
+  lands on `+not-found`.
+- The root layout keeps the splash up until the session, the disk cache and `/me` have answered, then keeps the last known step while
+  `/me` refetches, so a screen is never shown and then replaced. A first `/me` that fails for lack of a network ends as a retry
+  screen (the query is paused, not errored, so the gate treats a paused first load as failed). The retry marks the network as up
+  before it fetches, because the last failure marked it down and the query would stay paused.
+- Native tabs use SF Symbols and Material icons, not Phosphor (spec line 60 names Phosphor). `expo-router/native-tabs` draws the
+  platform icons itself and cannot take a React component.
+- `openPrefs` and `openCacheStore` live in `mmkvStore.ts`, because `react-native-mmkv` does not load in Jest and the other modules
+  must.
+- `me` is part of the encrypted disk cache so a start without a network still routes. The cache key is 24 random bytes held in the
+  secure store as 32 base64 characters (an AES-256 key for MMKV).
+- There is no `netinfo` package in the plan, so connectivity follows request outcomes: a call that gets no answer is offline, any
+  answer is online.
+- The OTP response has no `resendAfter` field in the contract, so the resend wait is a fixed 30 seconds, extended by `Retry-After`
+  on a 429.
+- The areas tool response has no contract schema, so the schema is local to the app (`/tools/list_areas`).
+- The persister stamps the cache buster on every write. `PersistQueryClientProvider` reads its options only when it mounts, so a
+  buster that changes with sign-in could not be passed as an option.
+- Jest maps `./x.js` to `./x` because the contract package imports its own files with the `.js` suffix.
+- `src/router.test.tsx` mocks `@/providers/boot` and the splash module and uses in-memory stores (`createTestApp`), because MMKV and
+  the native splash do not load in Jest. The test still runs the real session, API client, query client, gates and route tree.
+- The poster placeholder uses the music tone for categories that have no tone of their own.
+- Sheet is a React Native `Modal` with a drag-free layout, not `@gorhom/bottom-sheet`, because that library needs a native gesture
+  setup that cannot be checked without a device. The dependency stays listed for later.
+- The story files type their `meta` as plain `Meta` and pass `args` explicitly, because the typed helper rejects components with
+  required props.
+- A1 acceptance "system back on every pushed screen" is covered by the router test on the pushed screens that exist. The sign-in to
+  code and Home to Show cases are added with A5 and A8. The Android back gesture itself needs a device.
+- Welcome (A4): the board only draws card 1, so the copy for cards 2 and 3 is written here (`src/copy/welcome.ts`) and the trust line
+  is on every card. The wordmark diamond is left out of the hero; the wordmark is text only.
+- `TextButton` is a new primitive for the borderless Skip, Next-as-text and Send again actions. The design uses it on four screens,
+  so it lives in `src/ui/primitives` with stories, not as a one-off style.
+- `Matrix` has a `framed` option that gives its content the window height, so full-screen stories (Welcome, sign-in) lay out as on a
+  device.
+- `jest.setup.ts` mocks `react-native-safe-area-context` with the library's own Jest mock, so any screen that reads insets renders in
+  a test without a provider.
+- WhatsApp one-tap (A5) uses Meta's `whatsapp-otp-android-sdk` 0.2.0, not 1.0.0. The 0.2.0 line gives the handshake id back through
+  `processOtpCode`, so the app can drop a code that belongs to an earlier send. The module is a local Expo module in
+  `apps/mobile/modules/whatsapp-otp` with a plain JavaScript config plugin (Expo loads plugins with no build step). Its Kotlin code
+  could not be compiled or run here, so one-tap on a real phone is partial.
+- On iOS and in the e2e build the module is a stub. The stub reports WhatsApp as installed in the e2e build, and `null` (maybe) on iOS,
+  which the screens treat as "maybe installed". The e2e codes come from the `__test/otp` route.
+- `expo-clipboard` 58.0.3 is added for the Paste action on the code screen.
+- Jest `roots` now include `modules`, so the config plugin test runs under `bun run check`.
+- The code screen's "Not there yet?" and the resend wait are two clocks: the prompt shows 60 seconds after the send, or when the
+  resend wait ends if that is later, and Send again stays off until the resend wait ends.
+- The sign-in screens (A5) share one `SignInFlowProvider` in the `(onboarding)` layout: the typed number, and the code that was sent
+  (phone, challenge id, send time, when Send again opens). The code route sends a cold start back to the phone step, since there is
+  no challenge to enter. The phone step has no back button, because nothing sits before it in the sign-in step.
+- Sign-in polls `GET /auth/otp/:id` every 3 seconds from second 3 to second 117 (39 asks), then stops. `undeliverable` swaps the
+  boxes for the "not on WhatsApp" note with Change number only; `failed` says the code did not arrive and opens Send again early.
+- The same refusal sentence shows for any 403 on send or verify, so the screen never says why a number was turned away.
+- `BackBar` (a back arrow row) and the `icon` and `disabled` props on `TextButton` are new for the code screen; `allowSeedNumbers`
+  (`src/api/variant.ts`) lets the development and e2e builds type a full +1 202 555 01xx seed number, the production build never does.
+- Maestro `otp-errors.yaml` waits out the 30 second resend wait, so it takes about a minute. CI passes the server's token to the
+  flows as `TEST_TOKEN`, read from the seeded server's log and masked.
+- Notice (A6) is a full screen, which the board left open between a full screen and a sheet. It shows the bundled notice paragraphs
+  and takes the grievance officer's block from `/config`. Agree stays off until those details are on the screen, so nobody agrees
+  to a notice with its contact missing, and a failed load offers Try again. Signed out, agreeing stores the version on the phone;
+  signed in (the notice moved), it calls `POST /me/consent` and writes the new consent into the cached `me`, so the router moves on.
+- Profile photo (A6): no camera option and no media-library permission. The system photo picker needs none, and the
+  `expo-image-picker` plugin blocks the camera and microphone permissions. The picture is always drawn again at 1080 px on its long
+  side and saved as a new JPEG on the phone, which drops EXIF and GPS; the server draws it once more. That the saved file really
+  carries no EXIF is device-only, so that acceptance line is partial (the helper's calls are covered by a Jest test).
+- Saving the profile is a stateless sequence: profile, then photo, then handle (a new photo sends an approved handle back to review,
+  so the handle goes last). The cached `me` is updated after each call, so a retry sends only what is left, and a handle the
+  account already holds is not sent again, since that would put an approved handle back in the queue.
+- A server refusal shows next to its own field: `unsupported_type` and `file_too_large` under the photo, `handle_locked` and the
+  daily limit under the handle, a refused profile under the first name or the women-only switch. Offline, rate limits and server
+  faults with no field say so above Save.
+- The women-only switch is shown only for women and non-binary people, with the system `Switch` coloured from the tokens, and it is
+  cleared (and never sent) when the gender becomes man. `PersonAvatar` gets a 96 dp `lg` size for the profile photo.
+- The Maestro onboarding flow stops at the photo: the system picker is not scripted, so the photo path is covered by Jest tests only.
+
+## A7 Home (M2)
+
+- The Home title is "Shows coming up" with no date range. The board's "Shows this week" would be wrong whenever the list holds more
+  or fewer than a week of shows, since the server pages by start time and not by week. The city label under the wordmark is static
+  and not a button: Hyderabad is the only city in v1, so there is nothing to choose.
+- The featured card leaves out the date block on the poster. The stub under the tear line already carries the day and time
+  ("Sat 7:00 PM") in text that scales, and a second copy on the picture added noise. Cards show no count of people, as the plan says.
+- `image_url` is null for every show today, so the flat category-tone poster is what ships. The photo poster path is already in
+  `Poster` and takes over once a show has an image.
+- The plan bar sits in the flow under the list (a flex column), not absolutely positioned over it. The list is then inset above
+  it without measuring anything, and it stays on top of the tab bar. There is no plan data until the plans arrive in M3, so
+  `HomeScreen` passes `plan={null}` and the bar is built and tested with props only (stories: Finding, Settled, LongTitle).
+- The handle check strip (A29) was built here, early, because Home is where it shows. It is the strip only: pending says the profile
+  is being checked, rejected gives a sentence per reject reason and Change handle opens the existing profile form at
+  `settings/profile`. There is no `settings/social` route in this build. `useMe` polls every 60 seconds while the handle is
+  pending, so the strip goes away on its own when the review finishes.
+- The area list schema lives in `src/api/shows.ts`, not in the contract package: `/tools/list_areas` is a web tool route, not part of
+  the app API contract. Areas with no shows are hidden from the pills so no pill leads to an empty list.
+- `useNow` moved from `screens/signin` to `providers`, since Home and the sign-in code step both read the clock.
+- Jest now compiles `@shopify/flash-list` (it ships ES modules) and loads the library's own `jestSetup`, which fixes the measured
+  window. FlashList's loaded timer fires outside `act` in a few Home tests and prints a warning; the tests pass and the warning is
+  the library's own timer.
+- Maestro `browse.yaml` uses the seeded members 0104 (approved handle), 0102 (pending) and 0103 (rejected). It is written for CI and
+  has not run on a device. The visual capture story moved from `screens-home--placeholder` to `screens-home--loaded`.
+
+## 2026-10-28: Expo patch pins follow the SDK, Metro resolves the contract's `.js` imports
+
+`mobile-health` failed on PR 15 because Expo published new SDK 58 patches the same day, and
+`expo install --check` compares against what Expo expects now. Thirteen modules in
 `apps/mobile/package.json` moved to the expected patch, still pinned exactly, with the 14-day rule
 waived as for the scaffold. `expo` and `jest-expo` stay excluded.
 
-Why. A patch release inside the SDK is what Expo tests against. Holding the old pin would leave CI
-red until Renovate's 14-day window passes. The cost: each Expo patch day can break `mobile-health`
-until someone bumps the pins.
+`build-android` and `build-ios` failed because Metro could not resolve `./category.js` from
+`packages/contract/events.ts`. The contract imports its siblings with a `.js` suffix, which tsc and
+Bun map to the `.ts` file and Metro does not. `apps/mobile/metro.config.js` now retries a relative
+`.js` import from inside `packages/contract` without the suffix. Everything else resolves as before.
+
+Why. A patch release inside the SDK is what Expo tests against, and holding the old pin leaves CI
+red until Renovate's 14-day window passes. The resolver keeps the contract valid ESM for the server
+without a build step for the app.
 
 The module patches also need the matching native core. With `expo` held at 58.0.11, iOS crashed at
 launch on a missing `ExpoModulesJSI` symbol, so `expo` moved to 58.0.21 too and left
 `expo.install.exclude`, so `expo install --check` now flags `expo` when it falls behind its modules.
-Only `jest-expo` stays excluded.
+Only `jest-expo` stays excluded. The onboarding flow now matches the step count as the end of the
+card's label (`.*1 of 3`), because Maestro compares `assertVisible` text with the whole label.
+
+## 2026-10-28: M2 app, A8 to A10
+
+- A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in
+  `src/api/features.ts`) decides what it does. Off, which is the default, Go opens a Coming soon sheet. The show shows no "looking"
+  count while the server sends none: `lookingCount` is null and the line is hidden, not set to zero. `lookingLine` lives in
+  `screens/show`, not in `model`, because it builds copy, and it uses `groupIndian` from `model/showTime` (now exported). How it
+  works uses generic copy that holds for every show. The Buy button's icon sits after the label. The marquee bulbs are static, so
+  nothing runs under Reduce Motion.
+- A9 Sentry and PostHog. Consent is off by default, stored as the `analyticsConsent` pref ("1" or absent), and there is no switch for
+  it yet: "Share usage data" is built with Settings. Nothing is built, loaded or sent before consent, and without a build key
+  (`EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_KEY`, `EXPO_PUBLIC_POSTHOG_HOST`) the whole module does nothing. Both SDKs are
+  loaded with `require` after consent, so a build without consent never runs their code. Turning consent off calls PostHog `optOut`
+  and closes Sentry.
+- PostHog uses memory persistence, so its id is new on each launch and nothing about a device is kept. Session replay,
+  autocapture of screens and geo lookup are off. Events go through a registry (`analytics/events.ts`): five events with fixed keys,
+  strings scrubbed, and any call with a location, handle or person key (lat, area, city, handle, phone, email, name and the like,
+  also inside nested objects) is dropped whole. Sentry gets no user, no request body or headers, no replay, no screenshot, no
+  traces, and every message, breadcrumb and `extra` value is scrubbed of URLs (query, fragment and long token segments), emails,
+  Bearer tokens and phone numbers.
+- Telemetry starts after a frame and a zero timeout, not `InteractionManager`, which this React Native version no longer has.
+- A10 App links. The https host is a build variable, `APP_LINKS_HOST` (`go.<domain>`), because the domain is not decided. It is set
+  for the production variant only: `assetlinks.json` names the production package, so development, e2e and preview builds never
+  claim the host. With it unset there is no intent filter and links work through the custom scheme only, which is what the Maestro
+  flow uses. There is no iOS `associatedDomains` (the plan says so, citing Apple TN3155), so the AASA route is a stub: a 404 until `APP_LINKS_IOS_APP_IDS` is set.
+- Every link goes through `redirectSystemPath` (`src/api/nativeIntent.ts`, re-exported by `src/app/+native-intent.tsx` because
+  dependency-cruiser allows nothing to import a route). The list is short: a show (`/e/<id>` on the host, `show/<id>` or `e/<id>` on
+  the scheme), its `/go`, Home, and, in the app's own scheme only, Storybook with a plain story id (the visual capture flow needs
+  it) and the dev client launcher in a development build. Anything else opens Home. `/go` opens the show while groups are off. A path
+  the router already holds (`/show/<id>`) is accepted too and gets the same checks, because the router test harness and some
+  platforms hand paths back through the same function.
+- The Android filter uses `pathPrefix: "/e/"`, so a `.ics` link on the go host also opens the app, and the app sends it Home. The
+  filter cannot express "no suffix", and the website serves the file when the app is not installed.
+- `assetlinks.json` is served only when both `APP_LINKS_ANDROID_PACKAGE` and one fingerprint are set, and is a 404 otherwise. A
+  fingerprint is normalised to upper-case colon form, and an entry that is not a SHA-256 is dropped without failing the start, so
+  one typo does not hide the others. The one change in `src/cli.ts` reads the env and passes it to `siteResponse`.
+- `adb shell pm get-app-links` cannot be checked here: it needs the DNS host and the Play signing key. That step is listed in
+  `docs/plans/mobile-accounts.md` as needs owner.
+- Review round. A console breadcrumb keeps only its `logger`: what the app logged never goes to Sentry, even scrubbed. The
+  scrubber now walks nested arrays and objects in breadcrumb data and `extra`. `serve` warns when an `APP_LINKS_*` value is set
+  but dropped, and an iOS app id needs a 10-character team id. The Show screen's price and step numerals use the
+  `display-numeral` face through `displayFaceStyle`, not raw sizes. `EXPO_PUBLIC_GROUPS_ENABLED` stays off until the A11 go route.

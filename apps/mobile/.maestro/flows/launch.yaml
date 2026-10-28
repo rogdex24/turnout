@@ -1,5 +1,4 @@
-# The first flow: a fresh install opens and shows the home screen.
-# Today that is the placeholder home. When the Welcome screen lands in M2, change the assertion to its heading.
+# The first flow: a fresh install opens and shows the Welcome screen, because nobody is signed in.
 appId: com.turnout.app.e2e
 name: launch
 tags:
@@ -15,6 +14,6 @@ tags:
       - tapOn: "Wait"
 - extendedWaitUntil:
     visible:
-      id: home
+      id: welcome
     timeout: 30000
 - assertVisible: "Turnout"

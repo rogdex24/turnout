@@ -338,6 +338,9 @@ jobs:
           # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
           for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
           curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
+          token="$(sed -n 's/^STAGING_TEST_TOKEN=//p' "$RUNNER_TEMP/mobile-server.log")"
+          echo "::add-mask::$token"
+          echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
       # `script` runs one line at a time. The second line is the one automatic re-run; a flow that needs it often is fixed or
       # quarantined that week (docs/plans/mobile-ci-budget.md).
       - name: Run the flows and the visual capture
@@ -430,6 +433,9 @@ jobs:
           # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
           for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
           curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
+          token="$(sed -n 's/^STAGING_TEST_TOKEN=//p' "$RUNNER_TEMP/mobile-server.log")"
+          echo "::add-mask::$token"
+          echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
       # The second command is the one automatic re-run (see the Android job).
       - name: Run the flows and the visual capture
         run: |

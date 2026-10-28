@@ -16,6 +16,6 @@ env:
     clearState: true
 - extendedWaitUntil:
     visible:
-      id: home
+      id: welcome
     timeout: 30000
 - assertVisible: "Turnout"

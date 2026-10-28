@@ -163,10 +163,11 @@ Checks on 2026-10-28:
   `expo.install.exclude`. That keeps `mobile-health` green and hides nothing else. Remove the
   exclusion when Renovate bumps both (`DECISIONS.md`, 2026-10-28).
 - `mobile-health` checks against the SDK 58 versions Expo publishes now, not the ones at scaffold
-  time. On 2026-10-28 Expo shipped a patch for eleven modules (`expo-constants`, `expo-dev-client`,
-  `expo-font`, `expo-image`, `expo-linking`, `expo-location`, `expo-notifications`, `expo-router`,
-  `expo-splash-screen`, `expo-system-ui`, `expo-updates`), and the job failed until the exact pins
-  moved to them. Those bumps waive the 14-day rule like the scaffold did.
+  time. On 2026-10-28 Expo shipped a patch for thirteen modules (`expo-clipboard`, `expo-constants`,
+  `expo-dev-client`, `expo-font`, `expo-image`, `expo-image-manipulator`, `expo-linking`,
+  `expo-location`, `expo-notifications`, `expo-router`, `expo-splash-screen`, `expo-system-ui`,
+  `expo-updates`), and the job failed until the exact pins moved to them. Those bumps waive the
+  14-day rule like the scaffold did.
 - The module patches of 2026-10-28 need `expo-modules-jsi` 58.0.21. With `expo` at 58.0.11 the
   lockfile kept `expo-modules-core` 58.0.27 and `expo-modules-jsi` 58.0.20, and the iOS build crashed
   at launch (`ExpoFont` could not find a symbol in `ExpoModulesJSI`). `expo` now pins 58.0.21, which

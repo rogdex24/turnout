@@ -59,8 +59,8 @@ shoot (`folder`, Storybook `id`, and the text that shows when the story is ready
 `apps/mobile/.maestro/visual/capture-story.yaml` takes one shot, and
 `apps/mobile/.maestro/ci/device-run.sh <target>` loops the themes and text sizes and leaves
 `<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` passes with a
-notice while a target has no baseline. The one story today is `screens-home--placeholder`
-(folder `home`); the events list story in the example above comes with M2.
+notice while a target has no baseline. The Home story is `screens-home--loaded`
+(folder `home`).
 
 ### Git LFS
 

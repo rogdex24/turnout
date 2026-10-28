@@ -1,0 +1,77 @@
+# What the code step does when things go wrong, against the seeded server (see README.md). The seed numbers are the fictional
+# +1 202 555 01xx members; the e2e build takes them whole. Codes come from the server's test route, so TEST_TOKEN must be set.
+# Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: otp-errors
+tags:
+  - onboarding
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  NEW_MEMBER: "+12025550101"
+  BANNED_MEMBER: "+12025550112"
+  NOT_ON_WHATSAPP: "+12025550113"
+---
+# A wrong code says how many tries are left, and the boxes empty.
+- runFlow: ../subflows/open-sign-in.yaml
+- runFlow:
+    file: ../subflows/send-code.yaml
+    env:
+      PHONE: ${NEW_MEMBER}
+- extendedWaitUntil:
+    visible:
+      id: code
+    timeout: 10000
+- assertVisible: "Sent on WhatsApp to +12025550101"
+- runFlow:
+    file: ../subflows/enter-code.yaml
+    env:
+      CODE: "000000"
+- assertVisible: "That code isn't right. 4 tries left."
+
+# Four more wrong codes cancel it. Send again still waits out its 30 seconds, then sends a new code.
+- repeat:
+    times: 4
+    commands:
+      - runFlow:
+          file: ../subflows/enter-code.yaml
+          env:
+            CODE: "000000"
+- assertVisible: "Too many wrong codes. Ask for a new one."
+- assertVisible: "Not there yet?"
+- extendedWaitUntil:
+    visible: "Send again"
+    timeout: 40000
+- tapOn:
+    id: send-again
+- assertVisible: "We sent a new code."
+
+# A number a ban covers gets the same sentence as any other refusal, with nothing about why.
+- runFlow: ../subflows/open-sign-in.yaml
+- runFlow:
+    file: ../subflows/send-code.yaml
+    env:
+      PHONE: ${BANNED_MEMBER}
+- assertVisible: "We can't sign you in with this number."
+- assertNotVisible:
+    id: code
+
+# A number that is not on WhatsApp says so within the first poll, and only Change number is left.
+- runFlow: ../subflows/open-sign-in.yaml
+- runFlow:
+    file: ../subflows/send-code.yaml
+    env:
+      PHONE: ${NOT_ON_WHATSAPP}
+- extendedWaitUntil:
+    visible: "That number isn't on WhatsApp"
+    timeout: 15000
+- assertNotVisible:
+    id: code-field
+- assertNotVisible:
+    id: paste-code
+- tapOn:
+    id: change-number
+- extendedWaitUntil:
+    visible:
+      id: sign-in
+    timeout: 10000
