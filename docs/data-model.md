@@ -518,7 +518,7 @@ an eligible future event.
   listings use `12th Sep`, `12/09`, `Sep 12, 7 PM onwards` and `Friday 7pm` in
   roughly equal measure.
 
-## 13. Social (Turnout, from M2; plans and groups from M3)
+## 13. Social (Turnout, from M2; plans and groups from M3; thread, feedback and reports from M4)
 
 The people tables live in `src/social/schema.ts`, migrated last by `src/migrate.ts`. They follow section 1
 (ISO UTC `Z` times, lowercase ULID ids, `CHECK` enums) with one difference: `rate_bucket.window_start` is epoch
@@ -549,6 +549,13 @@ column is added to a table here and not there.
 | `operator_action` | Action name, subject type and id, short detail, time | 1 year |
 | `scheduler_lease` | Lease name, holder, expiry, last tick | One row per lease |
 | `alert_sent` | Alert key, time | 30 days |
+| `message` | ULID id, group, sender, the sender's `member_ref`, `client_id`, `body` (1 to 1,000 characters), time. Unique on sender and `client_id` | 30 days after the show; longer while a report on the group is open |
+| `thread_presence` | Group, member, when the member last read the thread | Until the show's data is swept or the member is deleted |
+| `downvote` | Group, voter, target, time. One row per pair per show; never to yourself | Until either person is deleted |
+| `met_edge` | Group and the pair (`member_a` sorts before `member_b`) | Until either person is deleted |
+| `feedback_close` | Group, when its feedback window closed (so met edges and the stop rule run once) | While the group row is kept |
+| `report` | Group, reporter, subject, optional message, `body`, `client_id`, gender snapshots, the subject's status before, `status`, `outcome`, `due_at`, contact and close fields. Reporter and subject are ids that stay after deletion | 1 year after it is closed |
+| `ban_list` | `phone_hash` (primary key, `HMAC-SHA256(BAN_PEPPER, e164)`), `reason` (`report_upheld`, `downvote_stop`, `operator`), time. No user id | Until the operator lifts it |
 
 Rules the schema encodes:
 
@@ -571,3 +578,7 @@ Rules the schema encodes:
   migrate. It holds no group rule: it adds the venue point and `effective_starts_at` (the override when there is one, else
   the source's start) to `listable_event`. The group rules (category, price, free, a known start, a placed venue, the
   closing time) are tunables and live only in `isEligible`, which `getEligibleShow` runs over the row.
+- A report has an `outcome` exactly when it is closed (`CHECK`). A downvote or a report never names the writer as the
+  subject (`CHECK`). The members of a pair in `met_edge` are stored in sorted order (`CHECK`), so there is one row per pair.
+- `ban_list` has no member column. Erasing a member for deletion never touches it; erasing for a ban or a stop writes one
+  row with the hash of the number that was nulled on the member.
