@@ -1,4 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { RawResponse, Transport, TransportRequest } from "./client";
+import { createAppQueryClient } from "./queryClient";
 
 /** A scripted transport for tests: each call takes the next reply. A reply that is an Error is thrown, as a dead network would. */
 export function scriptedTransport(replies: (RawResponse | Error | ((request: TransportRequest) => RawResponse | Error))[]) {
@@ -33,4 +35,22 @@ export function tokenPairBody(sub: string, tag: string, expiresInMs: number, now
     refreshToken: `refresh-${tag}-0123456789abcdef`,
     refreshExpiresAt: new Date(now + 30 * 86_400_000).toISOString(),
   };
+}
+
+const liveClients: QueryClient[] = [];
+
+/** A real query client for a test. Garbage timers are switched off, or the 24 h ones would keep Jest alive. Call `clearTestClients()` after each test. */
+export function testQueryClient(): QueryClient {
+  const client = createAppQueryClient();
+  const { queries, mutations } = client.getDefaultOptions();
+  client.setDefaultOptions({
+    queries: { ...queries, gcTime: Number.POSITIVE_INFINITY },
+    mutations: { ...mutations, gcTime: Number.POSITIVE_INFINITY },
+  });
+  liveClients.push(client);
+  return client;
+}
+
+export function clearTestClients(): void {
+  for (const client of liveClients.splice(0)) client.clear();
 }
