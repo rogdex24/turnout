@@ -17,7 +17,8 @@ env:
     visible:
       id: welcome
     timeout: 30000
-- assertVisible: "Everyone signs in with a phone number, a real photo and a social profile we check."
+# On iOS the trust line is only part of the card's label, so match it anywhere in the text.
+- assertVisible: ".*Everyone signs in with a phone number, a real photo and a social profile we check.*"
 - assertVisible: ".*1 of 3"
 - tapOn:
     id: welcome-next
