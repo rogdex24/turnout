@@ -43,6 +43,9 @@ dt { color: var(--muted-foreground); font: var(--weight-meta) var(--font-meta); 
 dd { margin: 0; font-variant-numeric: tabular-nums; }
 .description { white-space: pre-line; max-width: 65ch; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--spacing-2); align-items: center; margin: var(--spacing-4) 0; }
+.go-group { margin: var(--spacing-4) 0; }
+.go-group .lede { margin: var(--spacing-2) 0 0; }
+.app-status { display: grid; gap: var(--spacing-2); max-width: calc(var(--spacing-8) * 10); margin: var(--spacing-4) 0; }
 .foot { padding-top: var(--spacing-6); padding-bottom: var(--spacing-6); color: var(--muted-foreground); font: var(--weight-meta) var(--font-meta); }
 .pill, .button, .link, .card h2 a { touch-action: manipulation; }
 @media (max-width: ${LAYOUT.phoneBelow - 1}px) { .filters select, .filters input:not([type="checkbox"]) { width: 100%; } .filters label { flex: 1 1 100%; } }

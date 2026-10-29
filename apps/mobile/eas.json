@@ -23,7 +23,7 @@
       "extends": "base",
       "distribution": "internal",
       "environment": "development",
-      "env": { "APP_VARIANT": "e2e", "EXPO_PUBLIC_STORYBOOK": "1", "EXPO_PUBLIC_ALLOW_CAPTURE": "1" },
+      "env": { "APP_VARIANT": "e2e", "EXPO_PUBLIC_STORYBOOK": "1", "EXPO_PUBLIC_ALLOW_CAPTURE": "1", "EXPO_PUBLIC_GROUPS_ENABLED": "1" },
       "android": { "buildType": "apk" },
       "ios": { "simulator": true }
     },

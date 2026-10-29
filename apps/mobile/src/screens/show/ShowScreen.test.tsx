@@ -5,6 +5,7 @@ import { showDetailFixture } from "@/api/showFixtures";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { common } from "@/copy/common";
 import { show as copy } from "@/copy/show";
+import { memberShowFixture } from "@/model/planFixtures";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
 import { ShowScreen } from "./ShowScreen";
@@ -86,8 +87,23 @@ describe("ShowScreen", () => {
     expect(screen.getByTestId("show")).toBeOnTheScreen();
   });
 
-  it("leaves out the looking count, which the plans server has not provided yet", async () => {
-    await open();
+  it("leaves out the looking count when groups are off, and does not ask the plans server", async () => {
+    const app = await open();
+    await screen.findByTestId("show-ticket");
+    expect(screen.queryByTestId("show-looking")).toBeNull();
+    expect(app.transport.callsTo("GET /shows/monsoon-theory")).toHaveLength(0);
+  });
+
+  it("shows how many people are looking for a group when groups are on", async () => {
+    process.env.EXPO_PUBLIC_GROUPS_ENABLED = "1";
+    await open({ "GET /shows/monsoon-theory": json(200, memberShowFixture({ lookingCount: 7 })) });
+    expect(await screen.findByTestId("show-looking")).toBeOnTheScreen();
+    expect(screen.getByText("7")).toBeOnTheScreen();
+  });
+
+  it("leaves the line out when the plans server cannot answer", async () => {
+    process.env.EXPO_PUBLIC_GROUPS_ENABLED = "1";
+    await open({ "GET /shows/monsoon-theory": json(500, { error: { code: "server_error", message: "Down." } }) });
     await screen.findByTestId("show-ticket");
     expect(screen.queryByTestId("show-looking")).toBeNull();
   });

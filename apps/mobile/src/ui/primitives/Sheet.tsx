@@ -9,6 +9,9 @@ import { Text } from "./Text";
 export interface SheetAction {
   title: string;
   onPress: () => void;
+  /** Work is under way: the button shows a spinner and a second press does nothing. */
+  loading?: boolean;
+  testID?: string;
 }
 
 export interface SheetProps {
@@ -49,8 +52,16 @@ export function Sheet({ visible, title, lead, onClose, primary, secondary, child
         ) : null}
         {children ? <View className="mt-4">{children}</View> : null}
         <View className="mb-4 mt-6 gap-3">
-          {primary ? <Button title={primary.title} onPress={primary.onPress} /> : null}
-          {secondary ? <Button variant="secondary" title={secondary.title} onPress={secondary.onPress} /> : null}
+          {primary ? <Button title={primary.title} onPress={primary.onPress} loading={primary.loading} testID={primary.testID} /> : null}
+          {secondary ? (
+            <Button
+              variant="secondary"
+              title={secondary.title}
+              onPress={secondary.onPress}
+              loading={secondary.loading}
+              testID={secondary.testID}
+            />
+          ) : null}
         </View>
       </SafeAreaView>
     </Modal>

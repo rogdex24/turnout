@@ -3,6 +3,8 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import { createSession, revokeOnServer, type Session } from "../api/auth";
 import { type ApiClient, createApiClient, fetchTransport, type Transport } from "../api/client";
 import { type Connectivity, createConnectivity } from "../api/connectivity";
+import { registerCheckin } from "../api/groups";
+import { forgetDevice, removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
@@ -54,16 +56,24 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     origin,
     transport,
     now: parts.now,
-    revoke: (accessToken) => revokeOnServer(api)(accessToken),
+    // The phone's push device goes first, while the access token still works; the server ends the session's devices too.
+    revoke: async (accessToken) => {
+      await removeDeviceOnSignOut(api, prefs)(accessToken);
+      await revokeOnServer(api)(accessToken);
+    },
   });
   api = createApiClient({ origin, session, connectivity, transport });
 
   const persister = createCachePersister(cacheStore, { buster: () => cacheBuster(appVersion, session.getState().userId) });
   session.onSignedOut(() => {
+    // A session refused at refresh ends with no token to call the server, so the stored device goes here too; the next person on
+    // this phone registers it again.
+    forgetDevice(prefs);
     queryClient.clear();
     persister.removeClient();
     localFlags.forgetNotice();
   });
+  registerCheckin(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
 

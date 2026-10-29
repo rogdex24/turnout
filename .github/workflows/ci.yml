@@ -335,10 +335,13 @@ jobs:
       - name: Start the seeded server
         run: |
           MOBILE_SERVER_PORT=3917 bun e2e/mobile-server.ts > "$RUNNER_TEMP/mobile-server.log" 2>&1 &
-          # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
-          for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
+          # The server prints the token only after it answers, so the wait is for the token line, not for the first answer: reading
+          # the log as soon as curl succeeds can find no token, and every flow that reads a sign-in code then gets a 404.
+          # macOS runners have no `timeout`, so the wait is a bounded loop. The curl and the test fail the step if either is missing.
+          for _ in $(seq 90); do grep -q '^STAGING_TEST_TOKEN=' "$RUNNER_TEMP/mobile-server.log" && break; sleep 1; done
           curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
           token="$(sed -n 's/^STAGING_TEST_TOKEN=//p' "$RUNNER_TEMP/mobile-server.log")"
+          test -n "$token"
           echo "::add-mask::$token"
           echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
       # `script` runs one line at a time. The second line is the one automatic re-run; a flow that needs it often is fixed or
@@ -430,10 +433,13 @@ jobs:
       - name: Start the seeded server
         run: |
           MOBILE_SERVER_PORT=3917 bun e2e/mobile-server.ts > "$RUNNER_TEMP/mobile-server.log" 2>&1 &
-          # macOS runners have no `timeout`, so the wait is a bounded loop. The last curl fails the step if the server never came up.
-          for _ in $(seq 90); do curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null && break; sleep 1; done
+          # The server prints the token only after it answers, so the wait is for the token line, not for the first answer: reading
+          # the log as soon as curl succeeds can find no token, and every flow that reads a sign-in code then gets a 404.
+          # macOS runners have no `timeout`, so the wait is a bounded loop. The curl and the test fail the step if either is missing.
+          for _ in $(seq 90); do grep -q '^STAGING_TEST_TOKEN=' "$RUNNER_TEMP/mobile-server.log" && break; sleep 1; done
           curl -sf "http://localhost:3917/api/events?limit=1" > /dev/null
           token="$(sed -n 's/^STAGING_TEST_TOKEN=//p' "$RUNNER_TEMP/mobile-server.log")"
+          test -n "$token"
           echo "::add-mask::$token"
           echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
       # The second command is the one automatic re-run (see the Android job).

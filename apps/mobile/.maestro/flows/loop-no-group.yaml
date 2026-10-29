@@ -1,0 +1,65 @@
+# The loop that ends without a group: Gita's plan finds nobody, the server's clock passes T-24h, and the plan says no group this time,
+# plainly, that the ticket is still hers, and offers the next show. The clock stays moved for the flow after this one, so this runs
+# near the end. The phone's own clock does not move. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: loop-no-group
+tags:
+  - plans
+env:
+  MEMBER: "+12025550108"
+  SHOW_ID: seed-show-t26h
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: approve
+      REASON: ""
+      PHONES: ""
+- extendedWaitUntil:
+    visible: ".*Finding your group.*"
+    timeout: 80000
+
+# Three hours on, the show is under 24 hours away. Groups are no longer made, and a plan with none ends as called off.
+- runScript:
+    file: ../scripts/clock.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ADVANCE_HOURS: "3"
+- extendedWaitUntil:
+    visible: ".*No group this time.*"
+    timeout: 80000
+- assertVisible: ".*Your ticket is still yours.*"
+- assertNotVisible:
+    id: plan-leave
+- assertVisible:
+    id: plan-find-show
+- tapOn:
+    id: plan-find-show
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000

@@ -93,3 +93,75 @@ test("serve exits 1 and names TURNOUT_ENV when it is not set, and does not start
     fs.rmSync(dir, { recursive: true, force: true });
   }
 }, 30_000);
+
+test("the operator routes act for the operator and the other members, on the server's clock, and need the token", async () => {
+  const other = await startMobileServer();
+  try {
+    const api = `${other.url}/api/app/v1`;
+    const post = (url: string, body: unknown, headers: Record<string, string> = {}) =>
+      fetch(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    const operator = async (route: string, body: unknown) => {
+      const response = await post(`${other.operatorUrl}/operator/${route}`, body, { "x-staging-test-token": other.testToken });
+      return { status: response.status, body: (await response.json()) as Record<string, unknown> };
+    };
+    const phone = (line: string) => `+1202555${line}`;
+    const signIn = async (number: string) => {
+      const requested = await post(`${api}/auth/otp`, { phone: number, purpose: "sign_in" });
+      const { challengeId } = (await requested.json()) as { challengeId: string };
+      const { code } = (await (await post(`${api}/__test/otp`, { phone: number }, { "x-staging-test-token": other.testToken })).json()) as {
+        code: string;
+      };
+      const verified = await post(`${api}/auth/otp/verify`, { challengeId, phone: number, code, noticeVersion: NOTICE_VERSION });
+      return ((await verified.json()) as { accessToken: string }).accessToken;
+    };
+    const show = "seed-show-t2d";
+
+    // A handle in review is turned down with a reason and then accepted, as the profile-check flow does.
+    const asha = { authorization: `Bearer ${await signIn(phone("0102"))}` };
+    const handle = async () =>
+      ((await (await fetch(`${api}/me`, { headers: asha })).json()) as { handle: { state: string; rejectReason: string | null } }).handle;
+    expect((await handle()).state).toBe("pending");
+    expect((await operator("handle", { phone: phone("0102"), decision: "reject", reason: "private_or_empty" })).status).toBe(200);
+    expect(await handle()).toMatchObject({ state: "rejected", rejectReason: "private_or_empty" });
+    expect((await operator("handle", { phone: phone("0102"), decision: "approve" })).status).toBe(409);
+
+    expect((await post(`${other.operatorUrl}/operator/crowd`, { eventId: show, phones: [phone("0106")] })).status).toBe(404);
+
+    const token = await signIn(phone("0105"));
+    let auth = { authorization: `Bearer ${token}` };
+    const made = await post(`${api}/plans`, { eventId: show, groupType: "open" }, auth);
+    expect(made.status).toBe(201);
+    const planId = ((await made.json()) as { id: string }).id;
+    const state = async () =>
+      (await (await fetch(`${api}/plans/${planId}`, { headers: auth })).json()) as { state: string; group: { size: number } | null };
+
+    expect((await operator("send", { phone: phone("0105"), eventId: show })).status).toBe(200);
+    expect((await state()).state).toBe("checking_ticket");
+    expect((await operator("ticket", { phone: phone("0105"), eventId: show, decision: "reject", reason: "unreadable" })).status).toBe(200);
+    expect((await state()).state).toBe("ticket_rejected");
+    expect((await operator("send", { phone: phone("0105"), eventId: show })).status).toBe(200);
+    expect((await operator("ticket", { phone: phone("0105"), eventId: show, decision: "approve" })).status).toBe(200);
+    expect((await state()).state).toBe("finding_group");
+
+    expect((await operator("crowd", { eventId: show, phones: [phone("0106"), phone("0107"), phone("0108")] })).status).toBe(200);
+    const grouped = await state();
+    expect(grouped.state).toBe("group_confirmed");
+    expect(grouped.group?.size).toBe(4);
+
+    // Past T-24h the group locks, and from then on it keeps going with three. The routes act at the server's clock.
+    const moved = await post(
+      `${api}/__test/clock`,
+      { advanceMs: 25 * 3600 * 1000, tick: true },
+      { "x-staging-test-token": other.testToken },
+    );
+    expect(moved.status).toBe(200);
+    expect((await operator("withdraw", { phone: phone("0108"), eventId: show })).status).toBe(200);
+    // The access token is short-lived and the clock moved a day: the app would refresh, this signs in again.
+    auth = { authorization: `Bearer ${await signIn(phone("0105"))}` };
+    const shrunk = await state();
+    expect(shrunk.group?.size).toBe(3);
+    expect((await operator("withdraw", { phone: phone("0108"), eventId: show })).status).toBe(409);
+  } finally {
+    await other.stop();
+  }
+}, 90_000);

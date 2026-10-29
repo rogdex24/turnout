@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import { type LinkContext, normalizeLinkHost, resolveSystemPath } from "@/model/linking";
 import { groupsEnabled } from "./features";
+import { appVariant } from "./variant";
 
 function context(): LinkContext {
   const extra = Constants.expoConfig?.extra;
@@ -9,6 +10,7 @@ function context(): LinkContext {
     scheme: String(Constants.expoConfig?.scheme ?? ""),
     goEnabled: groupsEnabled(),
     devClient: __DEV__,
+    pushHook: appVariant() === "e2e",
   };
 }
 

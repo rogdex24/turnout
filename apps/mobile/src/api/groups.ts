@@ -1,0 +1,100 @@
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  type CheckinResponse,
+  checkinResponseSchema,
+  type GroupResponse,
+  type GroupRevealed,
+  groupResponseSchema,
+} from "@turnout/contract/app/groups";
+import type { Plan } from "@turnout/contract/app/plans";
+import { isApiError } from "@/model/apiError";
+import { type Point, toPoint } from "@/model/walk";
+import type { ApiClient } from "./client";
+import { queryKeys } from "./keys";
+import { mutationKey, type Replayable, registerReplayable } from "./mutations";
+import { fetchPlans } from "./plans";
+import { fetchShow } from "./shows";
+
+/** The plan that holds this group, or null when the list does not have it (not loaded yet, or the plan is gone). */
+export function planOfGroup(plans: readonly Plan[], groupId: string): Plan | null {
+  return plans.find((plan) => plan.group?.id === groupId) ?? null;
+}
+
+export function fetchGroup(api: ApiClient, groupId: string): Promise<GroupResponse> {
+  return api.request({ path: `/groups/${encodeURIComponent(groupId)}`, schema: groupResponseSchema });
+}
+
+/** One group. Fresh for 30 s, and kept on disk so the card opens with the last cafe and members when the phone has no signal. */
+export const groupQuery = (api: ApiClient, groupId: string) => ({
+  queryKey: queryKeys.group(groupId),
+  queryFn: () => fetchGroup(api, groupId),
+});
+
+/** The plan and the venue a group is for. The group answer carries the cafe but not the venue's pin, so the venue comes from the show. */
+export interface MeetContext {
+  planId: string;
+  /** The show's public id. */
+  eventId: string;
+  venue: { name: string | null; point: Point | null };
+}
+
+/**
+ * Finds the plan that holds this group in the person's plans, then the show's venue from the public show. The venue is null-pinned when
+ * the show is gone or has no coordinates. Null when no plan holds the group (the plan list has not got it). Kept with the group on
+ * disk, so the card opens offline with both pins.
+ */
+export async function fetchMeetContext(api: ApiClient, groupId: string): Promise<MeetContext | null> {
+  const plan = planOfGroup((await fetchPlans(api)).plans, groupId);
+  if (plan === null) return null;
+  try {
+    const show = await fetchShow(api, plan.eventId);
+    return { planId: plan.id, eventId: plan.eventId, venue: { name: show.venue.name, point: toPoint(show.venue.lat, show.venue.lng) } };
+  } catch (error) {
+    if (!isApiError(error) || error.kind !== "not_found") throw error;
+    return { planId: plan.id, eventId: plan.eventId, venue: { name: null, point: null } };
+  }
+}
+
+export const meetContextQuery = (api: ApiClient, groupId: string) => ({
+  queryKey: queryKeys.groupContext(groupId),
+  queryFn: () => fetchMeetContext(api, groupId),
+});
+
+/** From T-3h the answer carries the cafe and the members; before that it carries neither. */
+export function isRevealed(group: GroupResponse): group is GroupRevealed {
+  return "cafe" in group && "members" in group;
+}
+
+export interface CheckinVariables {
+  groupId: string;
+}
+
+/** POST /groups/:groupId/checkin: no body and no coordinates. Sending it twice has the same effect as once. */
+export function sendCheckin(api: ApiClient) {
+  return ({ payload }: Replayable<CheckinVariables>): Promise<CheckinResponse> =>
+    api.request({
+      method: "POST",
+      path: `/groups/${encodeURIComponent(payload.groupId)}/checkin`,
+      body: {},
+      schema: checkinResponseSchema,
+    });
+}
+
+/** Lets a check-in made without a network be sent after a restart, once the phone is back online. */
+export function registerCheckin(queryClient: QueryClient, api: ApiClient): void {
+  registerReplayable<CheckinVariables>(queryClient, "checkin", sendCheckin(api), retryCheckin);
+}
+
+/** A refusal (outside the check-in window, not in the group) will not change on a second try, so only a bad connection or a busy server is retried. */
+export function retryCheckin(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 3) return false;
+  return !isApiError(error) || error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited";
+}
+
+export const checkinMutationKey = mutationKey("checkin");
+
+/** The group in the cache with this member marked as checked in, so the card shows it before the next fetch. */
+export function markCheckedIn(group: GroupResponse): GroupResponse {
+  if (!isRevealed(group)) return group;
+  return { ...group, members: group.members.map((member) => (member.isYou ? { ...member, checkedIn: true } : member)) };
+}

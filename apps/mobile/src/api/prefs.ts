@@ -10,6 +10,10 @@ export const PREF_KEYS = {
   acceptedNotice: "acceptedNotice",
   userId: "userId",
   analyticsConsent: "analyticsConsent",
+  goExplained: "goExplained",
+  ticketAsked: "ticketAsked",
+  /** The push token this phone gave the server and the device id it got back, for the member who was signed in. */
+  pushDevice: "pushDevice",
 } as const;
 
 export function memoryKv(): KeyValueStore {
@@ -36,4 +40,31 @@ export function analyticsConsent(prefs: KeyValueStore): boolean {
 
 export function setAnalyticsConsent(prefs: KeyValueStore, on: boolean): void {
   prefs.set(PREF_KEYS.analyticsConsent, on ? "1" : "0");
+}
+
+/** The one sentence about how groups work is shown the first time a person goes with a group, then left out. */
+export function goExplained(prefs: KeyValueStore): boolean {
+  return prefs.getString(PREF_KEYS.goExplained) === "1";
+}
+
+export function markGoExplained(prefs: KeyValueStore): void {
+  prefs.set(PREF_KEYS.goExplained, "1");
+}
+
+/** The notification question is asked once, after the first ticket goes up, whatever the answer. */
+export function ticketAsked(prefs: KeyValueStore): boolean {
+  return prefs.getString(PREF_KEYS.ticketAsked) === "1";
+}
+
+export function markTicketAsked(prefs: KeyValueStore): void {
+  prefs.set(PREF_KEYS.ticketAsked, "1");
+}
+
+/** The "group confirmed" buzz and animation play once per plan, the first time the person sees that state. */
+export function confirmedPlayed(prefs: KeyValueStore, planId: string): boolean {
+  return prefs.getString(`confirmedPlayed:${planId}`) === "1";
+}
+
+export function markConfirmedPlayed(prefs: KeyValueStore, planId: string): void {
+  prefs.set(`confirmedPlayed:${planId}`, "1");
 }

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { HANDLE_REJECT_REASONS } from "@turnout/contract/profile";
+import { AccessibilityInfo } from "react-native";
 import { profileCheck } from "@/copy/profileCheck";
 import { ProfileCheckStrip } from "./ProfileCheckStrip";
 
@@ -27,5 +28,31 @@ describe("ProfileCheckStrip", () => {
   it("never reads as a mark against the person", () => {
     const text = [profileCheck.pending, profileCheck.change, ...Object.values(profileCheck.rejected)].join(" ");
     expect(text).not.toMatch(/fake|suspicious|failed|rejected|banned|violat/i);
+  });
+
+  describe("announcing", () => {
+    const say = () => jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockImplementation(() => undefined);
+    afterEach(() => jest.restoreAllMocks());
+
+    it("is quiet when it first shows, so opening a screen does not read it out", async () => {
+      const spy = say();
+      await render(<ProfileCheckStrip state="pending" />);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("says a change of state once, and not a repeat of the same one", async () => {
+      const spy = say();
+      const view = await render(<ProfileCheckStrip state="rejected" reason="not_found" onChange={jest.fn()} />);
+      await view.rerender(<ProfileCheckStrip state="pending" />);
+      await view.rerender(<ProfileCheckStrip state="pending" />);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(profileCheck.pending);
+    });
+
+    it("says a strip that appears because of a change just made", async () => {
+      const spy = say();
+      await render(<ProfileCheckStrip state="pending" announceOnMount />);
+      expect(spy).toHaveBeenCalledWith(profileCheck.pending);
+    });
   });
 });

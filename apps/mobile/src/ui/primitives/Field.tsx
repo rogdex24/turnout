@@ -1,9 +1,12 @@
 import { sizes } from "@turnout/design-tokens";
-import { type ReactNode, useState } from "react";
+import { type ComponentRef, type ReactNode, type Ref, useState } from "react";
 import { TextInput, type TextInputProps, View } from "react-native";
 import { cn } from "../cn";
 import { useColors } from "../theme";
 import { Text } from "./Text";
+
+/** What a ref to the field's input holds: `focus()`, `blur()` and the rest. */
+export type FieldInput = ComponentRef<typeof TextInput>;
 
 export interface FieldProps extends Omit<TextInputProps, "style"> {
   /** The label above the field, also the accessible name. */
@@ -14,11 +17,13 @@ export interface FieldProps extends Omit<TextInputProps, "style"> {
   error?: string | null;
   /** Content before the input, such as the +91 prefix. */
   prefix?: ReactNode;
+  /** The text input itself, for a screen that moves focus to it. */
+  inputRef?: Ref<FieldInput>;
   className?: string;
 }
 
 /** A 56 dp text field: label above, outline border, help or error below. */
-export function Field({ label, help, error, prefix, className, onFocus, onBlur, ...input }: FieldProps) {
+export function Field({ label, help, error, prefix, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
   const colors = useColors();
   const [focused, setFocused] = useState(false);
   const below = error ?? help;
@@ -33,6 +38,7 @@ export function Field({ label, help, error, prefix, className, onFocus, onBlur, 
       >
         {prefix}
         <TextInput
+          ref={inputRef}
           accessibilityLabel={label}
           accessibilityHint={below ?? undefined}
           placeholderTextColor={colors.muted}
