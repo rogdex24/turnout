@@ -1,0 +1,19 @@
+# Fetches the event sources into the production database. Started by turnout-sync.timer.
+[Unit]
+Description=Turnout event sync
+After=turnout@production.service
+
+[Service]
+Type=oneshot
+User=turnout
+Group=turnout
+WorkingDirectory=/srv/turnout/current
+EnvironmentFile=/etc/turnout/production.env
+ExecStart=/usr/local/bin/bun src/cli.ts sync --db ${DB_PATH}
+TimeoutStartSec=20min
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data
