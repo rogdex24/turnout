@@ -17,6 +17,17 @@ jest.mock("@/providers/splash", () => ({ holdSplash: jest.fn(), releaseSplash: j
 jest.setTimeout(20_000);
 let mockApp: TestApp;
 jest.mock("@/providers/boot", () => ({ bootApp: () => Promise.resolve(mockApp.deps) }));
+// Each render of the start error is counted, so a test can show it never flashed, not only that it is gone at the end.
+let mockStartFailedRenders = 0;
+jest.mock("@/screens/boot/StartFailed", () => {
+  const actual = jest.requireActual<typeof import("@/screens/boot/StartFailed")>("@/screens/boot/StartFailed");
+  return {
+    StartFailed: (props: Parameters<typeof actual.StartFailed>[0]) => {
+      mockStartFailedRenders += 1;
+      return actual.StartFailed(props);
+    },
+  };
+});
 
 async function launch(options: TestAppOptions, initialUrl = "/") {
   // The tab bar, Home and push set-up read the config and the plans; an unscripted route reads as a dead network.
@@ -208,10 +219,16 @@ describe("signed in", () => {
   });
 
   test("deleting the account returns to welcome with everything on the phone forgotten", async () => {
+    // On a phone each part of the wipe takes real time, and the screens must wait it out without an error.
+    const realTimeout = jest.requireActual<typeof import("timers")>("timers").setTimeout;
+    const slowPart = () => new Promise<void>((resolve) => realTimeout(resolve, 30));
     await launch({
       me: meFixture(),
       welcomeSeen: true,
       acceptedNotice: NOTICE_VERSION,
+      clearImages: slowPart,
+      clearPickedFiles: slowPart,
+      clearNotifications: slowPart,
       routes: {
         "POST /me/delete-code": json(200, { challengeId: "challenge-1", expiresAt: "2099-01-01T00:00:00.000Z" }),
         "DELETE /me": { status: 204, text: "", retryAfter: null },
@@ -224,9 +241,18 @@ describe("signed in", () => {
     await fireEvent.press(screen.getByTestId("delete-continue"));
     await fireEvent.press(screen.getByTestId("delete-send"));
     await on("delete-code");
+    mockStartFailedRenders = 0;
     await fireEvent.changeText(screen.getByTestId("delete-code-field"), "123456");
+    // Both clocks move while the wipe runs: its parts take real time, and the app's retries and refetches run on the fake one.
+    for (let i = 0; i < 40 && !screen.queryByTestId("welcome"); i++) {
+      await act(async () => {
+        jest.advanceTimersByTime(50);
+        await new Promise<void>((resolve) => realTimeout(resolve, 5));
+      });
+    }
     await on("welcome");
     expect(mockApp.deps.localFlags.getSnapshot()).toEqual({ welcomeSeen: false, acceptedNotice: null });
+    expect(mockStartFailedRenders).toBe(0);
   });
 
   test("the storybook route goes home when Storybook is not bundled", async () => {

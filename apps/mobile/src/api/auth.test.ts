@@ -174,6 +174,20 @@ test("a callback that throws does not keep the keychain, the member id or the st
   expect(session.getState()).toEqual({ status: "signed_out", userId: null });
 });
 
+test("while the sign-out callbacks run the session is signing out, with no member id", async () => {
+  const pair = tokenPairBody("01USER", "n1", 900_000, NOW);
+  const { session } = setup([]);
+  const seen: unknown[] = [];
+  session.onSignedOut(() => {
+    seen.push(session.getState());
+  });
+  await session.load();
+  await session.signIn(pair);
+  await session.signOut();
+  expect(seen).toEqual([{ status: "signing_out", userId: null }]);
+  expect(session.getState()).toEqual({ status: "signed_out", userId: null });
+});
+
 test("a keychain that will not empty still leaves the session signed out, and the fault is reported", async () => {
   const pair = tokenPairBody("01USER", "n1", 900_000, NOW);
   const { session, secure, prefs } = setup([]);
@@ -256,5 +270,6 @@ test("subscribers hear about every change", async () => {
   await session.load();
   await session.signIn(pair);
   await session.signOut();
-  expect(listener).toHaveBeenCalledTimes(3);
+  // Load, sign-in, then signing out and signed out.
+  expect(listener).toHaveBeenCalledTimes(4);
 });
