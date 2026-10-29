@@ -39,6 +39,11 @@ else
 fi
 
 echo "::group::flows"
+# The job runs this script a second time when the first run fails, on the same server, so each run empties the server's rate
+# limits first: otherwise the sign-in flows hit the per phone limit on the second run.
+if [ -n "${TEST_TOKEN:-}" ]; then
+  curl -sf -X POST -H "x-staging-test-token: $TEST_TOKEN" -H "content-type: application/json" -d '{}' "$SERVER_URL/api/app/v1/__test/limits" > /dev/null
+fi
 maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
 echo "::endgroup::"
 
