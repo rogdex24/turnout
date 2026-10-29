@@ -5,7 +5,7 @@ import { afterQuery, type DownvoteVariables, feedbackMutationKey, markDownvoted 
 import { isRevealed } from "@/api/groups";
 import { queryKeys } from "@/api/keys";
 import { type Replayable, replayable } from "@/api/mutations";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead } from "@/model/apiError";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
 import { useNow } from "@/providers/useNow";
@@ -59,11 +59,7 @@ export function AfterScreen({ groupId, focused, onBack, onReport, onClosed }: Af
   if (group.isError && isApiError(group.error) && group.error.kind === "not_found") {
     state = { status: "closed" };
   } else if (data === undefined) {
-    const stalledOffline = group.isPending && group.fetchStatus === "paused" && group.failureCount > 0;
-    state =
-      group.isError || stalledOffline
-        ? { status: "error", kind: stalledOffline ? "offline" : errorKind(group.error) }
-        : { status: "loading" };
+    state = pendingRead(group);
   } else if (!isRevealed(data) || data.state !== "done") {
     // The server decides when the group is done (the morning after). The phone's clock is not asked.
     state = { status: "notYet" };

@@ -7,7 +7,7 @@ import { isRevealed } from "@/api/groups";
 import { type Replayable, replayable } from "@/api/mutations";
 import { type ReportVariables, reportMutationKey } from "@/api/reports";
 import { report as copy } from "@/copy/report";
-import { errorKind } from "@/model/apiError";
+import { pendingRead } from "@/model/apiError";
 import { reportBody } from "@/model/report";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
@@ -46,11 +46,7 @@ export function ReportScreen({ groupId, memberRef, messageId, onBack, onDone }: 
   } else if (report.isPaused) {
     state = { status: "queued" };
   } else if (group.data === undefined) {
-    const stalledOffline = group.isPending && group.fetchStatus === "paused" && group.failureCount > 0;
-    state =
-      group.isError || stalledOffline
-        ? { status: "error", kind: stalledOffline ? "offline" : errorKind(group.error) }
-        : { status: "loading" };
+    state = pendingRead(group);
   } else if (!isRevealed(group.data)) {
     state = { status: "error", kind: "other" };
   } else {

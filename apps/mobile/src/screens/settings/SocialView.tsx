@@ -1,13 +1,12 @@
 import type { HandleKind, HandleRejectReason, HandleState } from "@turnout/contract/profile";
 import type { Ref } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { profileCheck } from "@/copy/profileCheck";
-import { BackBar } from "@/ui/BackBar";
 import { ProfileCheckStrip } from "@/ui/ProfileCheckStrip";
 import { Button } from "@/ui/primitives/Button";
 import { Field, type FieldInput } from "@/ui/primitives/Field";
-import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
+import { SettingsPage } from "./SettingsPage";
 
 const copy = profileCheck.social;
 
@@ -56,55 +55,46 @@ export function SocialView({
 }: SocialViewProps) {
   const current = held.handle ? `${held.kind ? `${copy.kind[held.kind]}, ` : ""}${held.handle}` : copy.none;
   return (
-    <SafeAreaView className="flex-1 bg-bg" testID="settings-social">
-      <BackBar onBack={onBack} />
-      <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 pb-6" keyboardShouldPersistTaps="handled">
-        <View>
-          <Text variant="title-large" accessibilityRole="header">
-            {copy.title}
-          </Text>
-          <Text variant="body" className="mt-2 text-muted">
-            {copy.lead}
-          </Text>
-        </View>
+    <SettingsPage
+      title={copy.title}
+      lead={copy.lead}
+      onBack={onBack}
+      testID="settings-social"
+      footer={<Button title={copy.save} onPress={onSave} loading={saving} disabled={input.trim() === ""} testID="social-save" />}
+    >
+      {held.state === "pending" ? <ProfileCheckStrip state="pending" announceOnMount={announceStrip} /> : null}
+      {held.state === "rejected" ? (
+        <ProfileCheckStrip state="rejected" reason={held.rejectReason} onChange={onChangeHandle} announceOnMount={announceStrip} />
+      ) : null}
 
-        {held.state === "pending" ? <ProfileCheckStrip state="pending" announceOnMount={announceStrip} /> : null}
-        {held.state === "rejected" ? (
-          <ProfileCheckStrip state="rejected" reason={held.rejectReason} onChange={onChangeHandle} announceOnMount={announceStrip} />
-        ) : null}
-
-        <View accessible accessibilityLabel={`${copy.current}, ${current}`} testID="social-current">
-          <Text variant="label" className="text-muted">
-            {copy.current}
-          </Text>
-          <Text variant="control" className="mt-1 font-semibold">
-            {current}
-          </Text>
-        </View>
-
-        <Field
-          inputRef={inputRef}
-          label={copy.field}
-          error={error}
-          value={input}
-          onChangeText={onInput}
-          placeholder={copy.placeholder}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="off"
-          keyboardType="url"
-          editable={!saving}
-          testID="social-handle"
-        />
-        {saved && !error ? (
-          <Text variant="meta" className="-mt-3 text-muted" accessibilityLiveRegion="polite" testID="social-saved">
-            {copy.saved}
-          </Text>
-        ) : null}
-      </ScrollView>
-      <View className="border-t border-line bg-bg px-4 pb-3 pt-3">
-        <Button title={copy.save} onPress={onSave} loading={saving} disabled={input.trim() === ""} testID="social-save" />
+      <View accessible accessibilityLabel={`${copy.current}, ${current}`} testID="social-current">
+        <Text variant="label" className="text-muted">
+          {copy.current}
+        </Text>
+        <Text variant="control" className="mt-1 font-semibold">
+          {current}
+        </Text>
       </View>
-    </SafeAreaView>
+
+      <Field
+        inputRef={inputRef}
+        label={copy.field}
+        error={error}
+        value={input}
+        onChangeText={onInput}
+        placeholder={copy.placeholder}
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="off"
+        keyboardType="url"
+        editable={!saving}
+        testID="social-handle"
+      />
+      {saved && !error ? (
+        <Text variant="meta" className="-mt-3 text-muted" accessibilityLiveRegion="polite" testID="social-saved">
+          {copy.saved}
+        </Text>
+      ) : null}
+    </SettingsPage>
   );
 }
