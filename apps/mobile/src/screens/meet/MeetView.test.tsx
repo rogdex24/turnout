@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { groupFixture, MEET_AT, MEMBERS, SHOW_STARTS_AT } from "@/api/groupFixtures";
 import { meet as copy } from "@/copy/meet";
 import { type MeetCardData, MeetView, type MeetViewProps } from "./MeetView";
@@ -32,6 +32,8 @@ function view(over: Partial<MeetViewProps> = {}, cardOver: Partial<MeetCardData>
       onOpenSettings={noop}
       onHere={noop}
       onCall={noop}
+      onOpenThread={noop}
+      onReport={noop}
       onLeave={noop}
       onClosed={noop}
       {...over}
@@ -84,6 +86,21 @@ describe("MeetView", () => {
   it("shows the offline bar", async () => {
     await view({ offline: true });
     expect(screen.getByRole("alert")).toBeOnTheScreen();
+  });
+
+  it("opens the group chat from the card", async () => {
+    const onOpenThread = jest.fn();
+    await view({ onOpenThread });
+    await fireEvent.press(screen.getByTestId("meet-thread"));
+    expect(onOpenThread).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the report form from the Safety sheet and closes the sheet", async () => {
+    const onReport = jest.fn();
+    await view({ onReport });
+    await fireEvent.press(screen.getByTestId("meet-safety"));
+    await fireEvent.press(screen.getByTestId("safety-report"));
+    expect(onReport).toHaveBeenCalledTimes(1);
   });
 
   it("hides Leave in the Safety sheet while the plan is not known", async () => {

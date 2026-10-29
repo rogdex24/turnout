@@ -8,7 +8,9 @@ import { removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
+import { registerReport } from "../api/reports";
 import type { SecretStore } from "../api/secureStorage";
+import { registerThreadSend } from "../api/thread";
 import { createStubWhatsAppOtp, type WhatsAppOtp } from "../api/whatsappOtp";
 import { createLocalFlags, type LocalFlags } from "./localFlags";
 
@@ -71,6 +73,8 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     localFlags.forgetNotice();
   });
   registerCheckin(queryClient, api);
+  registerThreadSend(queryClient, api);
+  registerReport(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
 

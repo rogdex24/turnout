@@ -36,7 +36,10 @@ export function useNotificationRouting(native: PushNative): void {
   }, [api, prefs, native, signedIn, push, userId, hasPlan]);
 }
 
-/** The thread screen calls this with its group while it is open, so a message for that thread does not also ring as a banner. */
-export function useHoldThreadPushes(groupId: string): void {
-  useEffect(() => holdThreadPushes(groupId), [groupId]);
+/**
+ * The thread screen calls this with its group while it is in front, so a message for that thread does not also ring as a banner.
+ * Null holds nothing, for a screen that is open behind another one.
+ */
+export function useHoldThreadPushes(groupId: string | null): void {
+  useEffect(() => (groupId === null ? undefined : holdThreadPushes(groupId)), [groupId]);
 }

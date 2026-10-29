@@ -40,8 +40,8 @@ describe("routeForNotice", () => {
     ["handle_rejected", "/settings/social"],
     ["meet_card_live", "/groups/grp1/meet"],
     ["head_over", "/groups/grp1/meet"],
-    // The thread and the morning-after screens are M4, so these open the plan for now.
-    ["thread_message", "/plans/plan%201"],
+    ["thread_message", "/groups/grp1/thread"],
+    // The morning-after screen is not reached by a tap yet, so it opens the plan.
     ["morning_after", "/plans/plan%201"],
   ] as const)("opens %s at %s", (kind, route) => {
     expect(routeForNotice(kind, ids)).toBe(route);
@@ -53,6 +53,7 @@ describe("routeForNotice", () => {
 
   it("opens the plan when the group id could not be read, and Home when there is no plan either", () => {
     expect(routeForNotice("meet_card_live", { planId: "p1", groupId: null })).toBe("/plans/p1");
+    expect(routeForNotice("thread_message", { planId: "p1", groupId: null })).toBe("/plans/p1");
     expect(routeForNotice("meet_card_live", { planId: null, groupId: null })).toBe("/");
     expect(routeForNotice("ticket_rejected", { planId: null, groupId: null })).toBe("/");
     expect(routeForNotice("no_group", { planId: null, groupId: null })).toBe("/");

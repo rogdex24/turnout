@@ -48,7 +48,14 @@ const routes = (over: Record<string, RouteReply | RouteReply[]> = {}): Record<st
 });
 
 async function open(over: Record<string, RouteReply | RouteReply[]> = {}) {
-  const props = { onBack: jest.fn(), onOpenShow: jest.fn(), onLeave: jest.fn(), onClosed: jest.fn() };
+  const props = {
+    onBack: jest.fn(),
+    onOpenShow: jest.fn(),
+    onLeave: jest.fn(),
+    onOpenThread: jest.fn(),
+    onReport: jest.fn(),
+    onClosed: jest.fn(),
+  };
   const app = await createTestApp({ me: meFixture({ handle: { state: "approved" } }), welcomeSeen: true, routes: routes(over) });
   await render(
     <AppProviders deps={app.deps}>
@@ -195,12 +202,25 @@ describe("MeetScreen", () => {
     expect(onOpenShow).toHaveBeenCalledWith("traffic-jam-tales");
   });
 
+  it("opens the group chat", async () => {
+    const { onOpenThread } = await open();
+    await fireEvent.press(await screen.findByTestId("meet-thread"));
+    expect(onOpenThread).toHaveBeenCalledTimes(1);
+  });
+
   describe("Safety", () => {
     it("calls 112 first", async () => {
       await open();
       await fireEvent.press(await screen.findByTestId("meet-safety"));
       await fireEvent.press(screen.getByTestId("safety-call"));
       expect(openURL).toHaveBeenCalledWith("tel:112");
+    });
+
+    it("reports through the report form", async () => {
+      const { onReport } = await open();
+      await fireEvent.press(await screen.findByTestId("meet-safety"));
+      await fireEvent.press(screen.getByTestId("safety-report"));
+      expect(onReport).toHaveBeenCalledTimes(1);
     });
 
     it("leaves the plan through the plan's own screen", async () => {

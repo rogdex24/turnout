@@ -38,6 +38,8 @@ const base: MeetViewProps = {
   onOpenSettings: noop,
   onHere: noop,
   onCall: noop,
+  onOpenThread: noop,
+  onReport: noop,
   onLeave: noop,
   onClosed: noop,
 };

@@ -3,6 +3,7 @@ import {
   ArrowSquareOut,
   CalendarX,
   CaretLeft,
+  ChatCircle,
   Check,
   HandWaving,
   Hourglass,
@@ -26,6 +27,7 @@ import { Icon } from "@/ui/primitives/Icon";
 import { IconButton } from "@/ui/primitives/IconButton";
 import { Note } from "@/ui/primitives/Note";
 import { dimOnPress } from "@/ui/primitives/press";
+import { Row } from "@/ui/primitives/Row";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
@@ -74,6 +76,10 @@ export interface MeetViewProps {
   onOpenSettings: () => void;
   onHere: () => void;
   onCall: () => void;
+  /** Opens the group chat. */
+  onOpenThread: () => void;
+  /** Opens the report form for this group. */
+  onReport: () => void;
   /** Opens the way to leave the plan. Null while the plan is not known. */
   onLeave: (() => void) | null;
   /** From the closed card back to the plans. */
@@ -170,7 +176,7 @@ function Member({ member }: { member: GroupMember }) {
   );
 }
 
-function Group({ members, belowPlan }: { members: GroupMember[]; belowPlan: boolean }) {
+function Group({ members, belowPlan, onOpenThread }: { members: GroupMember[]; belowPlan: boolean; onOpenThread: () => void }) {
   const count = hereCount(members);
   return (
     <View className="mt-5" testID="meet-group">
@@ -194,6 +200,9 @@ function Group({ members, belowPlan }: { members: GroupMember[]; belowPlan: bool
           {copy.group.smaller}
         </Note>
       ) : null}
+      <View className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
+        <Row title={copy.group.chat} sub={copy.group.chatSub} icon={ChatCircle} caret onPress={onOpenThread} testID="meet-thread" />
+      </View>
     </View>
   );
 }
@@ -282,7 +291,7 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
             </>
           ) : null}
         </View>
-        <Group members={card.members} belowPlan={card.belowPlan} />
+        <Group members={card.members} belowPlan={card.belowPlan} onOpenThread={props.onOpenThread} />
       </ScrollView>
       <SafeAreaView edges={["bottom"]} className="border-t border-line bg-bg px-4 pt-3">
         {hint ? (
@@ -356,6 +365,10 @@ export function MeetView(props: MeetViewProps) {
         visible={safetyOpen}
         onClose={() => setSafetyOpen(false)}
         onCall={props.onCall}
+        onReport={() => {
+          setSafetyOpen(false);
+          props.onReport();
+        }}
         onLeave={
           props.onLeave
             ? () => {

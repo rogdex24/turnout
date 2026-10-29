@@ -31,11 +31,12 @@ const onlyOpen = (open?: string) => {
 };
 
 describe("signed out", () => {
+  // The first render loads every route's screen, so it is the one test that pays for a cold transform of the app.
   test("a new phone starts at welcome", async () => {
     await launch({});
     await on("welcome");
     expect(screen).toHavePathname("/welcome");
-  });
+  }, 30_000);
 
   test("Skip on welcome is remembered and opens the notice", async () => {
     await launch({});

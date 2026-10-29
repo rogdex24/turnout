@@ -13,6 +13,8 @@ export default function Meet() {
       onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))}
       onOpenShow={(eventId) => router.push({ pathname: "/show/[publicId]", params: { publicId: eventId } })}
       onLeave={(planId) => router.push({ pathname: "/plans/[planId]/cancel", params: { planId } })}
+      onOpenThread={() => router.push({ pathname: "/groups/[groupId]/thread", params: { groupId } })}
+      onReport={() => router.push({ pathname: "/report", params: { groupId } })}
       onClosed={() => router.replace("/plans")}
     />
   );

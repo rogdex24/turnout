@@ -1,5 +1,6 @@
 import type { DehydrateOptions } from "@tanstack/react-query";
 import type { PersistedClient, Persister } from "@tanstack/react-query-persist-client";
+import { clipForDisk, type ThreadData } from "@/model/thread";
 import { isPersistedKey, keyStartsWith } from "./keys";
 import type { KeyValueStore } from "./prefs";
 
@@ -21,9 +22,16 @@ export const dehydrateOptions: DehydrateOptions = {
     REPLAYABLE_MUTATION_KEYS.some((name) => mutation.options.mutationKey?.[0] === name),
 };
 
-/** The shows list is an infinite query; only its first page goes to disk, so an offline start does not replay a long scroll. */
+/**
+ * The shows list is an infinite query; only its first page goes to disk, so an offline start does not replay a long scroll. A thread
+ * keeps its newest messages only.
+ */
 export function trimForDisk(client: PersistedClient): PersistedClient {
   const queries = client.clientState.queries.map((query) => {
+    if (keyStartsWith(query.queryKey, ["thread"])) {
+      const data = query.state.data as ThreadData | undefined;
+      return data?.messages ? { ...query, state: { ...query.state, data: clipForDisk(data) } } : query;
+    }
     if (!keyStartsWith(query.queryKey, ["shows", "list"])) return query;
     const data = query.state.data as { pages?: unknown[]; pageParams?: unknown[] } | undefined;
     if (!data?.pages) return query;

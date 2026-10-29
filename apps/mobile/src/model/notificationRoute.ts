@@ -30,8 +30,9 @@ export interface RouteIds {
 
 /**
  * The screen for a kind. Ticket and group kinds and `no_group` open the plan; a rejected ticket opens the ticket sheet; a rejected
- * handle opens the social settings; the meet card kinds open the meet card. Where the screen is not built yet (the thread and the
- * morning-after screen, M4), the plan opens instead, and Home when there is no plan to open. Unknown kinds open Home.
+ * handle opens the social settings; the meet card kinds open the meet card; a thread message opens the group thread. Where the screen
+ * is not built yet (the morning-after screen), or the group is not known, the plan opens instead, and Home when there is no plan to
+ * open. Unknown kinds open Home.
  */
 export function routeForNotice(kind: NoticeKind, { planId, groupId }: RouteIds): string {
   const plan = planId === null ? HOME : `/plans/${segment(planId)}`;
@@ -51,6 +52,7 @@ export function routeForNotice(kind: NoticeKind, { planId, groupId }: RouteIds):
     case "head_over":
       return groupId === null ? plan : `/groups/${segment(groupId)}/meet`;
     case "thread_message":
+      return groupId === null ? plan : `/groups/${segment(groupId)}/thread`;
     case "morning_after":
       return plan;
     default:
