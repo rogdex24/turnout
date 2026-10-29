@@ -891,3 +891,9 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
   "Instagram or LinkedIn, Checked". Flows match these rows with a regex (`".*Checked"`, `"Seed comedy night.*"`), and
   `test/maestroFlows.test.ts` refuses a bare "Seed ..." match.
 - **The "Open in" prompt wait is 10 s.** On the large iOS simulator `deeplink-show` failed with no prompt seen in 5 s.
+- **You rows are scrolled to the middle before a tap.** On the small iOS simulator the grievance row stopped under the
+  floating tab bar, Maestro called it visible, and the tap opened Plans. The app is right: native tabs inset the first
+  scroll view, so a person can scroll every row clear. `centerElement: true` stops the scroll with the row in the middle,
+  and Maestro 2.11 falls back to the visibility check for the last row, which cannot reach the middle.
+- **after-show waits on `after-marked-*`, not the "Marked, privately" text.** On iOS that row's name is its label, "You
+  marked Esha, privately".

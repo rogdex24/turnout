@@ -56,9 +56,12 @@ env:
     checked: true
 
 # Blocked people: a list to look at.
+# Each You row is scrolled to the middle: on iOS the tab bar floats over the bottom of the list, and Maestro calls a row under it
+# visible, so a tap there lands on the bar.
 - scrollUntilVisible:
     element:
       id: you-blocked
+    centerElement: true
 - tapOn:
     id: you-blocked
 - extendedWaitUntil:
@@ -77,6 +80,7 @@ env:
 - scrollUntilVisible:
     element:
       id: you-notifications
+    centerElement: true
 - tapOn:
     id: you-notifications
 - extendedWaitUntil:
@@ -96,6 +100,7 @@ env:
 - scrollUntilVisible:
     element:
       id: you-how-matching
+    centerElement: true
 - tapOn:
     id: you-how-matching
 - extendedWaitUntil:
@@ -114,6 +119,7 @@ env:
 - scrollUntilVisible:
     element:
       id: you-privacy
+    centerElement: true
 - tapOn:
     id: you-privacy
 - extendedWaitUntil:
@@ -137,6 +143,7 @@ env:
 - scrollUntilVisible:
     element:
       id: you-grievance
+    centerElement: true
 - tapOn:
     id: you-grievance
 - extendedWaitUntil:

@@ -82,8 +82,8 @@ env:
     timeout: 5000
 - tapOn:
     id: after-confirm
+# Waits on the id: on iOS the row's name is its label ("You marked <name>, privately"), not the "Marked, privately" text.
 - extendedWaitUntil:
-    visible: ".*Marked, privately.*"
+    visible:
+      id: "after-marked-.*"
     timeout: 10000
-- assertVisible:
-    id: "after-marked-.*"

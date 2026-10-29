@@ -61,6 +61,16 @@ describe("Maestro flows", () => {
     }
   });
 
+  // On iOS the tab bar floats over the bottom of the You list and Maestro calls a row under it visible, so a tap there hits the bar.
+  test("every scroll to a You row centers it", async () => {
+    for (const file of files) {
+      const text = await Bun.file(`${root}/${file}`).text();
+      for (const block of text.match(/- scrollUntilVisible:\n(?: {4}.*\n)+/g) ?? []) {
+        if (/id: you-/.test(block)) expect(block).toContain("centerElement: true");
+      }
+    }
+  });
+
   // Flows change the seeded plans and groups, so a second pass on the same server checks different data.
   test("the device job runs the flows once", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();

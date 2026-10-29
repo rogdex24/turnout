@@ -22,6 +22,7 @@ env:
 - scrollUntilVisible:
     element:
       id: you-delete-account
+    centerElement: true
 - tapOn:
     id: you-delete-account
 - extendedWaitUntil:
