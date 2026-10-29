@@ -27,6 +27,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -38,6 +39,7 @@ env:
       DECISION: approve
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
     timeout: 80000

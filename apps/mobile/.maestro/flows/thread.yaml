@@ -33,15 +33,18 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/open-link-to.yaml
     env:
       LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
       SCREEN: meet
 
-# The card has a way into the chat.
-- assertVisible:
-    id: meet-thread
+# The card has a way into the chat. On a small screen the row is below the group, so the flow scrolls to it.
+- scrollUntilVisible:
+    element:
+      id: meet-thread
+    centerElement: true
 - tapOn:
     id: meet-thread
 - extendedWaitUntil:

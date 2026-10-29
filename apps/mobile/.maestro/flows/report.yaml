@@ -33,6 +33,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/open-link-to.yaml
     env:

@@ -29,6 +29,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -40,6 +41,7 @@ env:
       DECISION: approve
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
     timeout: 80000
@@ -56,6 +58,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: "+12025550106,+12025550107,+12025550108"
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*Group confirmed.*"
     timeout: 80000
@@ -84,6 +87,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -95,6 +99,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -106,6 +111,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -117,3 +123,4 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""

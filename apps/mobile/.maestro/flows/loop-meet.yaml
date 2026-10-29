@@ -40,6 +40,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 
 # The push for a live meet card opens the card.
 - runFlow:
