@@ -49,6 +49,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: v.bundleId,
+      // Nothing on the phone should be restored onto another one: the cache key lives in the keystore and cannot follow it, so a
+      // restored cache file would be noise, and the small facts in prefs (whose cache this is) should not follow either.
+      allowBackup: false,
+      // The photo and the ticket come from system pickers, which hand over one file with no storage permission. The libraries add the old
+      // shared storage permissions up to Android 12 anyway, so they are removed: the app never reads or writes shared storage.
+      // The Expo template also asks to draw over other apps, which only the development overlay needs, so release builds drop it.
+      blockedPermissions: [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        ...(variant === "preview" || variant === "production" ? ["android.permission.SYSTEM_ALERT_WINDOW"] : []),
+      ],
       ...(intentFilters.length > 0 ? { intentFilters } : {}),
       ...(env.GOOGLE_SERVICES_JSON ? { googleServicesFile: env.GOOGLE_SERVICES_JSON } : {}),
       ...(mapsKey ? { config: { googleMaps: { apiKey: mapsKey } } } : {}),
