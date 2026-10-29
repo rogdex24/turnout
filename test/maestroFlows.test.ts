@@ -36,8 +36,7 @@ describe("Maestro flows", () => {
     }
   }
 
-  // Flows sign the same seeded members in one after another, faster than the per-number limit allows, and the job runs the flows a
-  // second time on the same server when the first run fails.
+  // Flows sign the same seeded members in one after another, faster than the per-number limit allows.
   test("signing in a seeded member empties the rate limits before it asks for a code", async () => {
     const text = await Bun.file(`${root}/subflows/sign-in-seed.yaml`).text();
     const reset = text.indexOf("scripts/reset-limits.js");
@@ -62,8 +61,15 @@ describe("Maestro flows", () => {
     }
   });
 
+  // Flows change the seeded plans and groups, so a second pass on the same server checks different data.
+  test("the device job runs the flows once", async () => {
+    const text = await Bun.file(`${root}/ci/device-run.sh`).text();
+    expect(text).toMatch(/^maestro test .*"\$here"$/m);
+    expect(text).not.toMatch(/^(\w+) \|\| \1$/m);
+  });
+
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the
-  // sequence aborts. after-show moves the server clock past every show, so running it early breaks the re-run in device-run.sh.
+  // sequence aborts. after-show moves the server clock past every show, so running it early leaves the later flows no shows.
   test("every flow in flowsOrder runs, so after-show stays inside the ordered sequence", async () => {
     const config = await Bun.file(`${root}/config.yaml`).text();
     const excluded = [...config.matchAll(/^excludeTags:\n((?:\s+- .+\n)+)/gm)].flatMap((m) =>

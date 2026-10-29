@@ -38,28 +38,10 @@ else
   xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 fi
 
-# Puts the seeded server's clock back and empties its rate limits. after-show moves the clock past every show, so a second run of
-# the flows on the same server would find no shows without this.
-reset_server() {
-  if [ -n "${TEST_TOKEN:-}" ]; then
-    for route in limits clock; do
-      body='{}'
-      [ "$route" = clock ] && body='{"reset":true}'
-      curl -sf -X POST -H "x-staging-test-token: $TEST_TOKEN" -H "content-type: application/json" -d "$body" \
-        "$SERVER_URL/api/app/v1/__test/$route" > /dev/null
-    done
-  fi
-}
-
-run_flows() {
-  reset_server
-  maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
-}
-
 echo "::group::flows"
-# The one automatic re-run, on the same server. Only the flows run again: a failed capture below fails the job without running
-# every flow a second time. A flow that needs the re-run often is fixed or quarantined that week (docs/plans/mobile-ci-budget.md).
-run_flows || run_flows
+# One pass, with no re-run inside the job. Many flows change the seeded members, plans and groups, so a second pass on the same
+# server checks different data. A flaky device job is re-run whole, which starts a fresh server.
+maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
 echo "::endgroup::"
 
 echo "::group::visual capture"

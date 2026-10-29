@@ -24,7 +24,8 @@ env:
 # The handle row shows its check state.
 - assertVisible:
     id: you-social
-- assertVisible: "Checked"
+# On iOS the row is one element named "Instagram or LinkedIn, Checked", so the state is matched as the end of that name.
+- assertVisible: ".*Checked"
 
 # Women-only: saved at once, in both directions, with the line that says when it applies.
 - assertVisible: "Applies to plans you join from now on."

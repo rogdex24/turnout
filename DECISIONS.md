@@ -189,9 +189,8 @@ Deviations from the plan and choices made while scaffolding:
   the events list is an M2 screen. `visual-compare.sh` passes with a notice until a target has an
   accepted baseline; none could be made without an emulator.
 - Device jobs are two matrix jobs, `android-device` and `ios-device`, whose run names are the four
-  targets. The one automatic re-run is `run_flows || run_flows` inside `device-run.sh`, and it
-  re-runs only the flows: a failed visual capture does not run every flow a second time, after
-  after-show has moved the server clock past every show.
+  targets. `device-run.sh` runs the flows once, with no re-run inside the job (see the entry of
+  2026-10-29 on the device job re-run).
 - The iOS runner is `macos-26` instead of `macos-latest`, with the simulator runtime pinned to
   iOS 26.2, so a runner image change cannot move the baselines. actionlint does not know the
   `macos-26` label yet and reports it; the label is valid on GitHub.
@@ -877,3 +876,18 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
 1. **The four funnel events are sent from the screens, not the views.** `ShowScreen` sends `show_viewed` once the show has loaded (a 404 or an error is not a view), `buy_tapped` before the ticket page opens, and `go_tapped` on every Go tap with `groups_enabled`, so the funnel also counts taps on a build where groups are off. `MeetScreen` sends `im_here_tapped` with the plan id when the person taps I'm here.
 2. **`ShowView` gets `onBuy` and `onGoTapped`.** The ticket link no longer goes through `onOpenLink`, so the screen can tell a Buy tap from the listing link.
 3. **The PostHog check from one Maestro run is an owner step.** It needs a PostHog test project key in the e2e build (`EXPO_PUBLIC_POSTHOG_KEY`) and the person's consent on, and CI has neither. Until then the unit tests show that each event is sent with its properties.
+
+## 2026-10-29: device job re-run, timeouts and react-native 0.88.1
+
+- **No re-run inside a device job.** `device-run.sh` ran the flows a second time after a failure. The second pass met the
+  data the first pass changed: the seed resets members but not plans or groups, so `browse` found 0102 no longer pending
+  and failed for a reason the first pass did not have. A failed device job is now re-run whole, which starts a fresh server.
+  The budget's "one automatic re-run only" is a cap, so zero re-runs keeps to it.
+- **Job limits are 60 minutes on Android and 75 on iOS.** Android took 38 and 43 minutes of the old 45. The large iOS
+  simulator reached 45 minutes before its flows ended.
+- **react-native follows Expo's patch, 0.88.1.** `expo install --check` in mobile-health asked for it, as the entry of
+  2026-10-28 on Expo pins says. `@react-native/jest-preset` moves with it.
+- **iOS joins a row's name.** An element marked `accessible` with text children is one element on iOS, named for example
+  "Instagram or LinkedIn, Checked". Flows match these rows with a regex (`".*Checked"`, `"Seed comedy night.*"`), and
+  `test/maestroFlows.test.ts` refuses a bare "Seed ..." match.
+- **The "Open in" prompt wait is 10 s.** On the large iOS simulator `deeplink-show` failed with no prompt seen in 5 s.

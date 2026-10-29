@@ -11,7 +11,7 @@ name: open link
     commands:
       - extendedWaitUntil:
           visible: "Open in .*"
-          timeout: 5000
+          timeout: 10000
           optional: true
       - runFlow:
           when:
