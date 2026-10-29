@@ -30,16 +30,31 @@ env:
 
 # Women-only: saved at once, in both directions, with the line that says when it applies.
 - assertVisible: "Applies to plans you join from now on."
+# The switch is disabled while the save is in flight, so each tap waits for the expected value with the switch enabled again. Chitra
+# starts with it on: the first tap turns it off, the second puts it back.
 - tapOn:
     id: you-women-only
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: you-women-only
+      checked: false
+      enabled: true
+    timeout: 10000
 - assertNotVisible:
     id: you-women-only-error
 - tapOn:
     id: you-women-only
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: you-women-only
+      checked: true
+      enabled: true
+    timeout: 10000
 - assertNotVisible:
     id: you-women-only-error
+- assertVisible:
+    id: you-women-only
+    checked: true
 
 # Blocked people: a list to look at.
 - scrollUntilVisible:

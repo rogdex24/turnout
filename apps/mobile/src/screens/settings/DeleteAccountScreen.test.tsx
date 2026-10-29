@@ -82,6 +82,16 @@ describe("DeleteAccountScreen", () => {
     expect(app.clearImages).toHaveBeenCalledTimes(1);
   });
 
+  it("stops showing the deleting state when this phone cannot finish forgetting", async () => {
+    const app = await open({ "DELETE /me": { status: 204, text: "", retryAfter: null } });
+    jest.spyOn(app.secure, "remove").mockRejectedValueOnce(new Error("keychain fault"));
+    await toCode();
+    await fireEvent.changeText(screen.getByTestId("delete-code-field"), "123456");
+    await act(async () => undefined);
+    expect(await screen.findByText(copy.errors.server)).toBeOnTheScreen();
+    expect(screen.getByTestId("delete-code-field")).toBeEnabled();
+  });
+
   it("a wrong code leaves the account as it was and says how many tries are left", async () => {
     const app = await open({
       "DELETE /me": json(400, { error: { code: "invalid_code", message: "No." } }),

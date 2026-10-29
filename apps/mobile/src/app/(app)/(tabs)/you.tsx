@@ -18,5 +18,5 @@ const ROUTES = {
 export default function You() {
   const router = useRouter();
   const { session } = useDeps();
-  return <YouScreen onOpen={(target) => router.push(ROUTES[target])} onSignOut={() => void session.signOut()} />;
+  return <YouScreen onOpen={(target) => router.push(ROUTES[target])} onSignOut={() => void session.signOut().catch(() => undefined)} />;
 }

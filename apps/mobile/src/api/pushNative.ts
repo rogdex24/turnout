@@ -61,3 +61,8 @@ export const nativePush: PushNative = {
     });
   },
 };
+
+/** Takes every delivered notification off the lock screen and the badge off the icon. They name the group and the show, so sign-out does not leave them. */
+export async function clearDeliveredNotifications(): Promise<void> {
+  await Promise.allSettled([Notifications.dismissAllNotificationsAsync(), Notifications.setBadgeCountAsync(0)]);
+}

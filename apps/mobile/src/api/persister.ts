@@ -50,16 +50,25 @@ export interface PersisterOptions {
    * would otherwise leave a file stamped for nobody and lose it at the next start.
    */
   buster?: () => string;
+  /**
+   * Whether anyone is signed in. A write that lands after sign-out (a query that settled late, or a cache event the wipe itself
+   * caused) would put the last person's data back on disk, so while this says no, nothing is written.
+   */
+  signedIn?: () => boolean;
 }
 
 /** Writes the cache to the (encrypted) store at most once per `throttleMs`; the last state always lands. */
-export function createCachePersister(store: KeyValueStore, { throttleMs = 1000, buster }: PersisterOptions = {}): Persister {
+export function createCachePersister(store: KeyValueStore, { throttleMs = 1000, buster, signedIn }: PersisterOptions = {}): Persister {
   let pending: PersistedClient | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function flush() {
     timer = null;
     if (pending === null) return;
+    if (signedIn && !signedIn()) {
+      pending = null;
+      return;
+    }
     const value = trimForDisk(pending);
     if (buster) value.buster = buster();
     pending = null;

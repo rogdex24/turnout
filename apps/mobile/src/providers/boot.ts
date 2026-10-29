@@ -3,6 +3,8 @@ import { telemetry } from "../analytics";
 import { apiBaseUrl } from "../api/baseUrl";
 import { clearImageCache } from "../api/imageCache";
 import { openCacheStore, openPrefs } from "../api/mmkvStore";
+import { clearPickedFiles } from "../api/pickedFiles";
+import { clearDeliveredNotifications } from "../api/pushNative";
 import { secureStore } from "../api/secureStorage";
 import { createStubWhatsAppOtp } from "../api/whatsappOtp";
 import { createWhatsAppOtp } from "../api/whatsappOtpNative";
@@ -32,6 +34,8 @@ async function start(): Promise<AppDeps> {
     origin: apiBaseUrl(),
     appVersion: Constants.expoConfig?.version ?? "0.0.0",
     clearImages: clearImageCache,
+    clearPickedFiles,
+    clearNotifications: clearDeliveredNotifications,
     stopTelemetry: () => telemetry(prefs).setConsent(false),
     // The e2e build runs against a fake sender with no WhatsApp on the device, so it takes the stub and the codes come from the test route.
     whatsappOtp: Constants.expoConfig?.extra?.variant === "e2e" ? createStubWhatsAppOtp({ installed: true }) : createWhatsAppOtp(),

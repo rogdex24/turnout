@@ -47,11 +47,15 @@ export interface DepParts {
   now?: () => number;
   /** Empties the image cache at sign-out. Tests leave it out. */
   clearImages?: () => Promise<void>;
+  /** Deletes the files the person picked, which sit under the cache folder. Tests leave it out. */
+  clearPickedFiles?: () => Promise<void>;
+  /** Takes the delivered notifications and the badge off the phone. Tests leave it out. */
+  clearNotifications?: () => Promise<void>;
   /** Stops Sentry and PostHog at sign-out. Tests leave it out. */
   stopTelemetry?: () => void;
 }
 
-/** The one wiring of session, client, cache and local flags. The sign-out hook wipes the phone (cache, small facts, images, usage-data choice), so the next person on it starts clean. */
+/** The one wiring of session, client, cache and local flags. The sign-out hook wipes the phone (cache, small facts, images, picked files, notifications, usage-data choice), so the next person on it starts clean. */
 export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
   const { secure, prefs, cacheStore, origin, transport = fetchTransport, appVersion } = parts;
   const connectivity = createConnectivity();
@@ -66,21 +70,30 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     origin,
     transport,
     now: parts.now,
-    // The phone's push device goes first, while the access token still works; the server ends the session's devices too.
-    revoke: async (accessToken) => {
-      await removeDeviceOnSignOut(api, prefs)(accessToken);
-      await revokeOnServer(api)(accessToken);
+    // The phone's push device goes first, and the server ends the session's devices too. Both run in the background after the local
+    // wipe, so the device is read now: the wipe empties the stored facts.
+    startRevoke: () => {
+      const removeDevice = removeDeviceOnSignOut(api, prefs);
+      return async (accessToken) => {
+        await removeDevice(accessToken);
+        await revokeOnServer(api)(accessToken);
+      };
     },
   });
   api = createApiClient({ origin, session, connectivity, transport });
 
-  const persister = createCachePersister(cacheStore, { buster: () => cacheBuster(appVersion, session.getState().userId) });
+  const persister = createCachePersister(cacheStore, {
+    buster: () => cacheBuster(appVersion, session.getState().userId),
+    signedIn: () => session.getState().userId !== null,
+  });
   const wipe = createLocalWipe({
     prefs,
     queryClient,
     persister,
     flags: localFlags,
     clearImages: parts.clearImages ?? (async () => {}),
+    clearPickedFiles: parts.clearPickedFiles ?? (async () => {}),
+    clearNotifications: parts.clearNotifications ?? (async () => {}),
     stopTelemetry: parts.stopTelemetry ?? (() => {}),
   });
   // A session refused at refresh ends with no token to call the server; the wipe empties the stored device with the other prefs.

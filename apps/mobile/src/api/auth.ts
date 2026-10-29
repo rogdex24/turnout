@@ -39,8 +39,11 @@ export interface SessionDeps {
   origin: string;
   transport: Transport;
   now?: () => number;
-  /** Tell the server to end this session. Best effort. */
-  revoke?: (accessToken: string) => Promise<void>;
+  /**
+   * Called when sign-out starts, before anything is wiped, so it can take what it needs from the phone. It returns the call that
+   * tells the server to end the session; that call runs in the background once this phone is signed out, with a token that works.
+   */
+  startRevoke?: () => (accessToken: string) => Promise<void>;
 }
 
 /** An access token with less than this left is refreshed before the request, so a call does not start with a token that dies mid-flight. */
@@ -48,12 +51,14 @@ const REFRESH_MARGIN_MS = 30_000;
 
 type RefreshOutcome = { kind: "ok"; pair: TokenPair } | { kind: "rejected" } | { kind: "unreachable" };
 
-export function createSession({ secure, prefs, origin, transport, now = Date.now, revoke }: SessionDeps): Session {
+export function createSession({ secure, prefs, origin, transport, now = Date.now, startRevoke }: SessionDeps): Session {
   let state: SessionState = { status: "loading", userId: null };
   let accessToken: string | null = null;
   let accessExpiresAt = 0;
   let refreshToken: string | null = null;
   let inFlight: Promise<string | null> | null = null;
+  // Counts the endings of a session, so a refresh that was in the air when the person signed out does not sign them back in.
+  let ending = 0;
   const listeners = new Set<() => void>();
   const signedOutCallbacks: (() => void | Promise<void>)[] = [];
 
@@ -90,16 +95,54 @@ export function createSession({ secure, prefs, origin, transport, now = Date.now
     }
   }
 
+  /** The token the server is told to end: the held one while it has time left, else one from a refresh with the refresh token held at sign-out. */
+  async function tokenToRevoke(held: { access: string | null; expiresAt: number; refresh: string | null }): Promise<string | null> {
+    if (held.access !== null && held.expiresAt - now() > REFRESH_MARGIN_MS) return held.access;
+    if (held.refresh === null) return held.access;
+    const outcome = await postRefresh(held.refresh);
+    return outcome.kind === "ok" ? outcome.pair.accessToken : held.access;
+  }
+
+  async function revokeInBackground(held: Parameters<typeof tokenToRevoke>[0], revoke: (accessToken: string) => Promise<void>) {
+    try {
+      const token = await tokenToRevoke(held);
+      if (token) await revoke(token);
+    } catch {
+      // Best effort: a phone with no network is signed out all the same, and the server ends the session when its token runs out.
+    }
+  }
+
   async function endSession(options: { revokeOnServer: boolean }) {
-    const token = accessToken;
+    ending += 1;
+    let revoke: ReturnType<NonNullable<typeof startRevoke>> | undefined;
+    try {
+      revoke = options.revokeOnServer ? startRevoke?.() : undefined;
+    } catch {
+      // The server call is best effort; a fault in getting it ready does not keep the person signed in.
+    }
+    const held = { access: accessToken, expiresAt: accessExpiresAt, refresh: refreshToken };
     accessToken = null;
     refreshToken = null;
     accessExpiresAt = 0;
-    if (options.revokeOnServer && token && revoke) await revoke(token).catch(() => {});
-    for (const callback of signedOutCallbacks) await callback();
-    await secure.remove(SECRET_KEYS.refreshToken);
-    prefs.remove(PREF_KEYS.userId);
-    set({ status: "signed_out", userId: null });
+    try {
+      // One callback that fails does not keep the others, the keychain or the state from ending.
+      for (const callback of signedOutCallbacks) {
+        try {
+          await callback();
+        } catch {
+          // Whatever it could not empty, the person is signed out.
+        }
+      }
+    } finally {
+      try {
+        await secure.remove(SECRET_KEYS.refreshToken);
+      } finally {
+        prefs.remove(PREF_KEYS.userId);
+        set({ status: "signed_out", userId: null });
+        // The phone is signed out before the server is asked, so a slow or missing network never holds the person on a screen of theirs.
+        if (revoke) void revokeInBackground(held, revoke);
+      }
+    }
   }
 
   /** One refresh at a time. The server rotates the token and only forgives a retry for 30 seconds, so two parallel calls must share one. */
@@ -107,8 +150,10 @@ export function createSession({ secure, prefs, origin, transport, now = Date.now
     if (inFlight) return inFlight;
     const token = refreshToken;
     if (token === null) return Promise.resolve(null);
+    const startedAt = ending;
     inFlight = (async () => {
       const outcome = await postRefresh(token);
+      if (ending !== startedAt) return null;
       if (outcome.kind === "ok") {
         await adopt(outcome.pair);
         return outcome.pair.accessToken;

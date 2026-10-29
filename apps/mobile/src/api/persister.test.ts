@@ -122,6 +122,23 @@ describe("cache persister", () => {
     expect(store.getString(CACHE_STORE_KEY)).toBeUndefined();
   });
 
+  it("writes nothing while no one is signed in, so a late write does not put the last person back on disk", () => {
+    jest.useFakeTimers();
+    const store = memoryKv();
+    let signedIn = true;
+    const persister = createCachePersister(store, { throttleMs: 1000, signedIn: () => signedIn });
+    const client = testQueryClient();
+    client.setQueryData(queryKeys.areas(), ["Bandra"]);
+    void persister.persistClient(snapshot(client));
+    signedIn = false;
+    jest.advanceTimersByTime(1000);
+    expect(store.getString(CACHE_STORE_KEY)).toBeUndefined();
+    signedIn = true;
+    void persister.persistClient(snapshot(client));
+    jest.advanceTimersByTime(1000);
+    expect(store.getString(CACHE_STORE_KEY)).toContain("Bandra");
+  });
+
   it("drops a cache it cannot read", () => {
     const store = memoryKv();
     store.set(CACHE_STORE_KEY, "{not json");

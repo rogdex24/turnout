@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { MeResponse } from "@turnout/contract/app/me";
 import { queryKeys } from "@/api/keys";
+import { deletePickedFile } from "@/api/pickedFiles";
 import { PHOTO_UNREADABLE } from "@/api/saveProfile";
 import { clearTestClients, json } from "@/api/testing";
 import { profile } from "@/copy/profile";
@@ -11,6 +12,8 @@ import { ProfileScreen } from "./ProfileScreen";
 import { choosePhoto, readPhoto } from "./photoFile";
 
 jest.mock("./photoFile", () => ({ choosePhoto: jest.fn(), readPhoto: jest.fn() }));
+jest.mock("@/api/pickedFiles", () => ({ deletePickedFile: jest.fn() }));
+const deleteFile = jest.mocked(deletePickedFile);
 const choose = jest.mocked(choosePhoto);
 const read = jest.mocked(readPhoto);
 
@@ -19,6 +22,7 @@ const PHOTO = { photo: { url: "/files/new", expiresAt: "2026-10-26T10:00:00.000Z
 beforeEach(() => {
   choose.mockReset().mockResolvedValue(SAMPLE_PICKED);
   read.mockReset().mockResolvedValue(new Blob(["jpeg"]));
+  deleteFile.mockReset();
 });
 afterEach(() => clearTestClients());
 
@@ -131,6 +135,36 @@ describe("ProfileScreen, saving a new member", () => {
     const cached = app.queryClient.getQueryData<MeResponse>(queryKeys.me());
     expect(cached?.profile.photo?.url).toBe("/files/new");
     expect(cached?.handle).toMatchObject({ state: "pending", kind: "instagram", handle: "ananya.k" });
+  });
+
+  it("deletes the prepared file once the picture is up, and not before", async () => {
+    const me = newMember();
+    const app = await open(me, routes(me));
+    await fillNew();
+    await fireEvent.press(screen.getByTestId("photo-button"));
+    await screen.findByText(profile.photo.ready);
+    expect(deleteFile).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId("save"));
+    await waitFor(() => expect(app.transport.callsTo("PUT /me/handle")).toHaveLength(1));
+    await waitFor(() => expect(deleteFile).toHaveBeenCalledWith(SAMPLE_PICKED.uri));
+    expect(deleteFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the prepared file when the picture was refused, and deletes the one it replaces", async () => {
+    const me = newMember();
+    await open(me, {
+      "PATCH /me/profile": json(200, { ...me, profile: { ...me.profile, firstName: "Ananya", gender: "woman" } }),
+      "PUT /me/photo": json(400, { error: { code: "unsupported_type", message: "x" } }),
+    });
+    await fillNew();
+    await fireEvent.press(screen.getByTestId("photo-button"));
+    await screen.findByText(profile.photo.ready);
+    await fireEvent.press(screen.getByTestId("save"));
+    await screen.findByTestId("photo-error");
+    expect(deleteFile).not.toHaveBeenCalled();
+    choose.mockResolvedValue({ ...SAMPLE_PICKED, uri: "file:///cache/second.jpg" });
+    await fireEvent.press(screen.getByTestId("photo-button"));
+    await waitFor(() => expect(deleteFile).toHaveBeenCalledWith(SAMPLE_PICKED.uri));
   });
 
   it("shows the upload progress while the picture goes up", async () => {

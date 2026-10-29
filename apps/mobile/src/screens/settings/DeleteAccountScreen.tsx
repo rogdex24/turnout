@@ -83,9 +83,15 @@ export function DeleteAccountScreen({ onBack }: { onBack: () => void }) {
       setDeleting(false);
       return;
     }
-    // The account is gone, so every token is dead already. If this phone cannot finish forgetting (a keychain fault), the next
-    // request signs it out the same way; there is nothing the person can do about it here.
-    await endAfterDeletion(session, wipe).catch(() => undefined);
+    // The account is gone, so every token is dead already. Forgetting on this phone can still fail (a keychain fault). Then the screen
+    // stays up with the server message, and the next request signs the phone out, because the server refuses the old tokens.
+    try {
+      await endAfterDeletion(session, wipe);
+    } catch {
+      setMessage(text.server);
+      setCode("");
+      setDeleting(false);
+    }
   };
 
   const back = () => {

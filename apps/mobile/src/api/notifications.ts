@@ -95,14 +95,15 @@ export function onPermissionChanged(listener: () => void): () => void {
 }
 
 /**
- * Takes this phone's device off the server at sign-out. It runs with the access token the session still holds, because the session
- * has dropped it from the client by then. Only the sign-out route removes devices on the server, so this call is what does it; it
- * is best effort: a phone with no network signs out anyway.
+ * Takes this phone's device off the server at sign-out. Call it when sign-out starts: it reads the stored device then and forgets it,
+ * because the wipe empties the stored facts before the call is made. The call it returns runs afterwards with an access token the
+ * session no longer holds. Only the sign-out route removes devices on the server, so this call is what does it; it is best effort:
+ * a phone with no network signs out anyway.
  */
 export function removeDeviceOnSignOut(api: ApiClient, prefs: KeyValueStore): (accessToken: string) => Promise<void> {
+  const stored = readStored(prefs);
+  prefs.remove(PREF_KEYS.pushDevice);
   return async (accessToken) => {
-    const stored = readStored(prefs);
-    prefs.remove(PREF_KEYS.pushDevice);
     if (stored === null) return;
     try {
       await api.request({

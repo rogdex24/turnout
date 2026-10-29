@@ -39,8 +39,10 @@ export interface TestAppOptions {
   routes?: Record<string, RouteReply | RouteReply[]>;
   now?: () => number;
   whatsappOtp?: WhatsAppOtp;
-  /** What sign-out does to the image cache and to telemetry, to be watched. */
+  /** What sign-out does to the image cache, the picked files, the notifications and telemetry, to be watched. */
   clearImages?: () => Promise<void>;
+  clearPickedFiles?: () => Promise<void>;
+  clearNotifications?: () => Promise<void>;
   stopTelemetry?: () => void;
 }
 
@@ -50,6 +52,8 @@ export interface TestApp {
   transport: ReturnType<typeof routedTransport>;
   prefs: ReturnType<typeof memoryKv>;
   secure: ReturnType<typeof memorySecretStore>;
+  /** The store behind the disk copy of the query cache. */
+  cacheStore: ReturnType<typeof memoryKv>;
 }
 
 /** The real wiring over in-memory stores and a scripted network, for router and screen tests. */
@@ -68,10 +72,11 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   }
   const transport = routedTransport({ ...routes, ...options.routes });
   const queryClient = testQueryClient();
+  const cacheStore = memoryKv();
   const deps = await createAppDeps({
     secure,
     prefs,
-    cacheStore: memoryKv(),
+    cacheStore,
     origin: TEST_ORIGIN,
     transport: transport.transport,
     appVersion: "0.0.0-test",
@@ -79,7 +84,9 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
     now,
     whatsappOtp: options.whatsappOtp,
     clearImages: options.clearImages,
+    clearPickedFiles: options.clearPickedFiles,
+    clearNotifications: options.clearNotifications,
     stopTelemetry: options.stopTelemetry,
   });
-  return { deps, queryClient, transport, prefs, secure };
+  return { deps, queryClient, transport, prefs, secure, cacheStore };
 }
