@@ -70,6 +70,14 @@ describe("PersonAvatar", () => {
     expect(screen.getByText("A")).toBeTruthy();
     expect(screen.getByLabelText("asha").props.className).toContain("border-signal");
   });
+
+  it("keeps a photo in the memory cache only, under one key, when asked", async () => {
+    await render(<PersonAvatar name="asha" photoUrl="https://photos.example/a.jpg?sig=1" memoryCacheKey="g1:m1" />);
+    const tile = screen.toJSON() as { children: { props: Record<string, unknown> }[] };
+    const image = tile.children[0]?.props;
+    expect(image?.cachePolicy).toBe("memory");
+    expect(image?.source).toEqual([{ uri: "https://photos.example/a.jpg?sig=1", cacheKey: "g1:m1" }]);
+  });
 });
 
 describe("StatusStep", () => {

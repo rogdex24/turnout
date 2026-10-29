@@ -19,10 +19,15 @@ export interface PersonAvatarProps {
   size?: keyof typeof BOX;
   /** The signal ring: this person just checked in. */
   ring?: boolean;
+  /**
+   * Keep the photo in the image memory cache only, never on disk, under this key. The key stays the same when the signed link
+   * changes, so the photo is not fetched again each time the link is renewed.
+   */
+  memoryCacheKey?: string;
 }
 
 /** A person's photo tile, or their initial on a raised surface when there is no photo. */
-export function PersonAvatar({ name, photoUrl = null, size = "face", ring = false }: PersonAvatarProps) {
+export function PersonAvatar({ name, photoUrl = null, size = "face", ring = false, memoryCacheKey }: PersonAvatarProps) {
   return (
     <View
       accessible
@@ -35,7 +40,13 @@ export function PersonAvatar({ name, photoUrl = null, size = "face", ring = fals
       style={BOX[size]}
     >
       {photoUrl ? (
-        <Image source={{ uri: photoUrl }} contentFit="cover" style={BOX[size]} accessible={false} />
+        <Image
+          source={{ uri: photoUrl, cacheKey: memoryCacheKey }}
+          cachePolicy={memoryCacheKey ? "memory" : undefined}
+          contentFit="cover"
+          style={BOX[size]}
+          accessible={false}
+        />
       ) : (
         <Text variant="title" className="text-muted" allowFontScaling={false}>
           {name.trim().charAt(0).toUpperCase()}

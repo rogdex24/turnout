@@ -38,3 +38,9 @@ jest.mock("react-native-maps", () => {
   const Marker = ({ title }: { title?: string }) => React.createElement(View, { testID: "map-pin", accessibilityLabel: title });
   return { __esModule: true, default: MapView, Marker };
 });
+
+// Nor can Jest block a screenshot; the after-the-show tests read these calls to see when the screen is protected.
+jest.mock("expo-screen-capture", () => ({
+  preventScreenCaptureAsync: jest.fn(async () => undefined),
+  allowScreenCaptureAsync: jest.fn(async () => undefined),
+}));
