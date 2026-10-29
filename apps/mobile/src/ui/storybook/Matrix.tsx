@@ -35,7 +35,8 @@ export function Matrix({ children, padded = false, framed = false }: { children:
     return (
       <AutoFocusContext.Provider value={false}>
         <ScrollView>
-          <View className="bg-bg py-4" testID="matrix-device">
+          {/* A framed screen fills the window, so padding here would push its bottom edge (the thread composer) out of the shot. */}
+          <View className={framed ? "bg-bg" : "bg-bg py-4"} testID="matrix-device">
             {content}
           </View>
         </ScrollView>

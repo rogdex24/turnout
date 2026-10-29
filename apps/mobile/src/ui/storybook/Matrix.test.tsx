@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react-native";
+import { Dimensions } from "react-native";
 import { CodeView } from "@/screens/signin/CodeView";
 import { SAMPLE_LABEL } from "@/screens/signin/fixtures";
 import { PhoneView } from "@/screens/signin/PhoneView";
@@ -52,7 +53,10 @@ describe("Matrix", () => {
       </FollowDeviceContext.Provider>,
     );
     expect(screen.getAllByText("Body")).toHaveLength(1);
-    expect(screen.getByTestId("matrix-device")).toBeTruthy();
+    const cell = screen.getByTestId("matrix-device");
+    // Framed: the content is one window high and starts at the top of the shot, with no padding above it.
+    expect(cell.props.className).not.toContain("py-4");
+    expect(cell.children[0]).toHaveStyle({ height: Dimensions.get("window").height });
     expect(screen.queryByText(/default text|largest text/)).toBeNull();
   });
 });
