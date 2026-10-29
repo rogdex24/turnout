@@ -24,6 +24,7 @@ executionOrder:
     - loop-group
     - loop-no-group
     - group-shrinks
-    - thread
-    - report
+    # thread and report go here, before after-show, when the needs-group-seed tag comes off them. Maestro ends the ordered run at
+    # the first listed flow it does not run, so an excluded flow in this list would split after-show off into a flow that runs
+    # even when the sequence aborts (test/maestroFlows.test.ts checks this).
     - after-show

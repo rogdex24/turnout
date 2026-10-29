@@ -74,7 +74,7 @@ env:
 - assertVisible:
     id: "show-card-.*"
 
-# A handle that was turned down says why and offers Change handle, which opens the profile form.
+# A handle that was turned down says why and offers Change handle, which opens the handle page in Settings.
 - runFlow:
     file: ../subflows/sign-in-seed.yaml
     env:
@@ -85,5 +85,5 @@ env:
 - tapOn: "Change handle"
 - extendedWaitUntil:
     visible:
-      id: profile
+      id: settings-social
     timeout: 10000
