@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
 import { queryKeys } from "@/api/keys";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { common } from "@/copy/common";
@@ -31,6 +31,12 @@ describe("CancelScreen", () => {
     expect(await screen.findByText(copy.cancel.title)).toBeOnTheScreen();
     expect(screen.getByText(copy.cancel.lead)).toBeOnTheScreen();
     expect(screen.queryByText(copy.cancel.groupNote)).toBeNull();
+  });
+
+  it("puts the cancel-sheet id on the sheet panel, which holds the actions", async () => {
+    // Maestro skips a view with no size, and without a group note or an issue the sheet's own content is empty.
+    await open(PLANS.finding_group);
+    expect(within(await screen.findByTestId("cancel-sheet")).getByTestId("cancel-confirm")).toBeTruthy();
   });
 
   it("tells a person in a group what the group is told", async () => {

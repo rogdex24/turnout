@@ -24,8 +24,9 @@ export function CancelView({ hasGroup, busy = false, issue = null, onLeave, onSt
       onClose={onStay}
       primary={{ title: copy.cancel.confirm, onPress: onLeave, loading: busy, testID: "cancel-confirm" }}
       secondary={{ title: copy.cancel.stay, onPress: onStay, testID: "cancel-stay" }}
+      testID="cancel-sheet"
     >
-      <View className="gap-3" testID="cancel-sheet">
+      <View className="gap-3">
         {hasGroup ? <Note icon={WarningCircle}>{copy.cancel.groupNote}</Note> : null}
         {issue ? (
           <View accessibilityLiveRegion="polite" testID="cancel-issue">
