@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { FollowDeviceContext } from "../src/ui/storybook/Matrix";
 import { view } from "./storybook.requires";
 
 type StoryId = `${string}--${string}`;
@@ -25,7 +26,11 @@ function rootFor(initialSelection: StoryId | undefined) {
  * The Storybook screen. With a story id it shows that story alone, with no Storybook chrome and no stored selection, which is what the
  * e2e capture flows open through `turnout-e2e://storybook?story=<id>`. Without one it shows the full on-device browser.
  */
-export function renderStorybook(story?: string): ReactElement {
+export function renderStorybook(story?: string, followDevice = false): ReactElement {
   const Root = rootFor(isStoryId(story) ? story : undefined);
-  return <Root />;
+  return (
+    <FollowDeviceContext.Provider value={followDevice}>
+      <Root />
+    </FollowDeviceContext.Provider>
+  );
 }

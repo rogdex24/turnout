@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { ScopedTheme } from "uniwind";
 import { AutoFocusContext } from "../autoFocus";
@@ -13,12 +13,35 @@ const CELLS = [
 ] as const;
 
 /**
+ * True when the visual capture opens a story. The device job sets the theme and the text size on the device, so the story then shows
+ * one copy that follows the device instead of the four forced cells.
+ */
+export const FollowDeviceContext = createContext(false);
+
+/**
  * Story helper: shows the same content in light and dark, at the default and the largest text size, one under the other. Every
  * design-system story and every screen state story uses it, so each one is checked at both extremes. `framed` gives the content a
  * full window height, for screens that fill the phone.
  */
 export function Matrix({ children, padded = false, framed = false }: { children: ReactNode; padded?: boolean; framed?: boolean }) {
   const { height } = useWindowDimensions();
+  const followDevice = useContext(FollowDeviceContext);
+  const content = (
+    <View className={padded ? "px-4" : undefined} style={framed ? { height } : undefined}>
+      {children}
+    </View>
+  );
+  if (followDevice) {
+    return (
+      <AutoFocusContext.Provider value={false}>
+        <ScrollView>
+          <View className="bg-bg py-4" testID="matrix-device">
+            {content}
+          </View>
+        </ScrollView>
+      </AutoFocusContext.Provider>
+    );
+  }
   return (
     <AutoFocusContext.Provider value={false}>
       <ScrollView contentContainerClassName="gap-4">
@@ -29,9 +52,7 @@ export function Matrix({ children, padded = false, framed = false }: { children:
                 <Text variant="label" className="mb-2 px-4 text-muted">
                   {cell.name}
                 </Text>
-                <View className={padded ? "px-4" : undefined} style={framed ? { height } : undefined}>
-                  {children}
-                </View>
+                {content}
               </View>
             </TextScaleContext.Provider>
           </ScopedTheme>

@@ -1,6 +1,8 @@
 # Visual capture
 
-`capture-story.yaml` opens one Storybook story in the e2e build through `turnout-e2e://storybook?story=<id>` and photographs it.
+`capture-story.yaml` opens one Storybook story in the e2e build through `turnout-e2e://storybook?story=<id>&device=1` and photographs it.
+`device=1` makes the story's `Matrix` show one copy that follows the device theme and text size, which the device job sets. Without
+it, every shot would show the forced "Light, default text" cell at the top.
 `bun scripts/visual-diff.ts` then compares the shots with the baselines. The matrix, the baseline layout and the artifact names are in
 `docs/plans/mobile-visual-testing.md`.
 
