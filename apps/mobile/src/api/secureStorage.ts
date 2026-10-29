@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import type { KeyValueStore } from "./prefs";
 
 /** The few secrets the app keeps. The refresh token and the key that encrypts the query cache live here and nowhere else. */
 export interface SecretStore {
@@ -41,4 +42,18 @@ export async function ensureCacheKey(secure: SecretStore, randomBytes: (count: n
   const key = btoa(String.fromCharCode(...randomBytes(24)));
   await secure.set(SECRET_KEYS.cacheKey, key);
   return key;
+}
+
+/** The key, in a store that holds only this, that says the keychain belongs to this install. */
+export const INSTALL_KEY = "installed";
+
+/**
+ * The iOS keychain outlives the app: a reinstall finds the last install's refresh token and would sign that person in. App storage
+ * does not outlive it, so a missing install mark means a new install, and the keychain is emptied before anything reads it. The mark
+ * lives in its own store, because sign-out empties the prefs and must not make the next start forget a new sign-in.
+ */
+export async function forgetSecretsFromAnOldInstall(secure: SecretStore, install: KeyValueStore): Promise<void> {
+  if (install.getString(INSTALL_KEY) === "1") return;
+  for (const key of Object.values(SECRET_KEYS)) await secure.remove(key);
+  install.set(INSTALL_KEY, "1");
 }
