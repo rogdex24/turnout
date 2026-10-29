@@ -77,8 +77,9 @@ export function GoView({
           : { title: go.next, onPress: onNext, loading: busy, testID: "go-next" }
       }
       secondary={{ title: go.notNow, onPress: onClose, testID: "go-not-now" }}
+      testID="go-sheet"
     >
-      <View className="gap-3" testID="go-sheet">
+      <View className="gap-3">
         {womenOnlyOffered ? (
           <View accessibilityRole="radiogroup" className="gap-2">
             <Text variant="label" className="text-muted">
