@@ -938,15 +938,22 @@ minutes a run. The repo is public, so the cost is the wait and the 5 macOS jobs 
 - **A story with no shot is captured again on its own, up to twice.** This is not the re-run the entry above forbids: the
   stories are Storybook screens opened with `clearState`, they read no seeded data, and the flows are still one pass. The
   capture failures seen so far were infra (the Android emulator going offline, the iOS "Open in" prompt not coming). A
-  retry that passes leaves a `::warning::` on the run, and a story still without a shot fails the job as before.
+  retry that passes leaves a `::warning::` on the run, and a story still without a shot fails the job as before. When a
+  batch leaves more than half the stories with no shot, the device has stopped, so the job fails at once instead of
+  spending its time limit on single retries. `takeScreenshot` must stay the last step of `capture-story.yaml`, because a
+  shot is taken as a passed story; `test/maestroFlows.test.ts` checks it.
 - **Device jobs need `check`.** A run whose types, lint or unit tests fail does not spend 40 minutes on devices. `check`
   ends before the native builds, so a green run waits no longer.
 - **Switches for the device jobs:** the labels `ci:skip-device`, `ci:force-device` and `ci:fail-fast`, and the same three
-  choices on a manual run. A skip with mobile changes leaves a warning on `ci-gate`, which still passes, so the switch is
-  for a change that cannot reach the app. The labels are read from the API, so a re-run sees a label added after the push.
+  choices on a manual run. The skip is for a change to shared paths (src, e2e, package.json) that cannot reach the app. It
+  is ignored when `apps/mobile` or `packages` changed, so a label cannot let `ci-gate` pass on an app change; any other
+  skip with mobile paths changed leaves a warning on `ci-gate`. Force wins over skip. The labels are read from the API,
+  so a re-run sees a label added after the push.
 - **`check` and its halves run their parts side by side** with `bun run --parallel --no-exit-on-error`, so every failing
   part still reports and the exit code is still non-zero. `bun test --parallel` runs the files in worker processes. Locally
   (4 cores) `check:server` went from 64 s to 27 s, `check:mobile` from 42 s to 25 s and `check` from 106 s to 50 s.
+  With everything sharing the cores, the map bundle tests and the ticket upload limit test take 3 to 4.5 s, close to
+  Bun's 5 s default, so `bun test` runs with `--timeout 15000`. The timeout only catches a hung test; no assertion changed.
 - **The write benchmark test writes to /dev/shm when it exists.** It checks journal modes and row counts, not disk speed,
   and its 1,600 fsyncs took 21 of the 46 s of `bun test`. On /dev/shm it takes 0.5 s.
 - **The pre-commit checks run as a parallel group after the format job,** which stays first because it restages files.

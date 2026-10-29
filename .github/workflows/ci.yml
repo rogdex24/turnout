@@ -7,8 +7,9 @@ name: ci
 #   - Required status checks should list only `ci-gate`, so jobs can be added or skipped without editing branch protection.
 #
 # Device job switches. The device jobs (and the native builds they need) run when the `mobile` filter matches. To change that:
-#   - PR label `ci:skip-device`: skip them, for a change that cannot affect the app. ci-gate still passes, with a warning.
-#   - PR label `ci:force-device`: run them even when no mobile path changed.
+#   - PR label `ci:skip-device`: skip them, for a change to shared paths (src, e2e, package.json) that cannot affect the app.
+#     The label is ignored when apps/mobile or packages changed. ci-gate still passes, with a warning.
+#   - PR label `ci:force-device`: run them even when no mobile path changed. It wins over `ci:skip-device`.
 #   - PR label `ci:fail-fast`: cancel the other device job of a platform as soon as one fails.
 #   - A manual run (Actions, ci, Run workflow) takes the same three choices as inputs.
 # Labels are read when the run starts, so after adding one, push or re-run all jobs.
@@ -32,8 +33,9 @@ on:
 permissions:
   contents: read
 
-# One group per PR, or per ref for pushes. Only PR runs cancel each other: a push to main always finishes, because the next
-# push scans only its own commits.
+# One group per PR, or per ref for pushes and manual runs. Only PR runs cancel each other: a running push to main always
+# finishes, because the next push scans only its own commits. GitHub keeps one pending run per group, so a newer pending
+# run on main replaces an older one.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -93,6 +95,9 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - '.github/workflows/ci.yml'
+            app:
+              - 'apps/mobile/**'
+              - 'packages/**'
       # The labels come from the API, not the event, so a re-run sees a label added after the push.
       - name: Device job switches
         id: device
@@ -101,20 +106,22 @@ jobs:
           EVENT: ${{ github.event_name }}
           PR: ${{ github.event.pull_request.number }}
           MOBILE: ${{ steps.filter.outputs.mobile }}
+          APP: ${{ steps.filter.outputs.app }}
           INPUT_DEVICE: ${{ inputs.device }}
           INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
         run: |
           set -euo pipefail
-          mode=auto
-          fail_fast=false
-          if [ "$EVENT" = workflow_dispatch ]; then
-            mode="${INPUT_DEVICE:-auto}"
-            fail_fast="${INPUT_FAIL_FAST:-false}"
-          elif [ "$EVENT" = pull_request ]; then
+          mode="${INPUT_DEVICE:-auto}"
+          fail_fast="${INPUT_FAIL_FAST:-false}"
+          if [ "$EVENT" = pull_request ]; then
             labels="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" --jq '.[].name')"
             if grep -qx 'ci:skip-device' <<< "$labels"; then mode=skip; fi
             if grep -qx 'ci:force-device' <<< "$labels"; then mode=force; fi
             if grep -qx 'ci:fail-fast' <<< "$labels"; then fail_fast=true; fi
+          fi
+          if [ "$mode" = skip ] && [ "$APP" = true ]; then
+            echo "::warning::The device jobs run anyway: apps/mobile or packages changed, so the skip switch does not apply."
+            mode=auto
           fi
           case "$mode" in
             force) run=true ;;

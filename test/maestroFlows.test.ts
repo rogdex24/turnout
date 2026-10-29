@@ -100,13 +100,18 @@ describe("Maestro flows", () => {
   // The capture writes one flow per story from capture-story.yaml and may run a story again; it never runs a flow from flows/.
   test("the visual capture runs only the story flows it writes, again only one story at a time", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();
-    const runs = [...text.matchAll(/^\s*(?:if ! )?maestro test (.*)$/gm)].map((m) => m[1] ?? "");
+    const runs = [...text.matchAll(/^\s*maestro test (.*)$/gm)].map((m) => m[1] ?? "");
     expect(runs).toHaveLength(3);
-    expect(runs.filter((run) => run.endsWith('"$batch" < /dev/null; then'))).toHaveLength(1);
+    expect(runs.filter((run) => run.includes('"$batch" < /dev/null'))).toHaveLength(1);
     expect(runs.filter((run) => run.includes('"$batch/$folder.yaml"'))).toHaveLength(1);
     const story = await Bun.file(`${root}/visual/capture-story.yaml`).text();
     expect(story).toMatch(/^appId: \S+$/m);
     expect(story.match(/^- takeScreenshot: capture$/gm)).toHaveLength(1);
+    // A shot counts as a passed story, so nothing may run after the screenshot.
+    expect(story.trimEnd().split("\n").at(-1)).toBe("- takeScreenshot: capture");
+    // The folder goes unquoted into sed, grep and a file name.
+    const stories: { folder: string }[] = await Bun.file(`${root}/visual/stories.json`).json();
+    for (const { folder } of stories) expect(folder).toMatch(/^[a-z0-9-]+$/);
   });
 
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the

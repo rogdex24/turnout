@@ -69,8 +69,8 @@ write_story_flow() {
   } > "$batch/$folder.yaml"
   grep -q "^- takeScreenshot: $folder\$" "$batch/$folder.yaml"
 }
-# The job uploads ~/.maestro/tests when it fails, so the screenshots and the view tree of a failed capture go there.
-keep_debug() { mkdir -p "$HOME/.maestro/tests"; mv "$1" "$HOME/.maestro/tests/$2"; }
+# The job uploads ~/.maestro/tests when it fails, so each run writes its screenshots and view tree there.
+debug="$HOME/.maestro/tests"
 
 mkdir -p "$SHOT_DIR"
 rm -rf "$batch"
@@ -81,12 +81,22 @@ for theme in light dark; do
     "wait_${platform}"
     "set_${platform}_theme" "$theme"
     "set_${platform}_text" "$text"
-    out="$(mktemp -d)"
-    keep_out=no
+    out="$debug/visual-batch-$theme-$text"
+    mkdir -p "$out"
     "wait_${platform}"
-    if ! maestro test --test-output-dir "$out" "$batch" < /dev/null; then
+    maestro test --test-output-dir "$out" "$batch" < /dev/null ||
       echo "::warning::visual capture $theme-$text: a story failed in the batch run, it is captured again on its own"
-      keep_out=yes
+    # Most stories with no shot means the device stopped, not that a story failed. Forty single retries would then run into
+    # the job's time limit, so the job fails here with a clear message.
+    total=0
+    missing=0
+    while read -r folder; do
+      total=$((total + 1))
+      [ -n "$(find "$out" -type f -name "$folder.png" | head -n 1)" ] || missing=$((missing + 1))
+    done < <(jq -r '.[].folder' "$here/visual/stories.json")
+    if [ $((missing * 2)) -gt "$total" ]; then
+      echo "the $theme-$text batch left $missing of $total stories with no shot, so the device likely stopped" >&2
+      exit 1
     fi
     jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
       mkdir -p "$SHOT_DIR/$folder"
@@ -94,24 +104,18 @@ for theme in light dark; do
       for attempt in 1 2; do
         [ -n "$shot" ] && break
         echo "::warning::visual capture $folder/$theme-$text: no shot yet, capture on its own (try $attempt of 2)"
-        retry="$(mktemp -d)"
+        retry="$debug/visual-$folder-$theme-$text-try$attempt"
+        mkdir -p "$retry"
         "wait_${platform}"
         maestro test --test-output-dir "$retry" "$batch/$folder.yaml" < /dev/null || true
         shot="$(find "$retry" -type f -name "$folder.png" | head -n 1)"
-        if [ -n "$shot" ]; then
-          mv "$shot" "$out/$folder.png"
-          shot="$out/$folder.png"
-        fi
-        keep_debug "$retry" "visual-$folder-$theme-$text-try$attempt"
       done
       if [ -z "$shot" ]; then
         echo "no $folder.png for $folder/$theme-$text after the batch and two tries on its own" >&2
-        keep_debug "$out" "visual-batch-$theme-$text"
         exit 1
       fi
       mv "$shot" "$SHOT_DIR/$folder/$theme-$text.png"
     done
-    if [ "$keep_out" = yes ]; then keep_debug "$out" "visual-batch-$theme-$text"; else rm -rf "$out"; fi
   done
 done
 rm -rf "$batch"

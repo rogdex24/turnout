@@ -12,7 +12,7 @@
   "scripts": {
     "sync": "bun run src/cli.ts sync",
     "serve": "bun run src/cli.ts serve",
-    "test": "bun test --parallel",
+    "test": "bun test --parallel --timeout 15000",
     "typecheck": "bun run --parallel --no-exit-on-error 'typecheck:*'",
     "typecheck:server": "tsc -p tsconfig.json --noEmit",
     "typecheck:admin-ui": "tsc -p src/admin/ui/tsconfig.json --noEmit",
