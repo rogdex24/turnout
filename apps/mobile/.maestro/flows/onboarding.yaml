@@ -75,24 +75,50 @@ env:
 - assertVisible: "Add a photo of your face to continue."
 - assertVisible: "Add your Instagram or LinkedIn."
 
-# The women-only switch appears for women and goes away for men.
+# The women-only switch appears for women and goes away for men. The error lines make the form longer than a small screen, and the
+# keyboard covers the lower half, so the flow closes the keyboard and scrolls to each control before it uses it.
 - tapOn:
     id: first-name
 - inputText: "Ananya"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: gender-woman
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: gender-woman
-- assertVisible:
-    id: women-only
+- scrollUntilVisible:
+    element:
+      id: women-only
+    direction: DOWN
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: gender-man
+    direction: UP
+    centerElement: true
 - tapOn:
     id: gender-man
 - assertNotVisible:
     id: women-only
 - tapOn:
     id: gender-woman
+- scrollUntilVisible:
+    element:
+      id: handle
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: handle
 - inputText: "https://www.instagram.com/ananya.k/"
-- assertVisible: "So we can check you're a real person. Others in your group never see it."
+- hideKeyboard
+- scrollUntilVisible:
+    element: "So we can check you're a real person. Others in your group never see it."
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: save
-- assertVisible: "Add a photo of your face to continue."
+- scrollUntilVisible:
+    element: "Add a photo of your face to continue."
+    direction: UP
