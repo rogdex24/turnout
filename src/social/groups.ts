@@ -9,6 +9,7 @@ import { groupAfterLoss, lossNotice } from "./model/groupLoss.js";
 import { isMatchable } from "./model/matchable.js";
 import { canCheckIn, canReveal, meetAt, milestones } from "./model/schedule.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
+import { neverPairsAmong } from "./neverPairs.js";
 import { addNotice } from "./notices.js";
 import { getPlan, movePlan, type PlanRow, planLockAt } from "./plans.js";
 import { getProfile } from "./profiles.js";
@@ -120,11 +121,6 @@ export function checkIn(db: Database, groupId: string, memberId: string, now: Da
   return { ok: true };
 }
 
-/** Pairs who must not share a group. The data comes with blocking and reports in M4; until then nobody is kept apart. */
-function neverPairsAmong(_db: Database, _memberIds: readonly string[]): ReadonlySet<string> {
-  return neverPairSet([]);
-}
-
 function addToGroup(db: Database, group: Pick<GroupRow, "id">, plan: PlanRow, now: Date, t: Tunables): void {
   const at = now.toISOString();
   db.query("INSERT INTO group_member (id, group_id, member_id, plan_id, member_ref, joined_at) VALUES (?, ?, ?, ?, ?, ?)").run(
@@ -200,7 +196,7 @@ export function runGroupingPass(db: Database, eventId: string, now: Date, t: Tun
         })),
       }));
       const everyone = [...pool.map((p) => p.memberId), ...groups.flatMap((g) => g.members.map((m) => m.memberId))];
-      const result: Assignment = assign(pool, groups, neverPairsAmong(db, everyone), t);
+      const result: Assignment = assign(pool, groups, neverPairSet(neverPairsAmong(db, everyone)), t);
 
       const at = now.toISOString();
       for (const join of result.joins) addToGroup(db, { id: join.groupId }, byMember.get(join.memberId) as PlanRow, now, t);

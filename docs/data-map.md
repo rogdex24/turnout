@@ -19,6 +19,7 @@ other people in a group.
 | `member.phone_e164` | Phone number, E.164 | The sign-in identity and where the code is sent | The member, the operator. Never a co-member | Until deletion; nulled on the tombstone |
 | `member.status` | `active`, `suspended`, `stopped`, `banned` or `deleted` | Decides whether the person can sign in and be grouped | The member (their own state), the operator | Until deletion |
 | `member.status_reason` | Short operator reason code | Audit of why a status changed | The operator | Until deletion |
+| `member.stop_baseline_at` | When an operator last reinstated the member | The stop rule counts downvotes from here, and it must outlast the year the action log is kept | Operator | Until deletion; nulled on the tombstone |
 | `member.phone_verified_at` | When a code last proved the phone | Matching needs a verified phone | The member, the operator | Until deletion |
 | `member.created_at` | Row creation time | Audit | Operator | Until deletion |
 | `member.updated_at` | Last change | Audit | Operator | Until deletion |
@@ -250,7 +251,7 @@ Every write the operator makes. `detail` holds codes and ids, never free text ab
 | `operator_action.id` | Row id (ULID) | Primary key | Operator | 1 year |
 | `operator_action.action` | What was done, for example `handle_approved` | Audit | Operator | 1 year |
 | `operator_action.subject_type` | What kind of thing it was done to | Audit | Operator | 1 year |
-| `operator_action.subject_id` | The id of that thing | Audit | Operator | 1 year |
+| `operator_action.subject_id` | The id of that thing; for a member it is the tombstone id after the account ends | Audit | Operator | 1 year |
 | `operator_action.detail` | A small JSON object of codes | Audit | Operator | 1 year |
 | `operator_action.created_at` | When | Audit | Operator | 1 year |
 
@@ -273,6 +274,102 @@ An operator alert already sent, so each fires once. The key holds a member id, s
 | --- | --- | --- | --- | --- |
 | `alert_sent.alert_key` | What the alert was about, for example `handle_due:<member id>:<show id>:<time the handle was submitted>` | Stops a repeat | Server | 30 days |
 | `alert_sent.sent_at` | When the send call returned. A row is written only then, so an alert that was lost is sent again | Audit and the sweep | Server | 30 days |
+
+### `message`
+
+A thread message. Nobody outside the group reads it, and it is never written to a log.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `message.id` | Message id (ULID) | Orders the thread and pages `?after=` (always above the group's newest id when stored) | Members of the group | 30 days after the show, longer while a report on the group is open |
+| `message.group_id` | The group | The thread belongs to one group | Server | Same |
+| `message.member_id` | The sender | Lets the sender's own messages be marked and deleted with the account | Server; never in a response about someone else | Same, or until the sender is deleted |
+| `message.member_ref` | The sender's name inside the group | Co-members see the sender by it | Members of the group | Same |
+| `message.client_id` | Random id made by the app | A retried send stores once | The sender | Same |
+| `message.body` | The text, 1 to 1,000 characters | The message | Members of the group, operator while a report is open | Same |
+| `message.created_at` | When it was stored | Order and the 30 day rule | Members of the group | Same |
+
+### `thread_presence`
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `thread_presence.group_id` | The group | One row per member per group | Server | Until the show's data is swept or the member is deleted |
+| `thread_presence.member_id` | The member | Same | Server | Same |
+| `thread_presence.seen_at` | When the member last read the thread | A new message sends a notice only after ten minutes away | Server | Same |
+
+### `downvote`
+
+Private. The person downvoted never sees it, and neither does anyone else in the group.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `downvote.id` | Row id (ULID) | Primary key | Server | Until either person is deleted |
+| `downvote.group_id` | The show's group | One vote per pair per show, and the stop rule counts shows | Server | Same |
+| `downvote.voter_id` | Who said "I didn't feel comfortable" | The pair is never grouped again; the voter's blocked list | Server; the voter sees only a first name and show | Same |
+| `downvote.target_id` | Who was downvoted | The stop rule counts voters and shows | Server, operator | Same |
+| `downvote.created_at` | When | The stop rule counts from the last reinstate | Server, operator | Same |
+
+### `met_edge`
+
+Written when feedback closes. Not shown in v1.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `met_edge.group_id` | The group | One row per pair per show | Server | Until either person is deleted |
+| `met_edge.member_a` | The lower member id of the pair | Keeps one row per pair | Server | Same |
+| `met_edge.member_b` | The higher member id of the pair | Same | Server | Same |
+| `met_edge.created_at` | When feedback closed | Audit | Server | Same |
+
+### `feedback_close`
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `feedback_close.group_id` | The group | Met edges and the stop rule run once per group | Server | Until the show's data is swept |
+| `feedback_close.closed_at` | When feedback closed | Audit | Server | Same |
+
+### `report`
+
+A report about a co-member. The operator reviews it within 24 hours.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `report.id` | Report id (ULID) | Names the report in the alert and the admin | Operator | 1 year after it is closed |
+| `report.group_id` | The group | Where the two met | Operator | Same |
+| `report.reporter_id` | Who reported | The operator may need to contact them. Stays as an id after the account is deleted | Operator | Same |
+| `report.subject_id` | Who was reported | The account is suspended at once. Stays as an id after the account is deleted | Operator | Same |
+| `report.message_id` | The message the report is about, if any | Lets the operator read it in context | Operator | Same, emptied when the message is deleted |
+| `report.body` | What the reporter wrote | The operator reads it | Operator | Same |
+| `report.client_id` | Random id made by the app | A retried report stores once | Server | Same |
+| `report.reporter_gender` | The reporter's gender when they reported | A report from a woman about a man is never closed without contacting her | Operator | Same |
+| `report.subject_gender` | The subject's gender when reported | Same | Operator | Same |
+| `report.subject_status_before` | The subject's account status before the report | A dismissal puts it back | Server | Same |
+| `report.status` | `open` or `closed` | The queue | Operator | Same |
+| `report.outcome` | `upheld` or `dismissed` | Upheld bans the subject, dismissed reinstates | Operator | Same |
+| `report.created_at` | When it was made | Audit | Operator | Same |
+| `report.due_at` | Created plus 24 hours | The queue is ordered by it and the alerts count from it | Operator | Same |
+| `report.contacted_reporter_at` | When the operator contacted the reporter | The woman-about-man rule | Operator | Same |
+| `report.closed_at` | When it was closed | The 1 year rule | Operator | Same |
+| `report.close_note` | A short note from the operator | Audit | Operator | Same |
+
+### `ban_list`
+
+Keyed hash only. It holds no user id, and the phone cannot be read back from it.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ban_list.phone_hash` | HMAC-SHA256 of the E.164 number with `BAN_PEPPER` | Refuses a banned number at sign-in and stops a stopped person making a second account | Server | Until the operator lifts it |
+| `ban_list.reason` | `report_upheld`, `downvote_stop` or `operator` | Only the first and last refuse a sign-in | Operator | Same |
+| `ban_list.created_at` | When it was written | Audit | Operator | Same |
+
+### `ban_pepper_check`
+
+One row. It holds a keyed fingerprint of the ban pepper, not the pepper, and no person.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ban_pepper_check.id` | Always 1 | One row | Server | Kept |
+| `ban_pepper_check.fingerprint` | HMAC-SHA256 of a fixed text with `BAN_PEPPER` | The admin compares its own pepper to this, so a ban made there matches the app's hashes | Server, operator | Overwritten at each app start |
+| `ban_pepper_check.written_at` | When the app last wrote it | Audit | Server | Same |
 
 ## Object store
 

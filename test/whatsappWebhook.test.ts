@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
 import { DID_NOT_REQUEST_PAYLOAD } from "../src/app-api/routes/whatsappWebhook.js";
 import { PHONES, type TestApp, testApp } from "./appHelpers.js";
+import { memberSession } from "./helpers/appFixture.js";
 
 const SECRET = "test-app-secret";
 
@@ -158,6 +159,25 @@ describe("didn't request this code", () => {
     expect((await t.call("POST", "/auth/otp", { body: { phone: PHONES[1], purpose: "sign_in" } })).status).toBe(200);
     t.clock.advance(24 * 60 * 60 * 1000 + 1000);
     expect((await t.call("POST", "/auth/otp", { body: { phone, purpose: "sign_in" } })).status).toBe(200);
+  });
+
+  test("the button on a delete code signs the member out everywhere; on a sign-in code it does not", async () => {
+    const t = await testApp();
+    const who = await memberSession(t, 0);
+    const other = await memberSession(t, 1);
+    const open = (id: string) =>
+      t.db.query("SELECT COUNT(*) AS n FROM auth_session WHERE member_id = ? AND revoked_at IS NULL").get(id) as { n: number };
+    // A sign-in code that was not requested leaves the sessions alone.
+    await t.call("POST", "/auth/otp", { body: { phone: other.phone, purpose: "sign_in" } });
+    await post(t, buttonPayload(other.phone.slice(1)));
+    expect(open(other.memberId).n).toBeGreaterThan(0);
+    expect((await t.call("GET", "/me", { token: other.token })).status).toBe(200);
+    // A delete code that was not requested means the session is not the owner's: sign it out.
+    expect((await t.call("POST", "/me/delete-code", { token: who.token })).status).toBe(200);
+    expect(open(who.memberId).n).toBeGreaterThan(0);
+    await post(t, buttonPayload(who.phone.slice(1)));
+    expect(open(who.memberId).n).toBe(0);
+    expect((await t.call("GET", "/me", { token: who.token })).status).toBe(401);
   });
 
   test("other buttons and odd senders are ignored", async () => {

@@ -26,6 +26,14 @@ const SOCIAL_TABLES = [
   "operator_action",
   "scheduler_lease",
   "alert_sent",
+  "message",
+  "thread_presence",
+  "downvote",
+  "met_edge",
+  "feedback_close",
+  "report",
+  "ban_list",
+  "ban_pepper_check",
 ];
 const NOW = "2026-01-01T00:00:00.000Z";
 

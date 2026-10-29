@@ -7,49 +7,17 @@ import {
   memberPhotoResponseSchema,
 } from "@turnout/contract/app/groups";
 import { planSchema } from "@turnout/contract/app/plans";
-import type { Gender } from "@turnout/contract/profile";
+import { milestones } from "../src/social/model/schedule.js";
 import { setCafe } from "../src/social/operator.js";
-import { tick } from "../src/social/tick.js";
-import { type TestApp, testApp } from "./appHelpers.js";
 import { memberSession, type Session } from "./helpers/appFixture.js";
-import { SHOW_START, seedShow, waitingPlan } from "./helpers/socialFixture.js";
+import { type Setup, setup } from "./helpers/groupFixture.js";
+import { SHOW_START } from "./helpers/socialFixture.js";
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const START = Date.parse(SHOW_START);
-const GENDERS: Gender[] = ["woman", "man", "woman", "man", "non_binary", "woman"];
 const BASE = "/api/app/v1";
 const errorOf = async (response: Response) => errorBodySchema.parse(await response.json()).error;
-
-interface Setup {
-  t: TestApp;
-  members: Session[];
-  groupId: string;
-  /** Moves the clock to `ms` from the show start, runs the passes that are due and signs everyone in again (access tokens are short). */
-  at(ms: number): Promise<void>;
-}
-
-async function setup(people = 4): Promise<Setup> {
-  const t = await testApp();
-  seedShow(t.db, { id: "show-a" });
-  const members: Session[] = [];
-  for (let i = 0; i < people; i++) {
-    const who = await memberSession(t, i, { name: `Person${i}`, gender: GENDERS[i % GENDERS.length] });
-    waitingPlan(t.db, who.memberId, "show-a", t.clock());
-    members.push(who);
-  }
-  tick(t.db, t.clock());
-  const plans = (await (await t.call("GET", "/plans", { token: (members[0] as Session).token })).json()) as {
-    plans: { group: { id: string } }[];
-  };
-  const groupId = plans.plans[0]?.group.id as string;
-  const at = async (ms: number) => {
-    t.clock.set(new Date(START + ms));
-    tick(t.db, t.clock());
-    for (const who of members) who.token = (await t.signIn(who.phone)).accessToken;
-  };
-  return { t, members, groupId, at };
-}
 
 const group = (s: Setup, who: Session, id = s.groupId) => s.t.call("GET", `/groups/${id}`, { token: who.token });
 
@@ -134,16 +102,17 @@ describe("GET /groups/:groupId from T-3h", () => {
     expect(unknown.status).toBe(404);
   });
 
-  test("the group and its photos close 24 hours after the start: the same 404 as a group that is not yours", async () => {
+  test("the group and its photos close with the feedback window: the same 404 as a group that is not yours", async () => {
     const s = await setup();
-    await s.at(23 * HOUR + 59 * MINUTE);
+    const closesAt = Date.parse(milestones(SHOW_START).feedbackClosesAt) - START;
+    await s.at(closesAt - MINUTE);
     const me = s.members[0] as Session;
     const other = s.t.db.query("SELECT member_ref FROM group_member WHERE member_id = ?").get((s.members[1] as Session).memberId) as {
       member_ref: string;
     };
     expect((await group(s, me)).status).toBe(200);
     expect((await s.t.call("GET", `/groups/${s.groupId}/members/${other.member_ref}/photo`, { token: me.token })).status).toBe(200);
-    await s.at(24 * HOUR);
+    await s.at(closesAt);
     expect((await group(s, me)).status).toBe(404);
     expect((await s.t.call("GET", `/groups/${s.groupId}/members/${other.member_ref}/photo`, { token: me.token })).status).toBe(404);
   });

@@ -59,7 +59,9 @@ wrong.
   `GRIEVANCE_PHONE`, `SUPPORT_EMAIL`.
 - Secrets: `OTP_PEPPER`, `BAN_PEPPER`, `FILE_LINK_SECRET`, `AUTH_JWT_PRIVATE_KEY`,
   `AUTH_JWT_PUBLIC_KEY` (and `AUTH_JWT_PREVIOUS_PUBLIC_KEY` while rotating). Generate each on the
-  host; never copy a value from another environment.
+  host; never copy a value from another environment. The admin process needs the same `BAN_PEPPER`
+  as the app: the app leaves a fingerprint of its value in the database, and the admin answers 503 on
+  ban, lift, reinstate and report close if its value differs or is missing.
 - Sign-in codes: `OTP_SENDER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
   `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `OTP_DAILY_CAP`,
   `OPERATOR_ALERT_WEBHOOK_URL`. Steps are in `docs/meta-setup.md`.

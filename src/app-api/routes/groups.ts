@@ -5,8 +5,9 @@ import {
   type GroupResponse,
   type MemberPhotoResponse,
 } from "@turnout/contract/app/groups";
+import { downvotedRefs } from "../../social/feedback.js";
 import { belowPlan, checkIn, getGroupForMember, groupSize, memberPhotoKey, revealedMembers } from "../../social/groups.js";
-import { canReveal, meetAt, revealAt, revealClosed } from "../../social/model/schedule.js";
+import { canReveal, meetAt, milestones, revealAt, revealClosed } from "../../social/model/schedule.js";
 import { getPlan } from "../../social/plans.js";
 import { authed } from "../auth.js";
 import type { Route } from "../context.js";
@@ -52,7 +53,14 @@ export const groupRoutes: Route[] = [
         checkedIn: m.checkedIn,
         isYou: m.isYou,
       }));
-      return ok({ ...before, cafe, members } satisfies GroupResponse);
+      const feedback =
+        group.state === "done"
+          ? {
+              feedbackOpenUntil: milestones(group.starts_at, t).feedbackClosesAt,
+              downvotedRefs: downvotedRefs(app.db, group.id, row.id),
+            }
+          : {};
+      return ok({ ...before, cafe, members, ...feedback } satisfies GroupResponse);
     },
   },
   {

@@ -11,8 +11,25 @@ import { ticketRejectReasonSchema } from "@turnout/contract/ticket";
 import { z } from "zod";
 import { addMuteRule, countMuted, isMuteField, MUTE_FIELDS, type MuteField, removeMuteRule } from "../curation/mute.js";
 import { SOURCE_ADAPTERS } from "../ingestion/sources/registry.js";
-import { pendingHandles, upcomingShows } from "../social/adminReads.js";
-import { approveHandle, approveTicket, rejectHandle, rejectTicket, setCafe, setStartTime } from "../social/operator.js";
+import { accountDetail, failedNotices, pendingHandles, reportQueue, upcomingShows } from "../social/adminReads.js";
+import { pepperCheck } from "../social/bans.js";
+import { normalizePhone } from "../social/model/phone.js";
+import { DEFAULT_TUNABLES } from "../social/model/tunables.js";
+import {
+  approveHandle,
+  approveTicket,
+  banMember,
+  closeReport,
+  liftBan,
+  markContacted,
+  OperatorRuleError,
+  reinstateMember,
+  rejectHandle,
+  rejectTicket,
+  setCafe,
+  setStartTime,
+  suspendMember,
+} from "../social/operator.js";
 import { ticketQueue } from "../social/tickets.js";
 import { endOfDayIst, startOfDayIst } from "../utils/time.js";
 import { isUuid } from "../utils/uuid.js";
@@ -496,4 +513,118 @@ export function rejectHandleAction(db: Database, memberId: string, body: unknown
   const result = rejectHandle(db, memberId, reason, now);
   if (!result.ok) throw HANDLE_ERRORS[result.error];
   return { memberId, status: "rejected" as const, reason };
+}
+
+// ---- reports, accounts, bans and failed notices ----
+
+/**
+ * The ban pepper, or a 503: without the same BAN_PEPPER as the app, a number hashed here would never match one hashed there. The app
+ * leaves a fingerprint of its pepper in the database; a different value here answers 503 the same as no value.
+ */
+function needPepper(db: Database, pepper: string | null | undefined): string {
+  if (!pepper) throw new HttpError(503, "BAN_PEPPER is not set on the admin process");
+  if (pepperCheck(db, pepper) === "mismatch") throw new HttpError(503, "BAN_PEPPER on the admin process is not the app's value");
+  return pepper;
+}
+
+/** Deletes the files an erased account pointed at. A miss is left for the app's nightly sweep, which removes any file no row points at. */
+async function deleteStored(files: AdminFiles | null, keys: readonly string[]): Promise<void> {
+  if (files === null) return;
+  for (const key of keys) await files.store.delete(key).catch(() => {});
+}
+
+export const listReports = (db: Database, now: Date) => ({ reports: reportQueue(db, now) });
+
+const REPORT_ERRORS = {
+  not_found: new HttpError(404, "no such report"),
+  already_closed: new HttpError(409, "this report is already closed"),
+} as const;
+
+export function contactedAction(db: Database, reportId: string, now: Date) {
+  const result = markContacted(db, reportId, now);
+  if (!result.ok) throw REPORT_ERRORS[result.error];
+  return { reportId, contacted: true as const };
+}
+
+const closeReportBody = z.strictObject({
+  outcome: z.enum(["upheld", "dismissed"]),
+  /** Kept on the report row for the year it is retained. It never goes into the operator's action log. */
+  note: z.string().trim().min(1).max(2000),
+});
+
+export async function closeReportAction(
+  db: Database,
+  pepper: string | null | undefined,
+  files: AdminFiles | null,
+  reportId: string,
+  body: unknown,
+  now: Date,
+) {
+  const { outcome, note } = parseBody(closeReportBody, body);
+  let result: ReturnType<typeof closeReport>;
+  try {
+    result = closeReport(db, needPepper(db, pepper), reportId, outcome, note, now, DEFAULT_TUNABLES);
+  } catch (error) {
+    if (error instanceof OperatorRuleError) throw new HttpError(409, "contact the reporter first, then mark it contacted");
+    throw error;
+  }
+  if (!result.ok) throw REPORT_ERRORS[result.error];
+  await deleteStored(files, result.fileKeys);
+  return { reportId, status: "closed" as const, outcome };
+}
+
+export function getAccount(db: Database, memberId: string) {
+  const account = accountDetail(db, memberId);
+  if (account === null) throw new HttpError(404, "no such account");
+  return account;
+}
+
+const ACCOUNT_ERRORS = {
+  not_found: new HttpError(404, "no such account"),
+  not_allowed: new HttpError(409, "that is not possible from this account's current state"),
+} as const;
+
+export function suspendAction(db: Database, memberId: string, now: Date) {
+  const result = suspendMember(db, memberId, now, DEFAULT_TUNABLES);
+  if (!result.ok) throw ACCOUNT_ERRORS[result.error];
+  return { memberId, status: "suspended" as const };
+}
+
+export function reinstateAction(db: Database, pepper: string | null | undefined, memberId: string, now: Date) {
+  const result = reinstateMember(db, needPepper(db, pepper), memberId, now);
+  if (!result.ok) {
+    throw result.error === "not_allowed"
+      ? new HttpError(409, "only a suspended or stopped account can be reinstated, and not while a report about it is open")
+      : ACCOUNT_ERRORS.not_found;
+  }
+  return { memberId, status: (accountDetail(db, memberId)?.status ?? "active") as string };
+}
+
+export async function banAction(db: Database, pepper: string | null | undefined, files: AdminFiles | null, memberId: string, now: Date) {
+  const result = banMember(db, needPepper(db, pepper), memberId, now, DEFAULT_TUNABLES);
+  if (!result.ok) throw ACCOUNT_ERRORS.not_found;
+  await deleteStored(files, result.fileKeys);
+  return { memberId, status: "banned" as const };
+}
+
+const liftBody = z.strictObject({ phone: z.string().trim().min(1).max(32) });
+const E164 = /^\+[1-9]\d{6,14}$/;
+
+/** The number the operator typed, as E.164: an Indian mobile in any common form, or any number already written as +country digits. */
+const operatorPhone = (raw: string): string | null => {
+  const compact = raw.replace(/[\s\-().]/g, "");
+  return E164.test(compact) ? compact : normalizePhone(raw);
+};
+
+export function liftBanAction(db: Database, pepper: string | null | undefined, body: unknown, now: Date) {
+  const { phone } = parseBody(liftBody, body);
+  const e164 = operatorPhone(phone);
+  if (e164 === null) throw bad("phone is not a number this service can hold, send it as +91 and ten digits");
+  if (!liftBan(db, needPepper(db, pepper), e164, now).ok) throw new HttpError(404, "that number is not on the ban list");
+  return { lifted: true as const };
+}
+
+export function listFailedNotices(db: Database, params: URLSearchParams) {
+  enumParam(params, "status", ["failed"] as const);
+  return { notices: failedNotices(db) };
 }

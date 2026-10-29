@@ -216,7 +216,7 @@ export async function handleRequest(app: AppContext, router: Router, request: Re
       now,
     };
     if (found.route.auth === "member") {
-      context.member = await requireMember(context);
+      context.member = await requireMember(context, found.route.allowSuspended === true);
       member = memberHash(context.member.member.id);
     }
     response = await found.route.handler(context);

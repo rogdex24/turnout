@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { recordPepper } from "../social/bans.js";
 import { adjustableClock, type Clock, systemClock } from "../utils/clock.js";
 import type { FetchLike } from "../utils/http.js";
 import { diskStore, memoryStore, type ObjectStore, s3Store } from "../utils/objectStore.js";
@@ -72,6 +73,7 @@ export async function createAppContext(options: AppContextOptions): Promise<AppC
   if (config.env === "production" && (push as { fake?: boolean }).fake === true) {
     throw new ConfigError("a push sender that sends nothing is not allowed in production");
   }
+  recordPepper(options.db, config.banPepper, now());
   const context: AppContext = {
     db: options.db,
     now,

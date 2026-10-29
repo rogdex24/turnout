@@ -21,6 +21,15 @@ export function getChallenge(db: Database, id: string): ChallengeRow | null {
   return db.query("SELECT * FROM otp_challenge WHERE id = ?").get(id) as ChallengeRow | null;
 }
 
+/** The newest code for this number that has not been used or voided, whatever its purpose. */
+export function latestOpenChallenge(db: Database, phoneHash: string): ChallengeRow | null {
+  return db
+    .query(
+      "SELECT * FROM otp_challenge WHERE phone_hash = ? AND consumed_at IS NULL AND voided_at IS NULL ORDER BY created_at DESC, rowid DESC LIMIT 1",
+    )
+    .get(phoneHash) as ChallengeRow | null;
+}
+
 /** Earlier codes for this number stop working the moment a new one is asked for. */
 export function voidOpenChallenges(db: Database, phoneHash: string, now: Date): number {
   return db
