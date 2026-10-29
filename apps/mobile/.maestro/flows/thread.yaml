@@ -29,13 +29,10 @@ env:
 - launchApp:
     clearState: false
 - runFlow:
-    file: ../subflows/open-link.yaml
+    file: ../subflows/open-link-to.yaml
     env:
       LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
-- extendedWaitUntil:
-    visible:
-      id: meet
-    timeout: 15000
+      SCREEN: meet
 
 # The card has a way into the chat.
 - assertVisible:

@@ -53,6 +53,18 @@ describe("Maestro flows", () => {
     expect(retry).toBeLessThan(text.indexOf("welcome-skip"));
   });
 
+  // Once on iOS the simulator closed its "Open in" prompt and the app never got the link. A link that should open a screen of its
+  // own goes through open-link-to.yaml, which opens it again when the screen does not come.
+  test("a link and a wait for its own screen go through open-link-to.yaml", async () => {
+    const subflow = await Bun.file(`${root}/subflows/open-link-to.yaml`).text();
+    expect(subflow.indexOf("- retry:")).toBeGreaterThan(-1);
+    expect(subflow.indexOf("- retry:")).toBeLessThan(subflow.indexOf("open-link.yaml"));
+    for (const file of files) {
+      const text = await Bun.file(`${root}/${file}`).text();
+      expect(text).not.toMatch(/open-link\.yaml\n\s+env:\n\s+LINK: .*\n- extendedWaitUntil:\n\s+visible:\n\s+id: (?!home\b)/);
+    }
+  });
+
   // On iOS the poster is one accessible element named "<title>, <category>", so a bare title never matches it.
   test("no flow asserts a seeded show title as the whole text", async () => {
     for (const file of files) {

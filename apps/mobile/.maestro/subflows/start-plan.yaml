@@ -11,13 +11,10 @@ name: start plan
       SERVER_URL: ${SERVER_URL}
       TEST_TOKEN: ${TEST_TOKEN}
 - runFlow:
-    file: open-link.yaml
+    file: open-link-to.yaml
     env:
       LINK: turnout-e2e://show/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
+      SCREEN: show
 - tapOn:
     id: show-go
 - extendedWaitUntil:
