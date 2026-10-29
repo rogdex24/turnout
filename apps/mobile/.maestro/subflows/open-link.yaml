@@ -5,16 +5,17 @@ appId: com.turnout.app.e2e
 name: open link
 ---
 - openLink: ${LINK}
+# The match names the app, because a bare "Open in .*" also matched the meet card's own "Open in Maps" button.
 - runFlow:
     when:
       platform: iOS
     commands:
       - extendedWaitUntil:
-          visible: "Open in .*"
+          visible: "Open in .Turnout.*"
           timeout: 10000
           optional: true
       - runFlow:
           when:
-            visible: "Open in .*"
+            visible: "Open in .Turnout.*"
           commands:
             - tapOn: "Open"

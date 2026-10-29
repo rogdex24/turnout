@@ -53,7 +53,7 @@ export function YouView({
 }: YouViewProps) {
   return (
     <SafeAreaView className="flex-1 bg-bg" edges={["top"]} testID="you">
-      <ScrollView className="flex-1" contentContainerClassName="pb-8">
+      <ScrollView className="flex-1" contentContainerClassName="pb-8" contentInsetAdjustmentBehavior="automatic">
         <Text variant="title-large" className="px-4 pt-4" accessibilityRole="header">
           {you.title}
         </Text>

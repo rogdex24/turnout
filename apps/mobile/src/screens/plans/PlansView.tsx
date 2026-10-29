@@ -58,6 +58,7 @@ export function PlansView({ state, offline = false, refreshing = false, onRefres
       <ScrollView
         className="flex-1"
         contentContainerClassName="pb-6"
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {state.status === "loading" ? (

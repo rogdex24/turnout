@@ -903,3 +903,8 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
   should land on Home keep the plain subflow, because a retry there proves nothing.
 - **The Android capture waits for the emulator.** After all 17 flows passed, adb saw the small emulator as "device
   offline" and the first capture failed. `device-run.sh` reconnects and waits for the device before each capture.
+- **Tab screens ask iOS to inset their lists.** React Native's ScrollView leaves `contentInsetAdjustmentBehavior` at
+  "never". On the small iOS simulator the You list ended under the floating tab bar, and the tap on Delete account, the last
+  row, opened Plans. Home, Plans and You now set it to "automatic"; `src/lists.test.ts` checks it.
+- **The link prompt is matched by the app's name.** The visual capture of the meet card failed on the large iOS simulator:
+  "Open in .*" matched the card's "Open in Maps" button, and the subflow then looked for an Open button that was not there.

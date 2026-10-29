@@ -25,3 +25,14 @@ describe("long lists", () => {
     for (const { file, text } of lists) expect({ file, typed: /getItemType=/.test(text) }).toEqual({ file, typed: true });
   });
 });
+
+// React Native's ScrollView leaves contentInsetAdjustmentBehavior at "never". On the small iOS simulator the You list then ended
+// under the floating tab bar, and a tap on its last row, Delete account, opened Plans.
+describe("tab screens", () => {
+  test.each(["screens/home/HomeView.tsx", "screens/plans/PlansView.tsx", "screens/you/YouView.tsx"])(
+    "%s lets iOS inset its list for the tab bar",
+    (file) => {
+      expect(fs.readFileSync(path.join(__dirname, file), "utf8")).toMatch(/contentInsetAdjustmentBehavior="automatic"/);
+    },
+  );
+});

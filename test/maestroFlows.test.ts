@@ -65,6 +65,13 @@ describe("Maestro flows", () => {
     }
   });
 
+  // The meet card has an "Open in Maps" button, so a prompt match that does not name the app took it for the link prompt.
+  test("the link prompt is matched by the app's name", async () => {
+    const text = await Bun.file(`${root}/subflows/open-link.yaml`).text();
+    expect(text).not.toMatch(/visible: "Open in \.\*"/);
+    expect(text).toMatch(/visible: "Open in \.Turnout\.\*"/);
+  });
+
   // On iOS the poster is one accessible element named "<title>, <category>", so a bare title never matches it.
   test("no flow asserts a seeded show title as the whole text", async () => {
     for (const file of files) {
