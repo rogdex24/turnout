@@ -11,6 +11,11 @@ tags:
 ---
 - launchApp:
     clearState: true
+# A link sent while the app is still starting is lost (the router is not listening yet), and the app stays on Welcome.
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
 - runFlow:
     file: ../subflows/open-link.yaml
     env:

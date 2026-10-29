@@ -8,6 +8,8 @@ Story ids: the story title lower-cased with `/` and spaces as `-`, then `--`, th
 the story `Loaded` is `screens-home--loaded`.
 
 Stories to capture are listed in `stories.json`: the baseline folder, the story id and a text that shows once the story has rendered.
+The text sits at the top of the screen: Maestro sees only what is on screen, and at the largest text size a line lower down is
+below the fold on the small phones.
 The device jobs run `ci/device-run.sh <target>`, which sets the theme and the text size and captures every listed story.
 
 The events list replaces the `home` entry when it lands in M2. `home` stands in until then, so the pipeline has a shot to compare.
