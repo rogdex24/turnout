@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import { Pressable, TextInput, type TextInputInstance, View } from "react-native";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
-import { useColors } from "./theme";
 
 export interface CodeEntryProps {
   value: string;
@@ -19,7 +18,7 @@ export interface CodeEntryProps {
 }
 
 /**
- * Boxes for a one-time code: one display numeral each, the next empty box ringed in ink. One hidden text input takes the typing, the
+ * Boxes for a one-time code: one display numeral each, the next empty box ringed in ink. One see-through text input over the boxes takes the typing, the
  * paste and the keyboard's code suggestion, so a screen reader meets a single field and not six.
  */
 export function CodeEntry({
@@ -32,7 +31,6 @@ export function CodeEntry({
   autoFocus = false,
   testID,
 }: CodeEntryProps) {
-  const colors = useColors();
   const input = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
   const digits = value.replace(/\D/g, "").slice(0, length);
@@ -75,11 +73,14 @@ export function CodeEntry({
         autoComplete="sms-otp"
         importantForAutofill="yes"
         caretHidden
-        selectionColor={colors.ink}
+        selectionColor="transparent"
         accessibilityLabel={`${label}, ${progress}`}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="absolute inset-0 opacity-0"
+        underlineColorAndroid="transparent"
+        // See-through rather than at zero opacity: iOS and Android leave a view at alpha 0 out of the accessibility tree, so
+        // VoiceOver, TalkBack and the Maestro flows could not reach the field.
+        className="absolute inset-0 bg-transparent text-transparent"
       />
     </View>
   );
