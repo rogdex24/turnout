@@ -34,13 +34,10 @@ env:
 
 # The push for a live meet card opens the card.
 - runFlow:
-    file: ../subflows/open-link.yaml
+    file: ../subflows/open-link-to.yaml
     env:
       LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
-- extendedWaitUntil:
-    visible:
-      id: meet
-    timeout: 15000
+      SCREEN: meet
 
 # The card draws the meet time, the cafe with its map and the group. The e2e build shows the static map.
 - assertVisible:

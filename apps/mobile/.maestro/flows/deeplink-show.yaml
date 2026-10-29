@@ -18,13 +18,10 @@ env:
 
 # A show link opens the show: the ticket stub and the title of the seeded show.
 - runFlow:
-    file: ../subflows/open-link.yaml
+    file: ../subflows/open-link-to.yaml
     env:
       LINK: turnout-e2e://show/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
+      SCREEN: show
 - assertVisible:
     id: show-ticket
 # On iOS the poster is one element named "<title>, <category>", so the title is matched as the start of the name.
@@ -40,13 +37,10 @@ env:
       id: home
     timeout: 10000
 - runFlow:
-    file: ../subflows/open-link.yaml
+    file: ../subflows/open-link-to.yaml
     env:
       LINK: turnout-e2e://e/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
+      SCREEN: show
 - assertVisible:
     id: show-ticket
 

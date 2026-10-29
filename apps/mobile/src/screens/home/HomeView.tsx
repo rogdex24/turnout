@@ -88,6 +88,7 @@ export function HomeView(props: HomeViewProps) {
       {list.status === "ready" ? (
         <FlashList<ListItem>
           data={list.items}
+          contentInsetAdjustmentBehavior="automatic"
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.kind}
           ListHeaderComponent={header}

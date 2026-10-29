@@ -19,6 +19,10 @@ set_android_theme() { adb shell cmd uimode night "$([ "$1" = dark ] && echo yes 
 set_android_text() { adb shell settings put system font_scale "$([ "$1" = largest ] && echo 2.0 || echo 1.0)"; }
 set_ios_theme() { xcrun simctl ui booted appearance "$1"; }
 set_ios_text() { xcrun simctl ui booted content_size "$([ "$1" = largest ] && echo accessibility-extra-extra-extra-large || echo large)"; }
+# Once the emulator dropped to "device offline" between the flows and the first capture, and adb gave up. Reconnect and wait before
+# each capture.
+wait_android() { adb reconnect offline > /dev/null 2>&1 || true; timeout 120 adb wait-for-device; }
+wait_ios() { :; }
 
 # Same pixels on every run: the clock, the animations and the screen size are pinned before anything is shot.
 if [ "$platform" = android ]; then
@@ -48,6 +52,7 @@ echo "::group::visual capture"
 mkdir -p "$SHOT_DIR"
 for theme in light dark; do
   for text in default largest; do
+    "wait_${platform}"
     "set_${platform}_theme" "$theme"
     "set_${platform}_text" "$text"
     jq -c '.[]' "$here/visual/stories.json" | while read -r story; do
@@ -56,6 +61,7 @@ for theme in light dark; do
       # Maestro 2 writes a screenshot only inside its own output folder (<out>/<flow>/takeScreenshot/), so each run gets a
       # fresh folder and the one shot is moved to $SHOT_DIR/<story>/<theme>-<text>.png afterwards.
       out="$(mktemp -d)"
+      "wait_${platform}"
       if ! maestro test \
         --test-output-dir "$out" \
         -e "STORY_ID=$(jq -r .id <<< "$story")" \

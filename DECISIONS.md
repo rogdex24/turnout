@@ -897,3 +897,14 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
   and Maestro 2.11 falls back to the visibility check for the last row, which cannot reach the middle.
 - **after-show waits on `after-marked-*`, not the "Marked, privately" text.** On iOS that row's name is its label, "You
   marked Esha, privately".
+- **A link to a screen opens again when the screen does not come.** On the small iOS simulator `deeplink-show` tapped Open
+  on the "Open in" prompt, the prompt closed, and the app stayed on Home. The app never got the link; the same flow passed
+  on the run before. `subflows/open-link-to.yaml` opens the link and waits for the screen, up to three times. Links that
+  should land on Home keep the plain subflow, because a retry there proves nothing.
+- **The Android capture waits for the emulator.** After all 17 flows passed, adb saw the small emulator as "device
+  offline" and the first capture failed. `device-run.sh` reconnects and waits for the device before each capture.
+- **Tab screens ask iOS to inset their lists.** React Native's ScrollView leaves `contentInsetAdjustmentBehavior` at
+  "never". On the small iOS simulator the You list ended under the floating tab bar, and the tap on Delete account, the last
+  row, opened Plans. Home, Plans and You now set it to "automatic"; `src/lists.test.ts` checks it.
+- **The link prompt is matched by the app's name.** The visual capture of the meet card failed on the large iOS simulator:
+  "Open in .*" matched the card's "Open in Maps" button, and the subflow then looked for an Open button that was not there.
