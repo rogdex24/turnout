@@ -463,7 +463,8 @@ jobs:
     name: ${{ matrix.target }}
     needs: [changes, check, build-ios]
     runs-on: macos-26
-    timeout-minutes: 75
+    # ios-large took 76 min in run 40878741323 (the flows, then 40 captures) and hit the old 75.
+    timeout-minutes: 90
     strategy:
       fail-fast: ${{ needs.changes.outputs.fail-fast == 'true' }}
       matrix:
