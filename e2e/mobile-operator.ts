@@ -11,7 +11,7 @@
  *   POST /operator/withdraw  { phone, eventId }                                            the member's live plan ends as cancelled
  *   POST /operator/say       { phone, eventId, text }                                      the member posts to their group's thread
  *   POST /operator/after     { eventId }                                                   the clock moves to an hour past the morning after the show, then one ticker pass
- *   POST /operator/plan      { phone, eventId }                                            answers the id of the member's plan on the show, for a push link
+ *   POST /operator/plan      { phone, eventId }                                            answers the member's plan on the show and its meet card notice, for a push link
  *
  * The time they act at is the server's own clock (`POST /__test/clock` moves it), so a leaver after the lock is a leaver after the lock.
  */
@@ -156,7 +156,12 @@ async function perform(
       .get(id, body.eventId) as {
       id: string;
     } | null;
-    return plan === null ? refuse(404, `no plan for this member on ${body.eventId}`) : { ok: true, planId: plan.id };
+    if (plan === null) return refuse(404, `no plan for this member on ${body.eventId}`);
+    // A meet card push names its notice, and the app reads the group from it, so the link needs the real notice id.
+    const notice = db
+      .query("SELECT id FROM notice WHERE plan_id = ? AND kind = 'meet_card_live' ORDER BY id DESC LIMIT 1")
+      .get(plan.id) as { id: string } | null;
+    return { ok: true, planId: plan.id, noticeId: notice?.id ?? "" };
   }
   if (name === "crowd") {
     for (const number of body.phones as string[]) {

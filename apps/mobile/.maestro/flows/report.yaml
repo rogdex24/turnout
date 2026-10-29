@@ -20,7 +20,8 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 - launchApp:
     clearState: false
-# The plan's id comes from the server: the seed builds the plan with a fresh id on every run.
+# The plan's id and its meet card notice come from the server: the seed makes both with fresh ids on every run, and the app reads
+# the group from the notice, so a made-up notice id opens the plan instead of the card.
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -35,7 +36,7 @@ env:
 - runFlow:
     file: ../subflows/open-link-to.yaml
     env:
-      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${output.planId}
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
       SCREEN: meet
 
 # The Safety sheet has Call 112 first, then Report someone.
