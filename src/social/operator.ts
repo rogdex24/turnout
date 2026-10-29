@@ -366,6 +366,22 @@ export function banMember(db: Database, pepper: string, memberId: string, now: D
     .immediate();
 }
 
+/**
+ * Erases a member's account because they asked the operator to, from the number on the account or after the operator confirmed it
+ * with them. It is the member's own deletion done by someone else: no ban row, so the number can sign up again, and the same
+ * tombstone. The caller deletes the returned files after the commit.
+ */
+export function eraseMemberOnRequest(db: Database, memberId: string, now: Date, t: Tunables = DEFAULT_TUNABLES): BanMemberResult {
+  return db
+    .transaction((): BanMemberResult => {
+      const erased = eraseMember(db, memberId, { kind: "request" }, now, t);
+      if (!erased.ok) return erased;
+      recordAction(db, { action: "member_erase_request", subjectType: "member", subjectId: memberId, now });
+      return { ok: true, fileKeys: erased.fileKeys };
+    })
+    .immediate();
+}
+
 /** Takes a number off the ban list, whatever the reason. The number is hashed inside; the action row holds no number and no hash. */
 export function liftBan(db: Database, pepper: string, e164: string, now: Date): { ok: boolean } {
   return db

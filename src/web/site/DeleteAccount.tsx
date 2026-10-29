@@ -34,7 +34,8 @@ export function DeleteAccount({ grievance }: { grievance: GrievanceBlock | null 
       <h2>Without the app</h2>
       <p>
         If you no longer have the app or the phone, write to the grievance officer from the number on the account, or say which number it
-        is. We confirm the request with you and delete the account within 7 days.
+        is. We confirm the request with you and delete the account within 7 days. It is the same deletion as in the app, and your number is
+        not blocked from signing up again.
       </p>
       <GrievanceDetails grievance={grievance} />
       <p>
