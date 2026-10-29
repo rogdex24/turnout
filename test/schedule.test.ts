@@ -52,12 +52,18 @@ describe("reveal", () => {
     expect(canReveal({ startsAt: START, state: "done" }, at(START, 600))).toBe(true);
   });
 
-  test("closes 24 hours after the start, for a done group as for a live one", () => {
+  test("closes when the feedback window closes (72 hours after the morning after), for a done group as for a live one", () => {
+    const closes = milestones(START).feedbackClosesAt;
+    expect(closes).toBe("2026-11-14T04:30:00.000Z");
+    expect(milestones(START).revealClosesAt).toBe(closes);
+    const before = new Date(Date.parse(closes) - 1);
+    const after = new Date(Date.parse(closes));
     for (const state of ["live", "done"] as const) {
-      expect(canReveal({ startsAt: START, state }, at(START, 24 * 60 - 1))).toBe(true);
-      expect(canReveal({ startsAt: START, state }, at(START, 24 * 60))).toBe(false);
+      expect(canReveal({ startsAt: START, state }, at(START, 24 * 60))).toBe(true);
+      expect(canReveal({ startsAt: START, state }, before)).toBe(true);
+      expect(canReveal({ startsAt: START, state }, after)).toBe(false);
     }
-    expect(canReveal(group, at(START, 48 * 60), tunables({ plan: { revealCloseHours: 72 } }))).toBe(true);
+    expect(canReveal(group, after, tunables({ feedbackWindowHours: 96 }))).toBe(true);
   });
 
   test("the meet time and the thread close come from tunables, not from fixed numbers", () => {

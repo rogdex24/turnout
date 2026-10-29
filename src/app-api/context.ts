@@ -64,5 +64,7 @@ export interface Route {
   pattern: string;
   /** `member` runs `requireMember()` first; `none` is public. */
   auth: "member" | "none";
+  /** A suspended member may call this route, with the session the suspension revoked. Only their own deletion sets it. */
+  allowSuspended?: boolean;
   handler: (context: RequestContext) => Promise<Response> | Response;
 }

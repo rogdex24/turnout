@@ -16,8 +16,12 @@ export interface Milestones {
   revealAt: string;
   /** T-90m: the "head over" notice, and check-in opens. */
   headOverAt: string;
-  /** The co-members, photos and cafe stop being served (T+24h). */
+  /** The co-members, photos and cafe stop being served: when the feedback window closes. */
   revealClosesAt: string;
+  /** The morning after plus `feedbackWindowHours`: downvotes stop, met edges are written and the stop rule runs. */
+  feedbackClosesAt: string;
+  /** Show plus `messageRetentionDaysAfterStart`: messages are deleted, and cannot be read or reported. */
+  messagesGoneAt: string;
   /** T-60m: the group meets. */
   meetAt: string;
   checkInOpensAt: string;
@@ -33,18 +37,22 @@ export interface Milestones {
 export function milestones(startsAt: string, t: Tunables = DEFAULT_TUNABLES): Milestones {
   const start = Date.parse(startsAt);
   const istDay = Math.floor((start + IST_OFFSET_MS) / DAY_MS);
+  const morningAfter = (istDay + 1) * DAY_MS + t.morningAfterHourIst * HOUR_MS - IST_OFFSET_MS;
+  const feedbackClosesAt = iso(morningAfter + t.feedbackWindowHours * HOUR_MS);
   return {
     lockAt: joinUntil(startsAt, t),
     cafeAlertAt: iso(start - t.plan.cafeAlertHoursBefore * HOUR_MS),
     revealAt: iso(start - t.plan.revealHoursBefore * HOUR_MS),
     headOverAt: iso(start - t.plan.headOverMinutes * MINUTE_MS),
-    revealClosesAt: iso(start + t.plan.revealCloseHours * HOUR_MS),
+    revealClosesAt: feedbackClosesAt,
+    feedbackClosesAt,
+    messagesGoneAt: iso(start + t.plan.messageRetentionDaysAfterStart * DAY_MS),
     meetAt: iso(start - t.plan.meetMinutesBefore * MINUTE_MS),
     checkInOpensAt: iso(start - t.plan.headOverMinutes * MINUTE_MS),
     checkInClosesAt: iso(start + t.plan.checkInCloseMinutes * MINUTE_MS),
     threadClosesAt: iso(start + t.plan.threadCloseHoursAfterStart * HOUR_MS),
     ticketDeleteAt: iso(start + t.plan.ticketDeleteHoursAfterStart * HOUR_MS),
-    morningAfterAt: iso((istDay + 1) * DAY_MS + t.morningAfterHourIst * HOUR_MS - IST_OFFSET_MS),
+    morningAfterAt: iso(morningAfter),
   };
 }
 
@@ -67,7 +75,7 @@ const NEVER_REVEALED = ["dissolved", "called_off"] as const;
 
 /**
  * Whether co-member data (names, refs, photos, the cafe) may leave the server. Guards every route that returns it.
- * Open from T-3h until `revealCloseHours` after the start, and not at all for a group that was dissolved or called off.
+ * Open from T-3h until the feedback window closes, and not at all for a group that was dissolved or called off.
  */
 export function canReveal(group: { startsAt: string; state: string }, now: Date, t: Tunables = DEFAULT_TUNABLES): boolean {
   if ((NEVER_REVEALED as readonly string[]).includes(group.state)) return false;

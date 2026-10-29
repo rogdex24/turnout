@@ -18,6 +18,7 @@ import { milestones } from "./model/schedule.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 import { addNotice } from "./notices.js";
 import { movePlan, type PlanRow, planLockAt } from "./plans.js";
+import { reportAlerts } from "./reports.js";
 
 /**
  * An alert for the operator. `key` is unique to the thing that needs a person, so each fires once whatever the tick count. It
@@ -106,7 +107,8 @@ export function markAlertSent(db: Database, key: string, now: Date): void {
 
 /**
  * What needs a person: a group without a cafe (once at the lock, once at T-6h) and a handle still pending when the show it
- * is for is within 12 hours of its lock. The text names a count of things, never a person.
+ * is for is within 12 hours of its lock, and each open report (new, close to due, overdue). The text names a thing by its id,
+ * never a person.
  */
 function operatorAlerts(db: Database, now: Date, t: Tunables): TickAlert[] {
   const alerts: TickAlert[] = [];
@@ -152,6 +154,7 @@ function operatorAlerts(db: Database, now: Date, t: Tunables): TickAlert[] {
         text: `A handle is still pending and the show ${h.title} (${h.eventId}) locks within ${t.plan.handleAlertHours} hours (${new Date(lockAt).toISOString()}).`,
       });
   }
+  alerts.push(...reportAlerts(db, now, t, (key) => unsent(db, key)));
   return alerts;
 }
 

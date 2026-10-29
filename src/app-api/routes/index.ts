@@ -2,14 +2,17 @@ import type { AppContext, Route } from "../context.js";
 import { authRoutes } from "./auth.js";
 import { configRoutes } from "./config.js";
 import { deviceRoutes } from "./devices.js";
+import { feedbackRoutes } from "./feedback.js";
 import { fileRoutes } from "./files.js";
 import { groupRoutes } from "./groups.js";
 import { healthRoutes } from "./health.js";
 import { meRoutes } from "./me.js";
 import { noticeRoutes } from "./notices.js";
 import { planRoutes } from "./plans.js";
+import { reportRoutes } from "./reports.js";
 import { showRoutes } from "./shows.js";
 import { testOnlyRoutes } from "./testOnly.js";
+import { threadRoutes } from "./thread.js";
 import { whatsappWebhookRoutes } from "./whatsappWebhook.js";
 
 /**
@@ -27,6 +30,9 @@ export function appRoutes(app: AppContext): Route[] {
     ...showRoutes,
     ...planRoutes,
     ...groupRoutes,
+    ...threadRoutes,
+    ...feedbackRoutes,
+    ...reportRoutes,
     ...noticeRoutes,
     ...deviceRoutes,
   ];

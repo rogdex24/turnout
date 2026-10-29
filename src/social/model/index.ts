@@ -5,10 +5,12 @@
  */
 
 export * from "./eligibility.js";
+export * from "./feedback.js";
 export * from "./grouping.js";
 export * from "./groupLoss.js";
 export * from "./matchable.js";
 export * from "./phone.js";
 export * from "./planState.js";
 export * from "./schedule.js";
+export * from "./threadWindow.js";
 export * from "./tunables.js";

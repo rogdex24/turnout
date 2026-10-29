@@ -386,6 +386,158 @@ Evidence. `test/grouping.test.ts`, `test/groupingOptimal.test.ts`, `test/adminSe
 Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
 service.
 
+## 2026-10-28: M4 server, where the build differs from the plan or fills a gap
+
+Context. The plan's section 4 M4 server tasks (S13, S14, S15 reports, bans and accounts, S17, S18, S19
+complete, S25) against the section 5 contract and the section 6 rules. Each item below is a choice the
+plan did not settle or a place the build differs from it.
+
+Thread and feedback
+
+1. **The never-pairs input is the `downvote` and `report` tables.** `neverPairsAmong` reads both, so a
+   downvote or a report between two people keeps them out of one group. The M3 stub is gone.
+2. **`revealClosesAt` is the feedback close, and `revealCloseHours` is removed.** The feedback window
+   closes 72 hours after the morning after, and the group route's single 404 starts then, so the
+   reveal and the feedback end together. Feedback gives 409 `outside_window` both before it opens and
+   after it closes.
+3. **The feedback close is tracked per group** in `feedback_close` and runs as its own ticker step, so
+   met edges and the stop rule run once and a restart does not repeat them.
+4. **The stop rule counts downvotes since the last operator reinstate,** and needs at least 3 distinct
+   voters and 3 distinct shows. A stopped member keeps their account and sign-in, gets a `downvote_stop`
+   ban row, has plans withdrawn and cannot plan again.
+5. **Met edges include every checked-in member of the group,** whether or not they left it later. One
+   downvote in a group means no edges for anyone there.
+6. **`GET /me/blocked` returns `{blocked:[...]}`** with first name, show and date only.
+7. **A retried `clientId` returns 200 and skips the rate limit,** for messages and for reports.
+8. **Thread notices are throttled:** one per plan every 5 minutes, and only to a member who has been
+   away for 10 minutes. A notice holds no message text and no name.
+9. **Messages are deleted 30 days after the show,** unless a report on that group is still open.
+10. **`messageListQuerySchema` is strict,** like every other query schema.
+
+Reports, suspension and bans
+
+11. **A report suspends the subject in one step** (status `suspended`, sessions revoked) and records
+    the status they had before. A subject an operator already suspended records `suspended`, and a
+    dismissal leaves that alone.
+12. **A dismissal reinstates only if no other report about the subject is open.** After an upheld close,
+    other open reports about the same person stay open for the operator to close.
+13. **An operator reinstate is refused while any report is open.** Reinstating a stopped member removes
+    the `downvote_stop` row and writes `member_reinstate`. A suspended member whose number is still
+    listed as a stop goes back to stopped.
+14. **Upheld means ban and erase.** The number is hashed into `ban_list` with `report_upheld`, and
+    `eraseMember(..., 'ban')` nulls the phone and returns the file keys. On an already deleted subject
+    the ban and erase are skipped.
+15. **A report on a done group sets `left_at` on the subject's membership** and sends no loss notice.
+16. **The woman-about-man contact rule is enforced in `closeReport`.** It throws `contact_required`
+    until `contacted_reporter_at` is set; the admin answers 409 and tells the operator to contact first.
+17. **Report alerts use their own keys:** `report_new:<id>`, `report_due_soon:<id>` and
+    `report_overdue:<id>:<hour>`. The alert kind equals the key, so the notifier's once an hour per
+    kind throttle does not swallow a different report's alert or the next hour's overdue alert, and the
+    overdue alert reports the current hour only.
+18. **Report rows are purged 1 year after they close.**
+19. **The close note is stored on the report row only,** never in `operator_action`. The action holds
+    the outcome and nothing else.
+20. **`liftBan` writes an action with subject type `ban` and id `ban_list`,** and no number or hash.
+21. **`operator_action` rows about a deleted member keep the tombstone id for 1 year.**
+
+Deletion, location and auth
+
+22. **A delete code shares the sign-in limits** and uses the same WhatsApp authentication template.
+    It is refused with the generic `sign_in_unavailable` only for a number blocked by "I did not
+    request this code" (`isPhoneBlocked`); it does not read the ban list, because a banned member's
+    account is erased and has no session to ask with. A sign-in challenge cannot confirm a deletion
+    (403 new error code `forbidden`); another member's is a 400.
+23. **A self-deletion never writes the ban list.** Only a ban, an upheld report or a stop does.
+24. **Files are deleted after the commit,** and the nightly `sweepFiles` retries any that failed.
+25. **`requireMember` order:** token valid, session belongs to the member, banned or deleted gives 401,
+    suspended gives 403 `account_suspended`, then a revoked session gives 401. A report revokes the
+    suspended member's sessions, so the suspended check has to come before the revoked one (this
+    reordered `auth.ts`).
+26. **A suspended member can erase their own account, for as long as their access token lasts.**
+    `DELETE /me` and `POST /me/delete-code` set `allowSuspended` on the route: `requireMember` lets a
+    suspended member through and ignores the session the suspension revoked. Every other route is
+    still 403. Their open report rows stay (`eraseMember` keeps reports). The window is the 15-minute
+    access token: `/auth/otp/verify` still answers a suspended member 403, so once the token has
+    expired they cannot sign in to delete. Put that remaining gap in front of whoever reviews the
+    DPDP erasure duty; see `docs/plans/mobile-accounts.md`.
+
+Admin
+
+27. **The admin needs `BAN_PEPPER`** (the app's value) on its process. Without it the ban, lift,
+    reinstate and close routes answer 503 and change nothing. It uses `DEFAULT_TUNABLES`.
+28. **The admin deletes an erased account's files** through its own `AdminFiles` store. If the store is
+    not configured the keys are left to the app's nightly sweep.
+29. **The report queue and the account page show the member's phone number.** The operator has to contact
+    the reporter, and the data map already lists the operator as a reader of `member.phone_e164`.
+    No other screen shows one.
+30. **"Failed notices" means** a push state of `stale`, `no_device` or `not_sent`, or a delivery
+    that was refused. The list shows kind, state and error codes, with no text and no name.
+31. **The admin lift accepts E.164 or an Indian mobile in the common formats** (spaces, dashes, 0 or 91
+    in front) and answers 404 for a number that is not listed.
+
+Evidence. `test/appThread.test.ts`, `test/feedback.test.ts`, `test/reports.test.ts`,
+`test/deletion.test.ts`, `test/bans.test.ts`, `test/adminAccounts.test.ts`, `test/appAuthz.test.ts`,
+`test/appTicker.test.ts`, `test/contract.test.ts`.
+
+Why. Each is the narrower or safer behaviour. None adds a package or a paid service. Items 26 and 27 need
+the owner (legal review and a secret on the admin host), so they are recorded as owner steps.
+
+## 2026-10-28: M4 server, review round
+
+Decision. A security review and a logic review of the M4 server each found items. Each is fixed with a
+test, except where noted. The numbers match the review.
+
+1. **The admin's `BAN_PEPPER` is checked against a fingerprint the app writes at start.** This was
+   committed by another party (`2b09ce5`), not in this round.
+2. **A suspended member can request a delete code and erase their own account** while their access
+   token lasts (item 26 above). The gap that stays: `/auth/otp/verify` still answers a suspended member
+   403, so after the 15-minute token they cannot sign in to delete. It is an owner question in
+   `docs/plans/mobile-accounts.md`, not closed here.
+3. **Closing a report skips the contact rule when the reporter has deleted their account.** There is
+   nobody to phone, so the rule would block the close for good. The admin shows "reporter deleted their
+   account" in place of the contact step.
+4. **"I did not request this code" for a delete code revokes the member's sessions,** as well as
+   blocking the number, because someone else holding a session may have asked for it.
+5. **A delete code is refused at `/auth/otp/verify`** (400 `invalid_code`), now with a test.
+6. **Item 22 of the entry above says what it does:** a delete code is refused only for a number blocked
+   by "I did not request this code", and it does not read the ban list.
+7. **The `isPhoneBanned` comment** now says what it reads, and **8. the `AdminContext.write` comment**
+   says which writes it covers. Both are comment changes only.
+9. **A never-pair no longer keeps a group from forming.** `newGroups` searches in approval order for
+   another set of people when the first cannot be placed, instead of giving up on that size. The whole
+   call is capped at 60,000 steps (`SEARCH_STEPS`). Past the cap it forms no groups on that tick, and the
+   people stay waiting for the next one. The review's idea of skipping the later approver would not find
+   some placeable sets, so this is a backtracking search, not a skip.
+10. **The stop rule also runs for suspended members, and the reinstate baseline is on the member row.**
+    `member.stop_baseline_at` is set by an operator reinstate and cleared by erasure. The rule counts
+    downvotes after it. The baseline used to be read from the `member_reinstate` action, which the
+    one-year purge of `operator_action` deletes; keeping it on the member leaves that retention alone,
+    and an old reinstate no longer lets downvotes from before it count again. A dismissal restores
+    `stopped` when the number is still stop-listed.
+11. **A thread message gets an id above the group's newest.** The id was `ulid(now)` with `now` read before
+    the body arrived, so a slow post could be stored behind a cursor a reader already held, and the reader
+    skipped it. `postMessage` now takes `ulidAfter(newest id in the group, now)` inside its immediate
+    transaction. The cursor is still the id, so the contract is unchanged.
+12. **`notice(plan_id, kind, created_at)` has an index,** so the thread notice throttle looks up a plan's
+    recent notices instead of scanning the table. A test reads the query plan.
+
+Owner questions, unchanged by this round:
+
+- The stop rule counts distinct voters and distinct shows separately (at least 3 of each). Whether
+  that is the intended reading of "3 people, 3 shows" is for the owner to say.
+- A report's never-pair is read from the report row, so it ends when the one-year report purge deletes
+  the row (item 18 above). Whether it should last longer is for the owner to say.
+- Deleting an account deletes the downvotes the member gave or got. If that happens before the feedback
+  close, those downvotes never reach the stop rule or the met-edge check. Whether the mark should
+  survive until the close is for the owner to say.
+
+Evidence. `test/deletion.test.ts`, `test/appAuthz.test.ts`, `test/reports.test.ts`,
+`test/whatsappWebhook.test.ts`, `test/neverPairs.test.ts`, `test/feedback.test.ts`,
+`test/appThread.test.ts`, `test/ulid.test.ts`.
+
+Why. Each is the narrower or safer behaviour the reviews asked for. None adds a package or a paid
+service.
+
 ## 2026-10-28: M2 app (A1 to A10), where the build differs from the plan or fills a gap
 
 - `onboardingStep()` returns a fourth step, `sign_in`, between the notice and the profile, so a signed-out phone that has accepted the

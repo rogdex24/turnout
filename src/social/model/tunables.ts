@@ -26,10 +26,28 @@ export interface Tunables {
   /** The morning-after notice goes out at this hour (IST) the day after the show. */
   morningAfterHourIst: number;
   feedbackWindowHours: number;
+  /** The stop rule: downvotes from this many different people at this many different shows stop a member being grouped. */
+  stopRule: { voters: number; shows: number };
+  thread: {
+    /** A new message sends a notice only to a member who has not read the thread for this many minutes. */
+    awayMinutes: number;
+    /** At most one `thread_message` notice per plan in this many minutes. */
+    noticeEveryMinutes: number;
+  };
+  report: {
+    /** The operator reviews a report within this many hours of it being made. */
+    dueHours: number;
+    /** The operator is alerted again this many hours before a report is due, and every hour once it is overdue. */
+    reAlertLeadHours: number;
+    /** A closed report is deleted after this many days. */
+    retentionDays: number;
+  };
   otp: {
     /** Digits in the code. */
     digits: number;
     expiresMinutes: number;
+    /** The code that confirms deleting an account lives this long. */
+    deleteCodeExpiresMinutes: number;
     maxAttempts: number;
     /** Wrong codes the store-review number may send in an IST day. Past this, its verifies are refused until the day ends, right code or not. */
     reviewerFailCapPerDay: number;
@@ -54,12 +72,12 @@ export interface Tunables {
   plan: {
     /** The meet card goes live and co-members are revealed this many hours before the start (T-3h). */
     revealHoursBefore: number;
-    /** The group and its co-members stop being served this many hours after the start (24 now; the feedback work may move it to 72). */
-    revealCloseHours: number;
     /** The group meets this many minutes before the start. */
     meetMinutesBefore: number;
     /** The thread turns read-only this many hours after the start. */
     threadCloseHoursAfterStart: number;
+    /** Messages are deleted, and can no longer be read or reported, this many days after the start (unless a report on the group is open). */
+    messageRetentionDaysAfterStart: number;
     /** The "head over" notice goes out this many minutes before the start, and check-in opens then. */
     headOverMinutes: number;
     /** Check-in stays open this many minutes after the start. */
@@ -113,9 +131,13 @@ export const DEFAULT_TUNABLES: Tunables = {
   genderCaps: { 4: 3, 5: 3, 6: 4 },
   morningAfterHourIst: 10,
   feedbackWindowHours: 72,
+  stopRule: { voters: 3, shows: 3 },
+  thread: { awayMinutes: 10, noticeEveryMinutes: 5 },
+  report: { dueHours: 24, reAlertLeadHours: 4, retentionDays: 365 },
   otp: {
     digits: 6,
     expiresMinutes: 10,
+    deleteCodeExpiresMinutes: 5,
     maxAttempts: 5,
     reviewerFailCapPerDay: 20,
     notRequestedBlockHours: 24,
@@ -126,9 +148,9 @@ export const DEFAULT_TUNABLES: Tunables = {
   session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
   plan: {
     revealHoursBefore: 3,
-    revealCloseHours: 24,
     meetMinutesBefore: 60,
     threadCloseHoursAfterStart: 24,
+    messageRetentionDaysAfterStart: 30,
     headOverMinutes: 90,
     checkInCloseMinutes: 60,
     rejectedTicketDeleteHours: 24,
@@ -178,6 +200,9 @@ export function tunables(overrides: DeepPartial<Tunables> = {}): Tunables {
     ...base,
     ...(overrides as Partial<Tunables>),
     groupSize: { ...base.groupSize, ...overrides.groupSize },
+    stopRule: { ...base.stopRule, ...overrides.stopRule },
+    thread: { ...base.thread, ...overrides.thread },
+    report: { ...base.report, ...overrides.report },
     otp: { ...base.otp, ...(overrides.otp as Partial<Tunables["otp"]>) },
     session: { ...base.session, ...overrides.session },
     plan: { ...base.plan, ...overrides.plan },

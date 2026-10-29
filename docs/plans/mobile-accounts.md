@@ -156,3 +156,18 @@ Names only; no value is written here.
 | Push sender | Set `PUSH_SENDER=expo` on staging when the items above are done. Production always uses `expo` | `docs/deploy.md` | blocked: Expo account |
 | Admin file links | Put the same `FILE_LINK_SECRET`, `OBJECT_STORE` and `FILES_DIR` on the admin process as on the server | `docs/deploy.md` | blocked: host slot |
 | Ticket and handle review | Someone opens the admin queues at least twice a day and inside the 12 hour handle alert | `docs/runbook.md` | needs owner |
+
+## Needs owner: server side (M4)
+
+Added 2026-10-28 with the M4 server work. The code runs against fakes until each row is done.
+Names only; no value is written here.
+
+| Item | What the owner does | Where the steps are | Status |
+|---|---|---|---|
+| `BAN_PEPPER` on the app and the admin | Generate one value and set the same one on both processes. It is never rotated, because a new value makes every ban hash unreadable. Without it on the admin, ban, lift, reinstate and report close answer 503 | `docs/deploy.md`, `.env.example` | blocked: host slot |
+| Object store on the admin | Put the same `FILE_LINK_SECRET`, `OBJECT_STORE` and `FILES_DIR` (or the S3 settings) on the admin process, so a ban deletes the photo and ticket files at once. Otherwise the nightly sweep does it | `docs/deploy.md` | blocked: host slot |
+| Report alerts | Point `OPERATOR_ALERT_WEBHOOK_URL` at a chat or mailbox someone reads inside the 24 hour report window. The alerts are new report, due in 4 hours and overdue each hour | `docs/runbook.md` | pending: user |
+| Report handling | Name who opens the admin Reports page, and who phones the reporter before a woman-about-man report is closed | `docs/runbook.md` | needs owner |
+| Delete code template | The delete code goes out through the same WhatsApp authentication template as the sign-in code. Confirm with Meta's template review that the wording does not say "sign in" | `docs/meta-setup.md` | blocked: Meta account |
+| Suspended member deletes only while their token lasts | `DELETE /me` and `POST /me/delete-code` now work for a suspended member, but only with an access token issued before the suspension (15 minutes), because sign-in still answers 403 `account_suspended`. Ask whoever advises on the DPDP Act whether that is enough or sign-in should open a delete-only session, or a manual erase on request | `DECISIONS.md` (M4 server, item 26) | pending: user |
+
