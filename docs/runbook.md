@@ -57,6 +57,16 @@ the ones in `docs/plans/mobile-accounts.md`; (4) rotate the key and update the E
 restrictions were off. A budget alert does not stop spend, so step 1 comes first. See
 `docs/google-setup.md`.
 
+## The host
+
+- Logs: `journalctl -u turnout@production -f` (or `turnout@staging`, `turnout-admin`, `turnout-sync`, `litestream`, `caddy`).
+- Admin: `ssh -L 3001:127.0.0.1:3001 <user>@<host>`, then open `http://localhost:3001`.
+- Roll back: `sudo ln -sfn /srv/turnout/releases/<older sha> /srv/turnout/current && sudo systemctl restart turnout@production turnout-admin`.
+  The five newest releases are kept.
+- Backups: `sudo litestream ltx -config /etc/litestream.yml /data/production.db` lists what the bucket holds.
+  To restore by hand, stop `litestream` and `turnout@production`, move the database away, and start
+  `turnout@production`; `deploy/prestart.sh` restores it. Then start `litestream`.
+
 ## Photos and files
 
 Photos and ticket files are not in the Litestream backup. A lost disk means members upload again.

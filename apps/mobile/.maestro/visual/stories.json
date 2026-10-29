@@ -1,7 +1,7 @@
 [
   { "folder": "home", "id": "screens-home--loaded", "ready": "Shows coming up" },
   { "folder": "show", "id": "screens-show--ready", "ready": "Live music" },
-  { "folder": "plan-group-confirmed", "id": "screens-plan--group-confirmed", "ready": "Group confirmed" },
+  { "folder": "plan-group-confirmed", "id": "screens-plan--group-confirmed", "ready": "The Monsoon Theory" },
   { "folder": "meet-open", "id": "screens-meet--open-to-check-in", "ready": "Meet card" },
   { "folder": "thread", "id": "screens-thread--conversation", "ready": "Traffic Jam Tales" },
   { "folder": "after", "id": "screens-after--ready", "ready": "After the show" },

@@ -1,16 +1,13 @@
 # Deploy
 
-Status: M2 server half, written 2026-10-27. The first deploy (plan task S21) is **blocked on the
-host slot**: no host exists yet, so nothing here has been run on one. The parts that do not need a
-host are done and tested: the settings, the file stores, the staging mode and the seed. The
-service files (`deploy/litestream.yml`, `deploy/turnout.service`, `deploy/Caddyfile`) and the restore
-drill are written when the host is known, because the Litestream replica type follows the slot
-(https://litestream.io/reference/config/, https://litestream.io/guides/sftp/,
-https://litestream.io/guides/s3-compatible/).
+Status: the host is a VPS the owner already pays for, with backups to an S3-compatible bucket
+(plan section 9). The deploy files are in `deploy/` and are tested on a local copy of the host layout;
+nothing has run on the real VPS yet. The first deploy waits for the SSH access, the domain and the
+bucket values listed below.
 
 ## What runs
 
-One process: `bun src/cli.ts serve --db /data/turnout.db --port 3000`. It serves the public site,
+One process: `bun src/cli.ts serve --db /data/production.db --port 3000`. It serves the public site,
 the public JSON API and the app API under `/api/app/v1/`, and runs the ticker in the same process
 (one lease holder; `--no-ticker` turns it off, which the end-to-end server uses). Staging is a
 second service with its own DB, its own file directory and `TURNOUT_ENV=staging`, on
@@ -96,17 +93,56 @@ grouped before the reveal, meet card live, group of 3, done) arrive with M3.
 Until the host exists, the mobile flows run against `e2e/mobile-server.ts` on the CI machine, which
 starts the server in staging mode on a free port with this seed.
 
-## When the host slot exists (S21)
+## The VPS (S21)
 
-1. Install Bun 1.4.3 and Litestream 0.5.6 or later; create `/data` and the files directory.
-2. Write the environment file from `.env.example`, with values generated on the host.
-3. Add the service file, the Litestream config (replica type follows the slot, 7 days, restore on
-   boot only if the database is missing) and the proxy config with HTTPS and HSTS.
-4. Start staging first and check `GET /api/app/v1/health` and a sign-in with a seeded number.
-5. Start production; check the same health route over HTTPS.
-6. Register the WhatsApp webhook (`docs/meta-setup.md`) and send a code to a team phone.
-7. Kill the process and see it restart; delete the database and see it restore; check one ticker
-   lease holder. Record the drill in `docs/runbook.md`.
+Layout on the host:
 
-Acceptance (when unblocked): a fresh VM following this file serves the site and app API over HTTPS;
-a killed process restarts; a deleted DB restores; one lease holder.
+| What | Where |
+|---|---|
+| Code, one directory per release | `/srv/turnout/releases/<sha>`, `/srv/turnout/current` points at the live one |
+| Databases and files | `/data/production.db`, `/data/production-files`, `/data/staging.db`, `/data/staging-files` |
+| Settings (mode 0640, root:turnout) | `/etc/turnout/production.env`, `/etc/turnout/staging.env`, `/etc/turnout/litestream.env` |
+| Units | `turnout@production` (port 3000), `turnout@staging` (port 3002), `turnout-admin` (127.0.0.1:3001), `turnout-sync.timer`, `litestream`, `caddy` |
+| Proxy | Caddy: `<domain>` and `go.<domain>` to production, `staging.<domain>` to staging, HTTPS and HSTS |
+
+Files in `deploy/`:
+
+- `setup.sh` prepares a fresh Ubuntu 24.04 host as root and is safe to run again: Bun 1.4.3 and
+  Litestream 0.5.17 checked against their release checksums, Caddy from its apt repository, the
+  `turnout` user, the firewall (SSH, 80 and 443 only), and the env files. It generates every secret
+  (`OTP_PEPPER`, `BAN_PEPPER`, `FILE_LINK_SECRET`, the ES256 key pair, `STAGING_TEST_TOKEN`) on the
+  host and never overwrites an env file that exists.
+- `deploy.sh` runs on an operator machine. `deploy/deploy.sh setup <ref>` runs `setup.sh` and
+  uploads the Litestream values; `deploy/deploy.sh <ref>` ships a release. It reads
+  `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, `TURNOUT_DOMAIN` and the
+  `LITESTREAM_S3_*` values from the environment and sends secrets over stdin, not on a command line.
+- `release.sh` runs on the host: installs dependencies, installs the units and configs from the
+  release, switches `current`, restarts, and checks `/api/app/v1/health`. A failed check switches
+  back to the previous release.
+- `prestart.sh` runs before each app start. For production it restores the database from the
+  bucket when the file is missing. Litestream starts after the production app, so the restore
+  never races replication.
+- `litestream.yml` backs up the production database only, with snapshots kept 7 days. Staging is
+  the repeatable seed. Photos and tickets are still not backed up.
+- `turnout-sync.timer` syncs the event sources four times a day (00:00, 06:00, 12:00, 18:00 IST).
+
+Order:
+
+1. Point the DNS A records for `<domain>`, `go.<domain>` and `staging.<domain>` at the VPS.
+2. `deploy/deploy.sh setup <ref>`. Only staging starts: production refuses to start without its
+   required values, and `release.sh` leaves it off until `GRIEVANCE_NAME` is set.
+3. Seed staging: `sudo -u turnout bun scripts/seed-staging.ts --db /data/staging.db --files /data/staging-files`
+   in `/srv/turnout/current`, then put the printed lists in `TEST_PHONE_ALLOWLIST` and
+   `FAKE_UNDELIVERABLE_PHONES` in `staging.env` and restart `turnout@staging`. Check
+   `https://staging.<domain>/api/app/v1/health`.
+4. Add the production values to `/etc/turnout/production.env`: `GRIEVANCE_*`, `SUPPORT_EMAIL`,
+   `WHATSAPP_*`, `REVIEWER_PHONE`, `REVIEWER_OTP`, and later `APP_LINKS_ANDROID_*` and
+   `PLAY_STORE_URL`. Run `deploy/deploy.sh <ref>` again; production, the admin, Litestream and the
+   sync timer start.
+5. Register the WhatsApp webhook (`docs/meta-setup.md`) and send a code to a team phone.
+6. The drill, recorded in `docs/runbook.md`: kill the app process and see it restart; stop
+   `litestream` and `turnout@production`, move the database away, start `turnout@production` and see
+   it restore, then start `litestream`; check that one ticker lease holder exists.
+
+Acceptance: a fresh VM following this file serves the site and app API over HTTPS; a killed process
+restarts; a deleted DB restores; one lease holder.
