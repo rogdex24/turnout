@@ -29,6 +29,7 @@ describe("/delete-account, the store deletion URL", () => {
     expect(shown).toContain(`the ${nav.tabs.you} tab`);
     expect(shown).toContain(`Tap ${you.deleteAccount}`);
     expect(shown).toContain(`Tap ${deleteAccount.confirm.send}`);
+    expect(shown).toContain("the same deletion as in the app");
   });
 
   test("without settings the contact says the details are not set, and only the one path answers", async () => {

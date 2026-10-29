@@ -261,6 +261,22 @@ describe("eraseMember with a ban", () => {
   });
 });
 
+describe("eraseMember on request", () => {
+  test("it behaves like a self deletion: the plan goes, no ban row, the number is free, a second erase changes nothing", async () => {
+    const t = await testApp();
+    seedShow(t.db, { id: "show-r" });
+    const who = await memberSession(t, 0);
+    waitingPlan(t.db, who.memberId, "show-r", t.clock());
+    const result = eraseMember(t.db, who.memberId, { kind: "request" }, t.clock());
+    expect(result.ok).toBe(true);
+    expect(getMember(t.db, who.memberId)).toMatchObject({ status: "deleted", status_reason: "request", phone_e164: null });
+    expect(t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
+    expect(isPhoneRefused(t.db, t.app.config.banPepper, who.phone)).toBe(false);
+    expect(t.db.query("SELECT COUNT(*) AS n FROM plan WHERE member_id = ?").get(who.memberId)).toEqual({ n: 0 });
+    expect(eraseMember(t.db, who.memberId, { kind: "request" }, t.clock())).toEqual({ ok: false, error: "not_found" });
+  });
+});
+
 describe("a suspended member's own deletion", () => {
   test("a member suspended by a report can still ask for a delete code and delete; the open report stays", async () => {
     const s: Setup = await setup(5);

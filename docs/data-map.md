@@ -18,7 +18,7 @@ other people in a group.
 | `member.id` | Random sortable id | Names the person in every other row | Server only; never in a response about someone else | Until deletion, then it stays as the tombstone id |
 | `member.phone_e164` | Phone number, E.164 | The sign-in identity and where the code is sent | The member, the operator. Never a co-member | Until deletion; nulled on the tombstone |
 | `member.status` | `active`, `suspended`, `stopped`, `banned` or `deleted` | Decides whether the person can sign in and be grouped | The member (their own state), the operator | Until deletion |
-| `member.status_reason` | Short operator reason code | Audit of why a status changed | The operator | Until deletion |
+| `member.status_reason` | Short reason code (`self`, `request` or `ban` on a tombstone) | Audit of why a status changed | The operator | Until deletion |
 | `member.stop_baseline_at` | When an operator last reinstated the member | The stop rule counts downvotes from here, and it must outlast the year the action log is kept | Operator | Until deletion; nulled on the tombstone |
 | `member.phone_verified_at` | When a code last proved the phone | Matching needs a verified phone | The member, the operator | Until deletion |
 | `member.created_at` | Row creation time | Audit | Operator | Until deletion |
@@ -249,7 +249,7 @@ Every write the operator makes. `detail` holds codes and ids, never free text ab
 | Column | What | Why | Who sees it | How long |
 | --- | --- | --- | --- | --- |
 | `operator_action.id` | Row id (ULID) | Primary key | Operator | 1 year |
-| `operator_action.action` | What was done, for example `handle_approved` | Audit | Operator | 1 year |
+| `operator_action.action` | What was done, for example `handle_approved`, `member_ban` or `member_erase_request` (the operator erased an account the member asked for out of the app) | Audit | Operator | 1 year |
 | `operator_action.subject_type` | What kind of thing it was done to | Audit | Operator | 1 year |
 | `operator_action.subject_id` | The id of that thing; for a member it is the tombstone id after the account ends | Audit | Operator | 1 year |
 | `operator_action.detail` | A small JSON object of codes | Audit | Operator | 1 year |

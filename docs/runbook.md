@@ -73,6 +73,15 @@ when the show is under the cafe alert window; set the cafe on the Shows page. If
 link does not show, check that the admin has the same `FILE_LINK_SECRET` and file store settings as
 the server. Every decision here writes an `operator_action` row.
 
+## Deleting an account on request
+
+A person without the app writes to the grievance officer (the `/delete-account` page promises an answer and the deletion within 7
+days). Confirm the request with them first: the message has to come from the number on the account, or the operator asks them
+through that number. Then open the admin Accounts page, type the number (or the member id), and use Erase on request and confirm.
+This is the same erasure as the in-app deletion: the tombstone, consent records and reports stay, the files are deleted, open plans
+leave through the loss rule, and nothing goes on the ban list, so the person can sign up again. It writes a `member_erase_request`
+`operator_action` row and does not need `BAN_PEPPER`. Never use Ban for this: it blocks the number.
+
 ## Staging
 
 `TURNOUT_ENV=staging` uses the fake sender and the seed in `scripts/seed-staging.ts`. Re-running the

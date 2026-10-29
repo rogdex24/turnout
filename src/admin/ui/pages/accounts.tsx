@@ -9,29 +9,47 @@ import { istTime } from "../lib/format";
 import { navigate } from "../router";
 import type { AccountResponse } from "../types";
 
-type Verb = "suspend" | "reinstate" | "ban";
+type Verb = "suspend" | "reinstate" | "erase" | "ban";
 
 const CONFIRM: Record<Verb, string> = {
   suspend: "Confirm suspend",
   reinstate: "Confirm reinstate",
+  erase: "Confirm erase: the member asked, no ban",
   ban: "Confirm ban: erases the account",
 };
 
+/** A member id has letters; anything made only of digits and phone punctuation is a number. */
+const PHONE_TEXT = /^[+\d\s\-().]+$/;
+
 export function AccountsPage() {
   const [id, setId] = useState("");
+  const [failure, setFailure] = useState<string>();
   return (
     <>
-      <PageHeader title="Accounts" description="Look an account up by its member id, from a report or a notice." />
+      <PageHeader
+        title="Accounts"
+        description="Look an account up by its member id, from a report or a notice, or by the phone number on it."
+      />
+      {failure && <ErrorAlert error={failure} title="Could not find the account" />}
       <form
         className="flex gap-2"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          if (id.trim()) navigate(`/accounts/${encodeURIComponent(id.trim())}`);
+          const typed = id.trim();
+          if (!typed) return;
+          setFailure(undefined);
+          if (!PHONE_TEXT.test(typed)) return navigate(`/accounts/${encodeURIComponent(typed)}`);
+          try {
+            const found = await request<{ memberId: string }>("/api/accounts/find", { method: "POST", body: { phone: typed } });
+            navigate(`/accounts/${encodeURIComponent(found.memberId)}`);
+          } catch (caught) {
+            setFailure(caught instanceof Error ? caught.message : String(caught));
+          }
         }}
       >
         <Input
-          aria-label="Member id"
-          placeholder="Member id"
+          aria-label="Member id or phone number"
+          placeholder="Member id or phone number"
           value={id}
           onChange={(event) => setId(event.target.value)}
           className="max-w-md"
@@ -93,7 +111,7 @@ export function AccountPage({ id }: { id: string }) {
                 Reports made: {data.reportsMade}. Downvotes: {data.downvotesReceived}.
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {(["suspend", "reinstate", "ban"] as const).map((verb) => (
+                {(["suspend", "reinstate", "erase", "ban"] as const).map((verb) => (
                   <Button
                     key={verb}
                     size="sm"

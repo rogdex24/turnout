@@ -5,10 +5,14 @@ import { getMember } from "./members.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 
 /**
- * Why an account is erased. A member's own deletion never touches the ban list. A ban writes one row of `phone_hash` and `reason`
- * (no member id) so the number cannot sign up again.
+ * Why an account is erased. A member's own deletion never touches the ban list. `request` is the same erasure done by the operator
+ * for a member who asked in writing without the app: it leaves the ban list alone too, and differs from `self` only in the reason
+ * kept on the tombstone. A ban writes one row of `phone_hash` and `reason` (no member id) so the number cannot sign up again.
  */
-export type EraseKind = { kind: "self" } | { kind: "ban"; pepper: string; reason: Extract<BanReason, "report_upheld" | "operator"> };
+export type EraseKind =
+  | { kind: "self" }
+  | { kind: "request" }
+  | { kind: "ban"; pepper: string; reason: Extract<BanReason, "report_upheld" | "operator"> };
 
 export type EraseResult = { ok: true; fileKeys: string[] } | { ok: false; error: "not_found" };
 
@@ -32,7 +36,7 @@ export function eraseMember(db: Database, memberId: string, how: EraseKind, now:
       const at = now.toISOString();
 
       const plans = db.query(`SELECT id FROM plan WHERE member_id = ? AND state IN ${LIVE_PLANS}`).all(memberId) as { id: string }[];
-      for (const plan of plans) withdrawPlan(db, plan.id, how.kind === "self" ? "deleted" : "banned", now, t);
+      for (const plan of plans) withdrawPlan(db, plan.id, how.kind === "ban" ? "banned" : "deleted", now, t);
 
       const fileKeys: string[] = [];
       const photo = db.query("SELECT photo_key FROM profile WHERE member_id = ?").get(memberId) as { photo_key: string | null } | null;
@@ -59,7 +63,7 @@ export function eraseMember(db: Database, memberId: string, how: EraseKind, now:
 
       db.query(
         "UPDATE member SET phone_e164 = NULL, stop_baseline_at = NULL, status = 'deleted', status_reason = ?, deleted_at = ?, updated_at = ? WHERE id = ?",
-      ).run(how.kind === "self" ? "self" : "ban", at, at, memberId);
+      ).run(how.kind, at, at, memberId);
       return { ok: true, fileKeys };
     })
     .immediate();

@@ -271,6 +271,11 @@ export interface AccountDetail extends PersonHistory {
   actions: { action: string; createdAt: string }[];
 }
 
+/** The member id for a number, or null. Only a live account holds a number: an erased one has none. */
+export function memberIdByPhone(db: Database, e164: string): string | null {
+  return (db.query("SELECT id FROM member WHERE phone_e164 = ?").get(e164) as { id: string } | null)?.id ?? null;
+}
+
 /** One account for the operator. Null when there is no such member. */
 export function accountDetail(db: Database, memberId: string): AccountDetail | null {
   const history = personHistory(db, memberId);
