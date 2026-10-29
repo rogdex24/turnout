@@ -9,6 +9,7 @@ const workbench: typeof import("../../.rnstorybook") | undefined =
   process.env.EXPO_PUBLIC_STORYBOOK === "1" ? require("../../.rnstorybook") : undefined;
 
 export default function StorybookRoute() {
-  const { story } = useLocalSearchParams<{ story?: string }>();
-  return workbench ? workbench.renderStorybook(story) : <Redirect href="/" />;
+  // device=1 comes from the visual capture: the story follows the device theme and text size, set by the device job.
+  const { story, device } = useLocalSearchParams<{ story?: string; device?: string }>();
+  return workbench ? workbench.renderStorybook(story, device === "1") : <Redirect href="/" />;
 }
