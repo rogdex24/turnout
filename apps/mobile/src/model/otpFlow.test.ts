@@ -43,6 +43,12 @@ describe("phoneFieldText", () => {
     expect(phoneFieldText("+12025550123", { allowSeedNumbers: true })).toBe("+12025550123");
     expect(phoneFieldText("+12025550123")).toBe("12025 55012");
   });
+
+  test("a seed number typed one key at a time keeps its plus", () => {
+    let field = "";
+    for (const key of "+12025550123") field = phoneFieldText(field + key, { allowSeedNumbers: true });
+    expect(field).toBe("+12025550123");
+  });
 });
 
 describe("resendAt and askAgainAt", () => {
