@@ -6,8 +6,6 @@ name: otp-errors
 tags:
   - onboarding
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   NEW_MEMBER: "+12025550101"
   BANNED_MEMBER: "+12025550112"
   NOT_ON_WHATSAPP: "+12025550113"

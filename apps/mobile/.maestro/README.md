@@ -36,6 +36,10 @@ MOBILE_SERVER_PORT=3917 bun e2e/mobile-server.ts  # the seeded server, on the po
 maestro test -e SERVER_URL=http://localhost:3917 -e TEST_TOKEN=<the STAGING_TEST_TOKEN the server printed> apps/mobile/.maestro
 ```
 
+The flows take `SERVER_URL` and `TEST_TOKEN` only from `-e`. A flow must not give either one a default in its own `env:` block:
+Maestro applies a flow's `env:` after the `-e` values, so a default of `""` hides the token and every code lookup answers 404.
+`test/maestroFlows.test.ts` fails if a default comes back.
+
 The e2e build points at `E2E_API_PORT` (3917 by default), so start the server on that port with `MOBILE_SERVER_PORT`. CI does the same.
 
 ## The plan flows

@@ -5,8 +5,6 @@ appId: com.turnout.app.e2e
 name: smoke
 tags:
   - smoke
-env:
-  SERVER_URL: http://localhost:3917
 ---
 - runScript:
     file: ../scripts/expect-events.js
