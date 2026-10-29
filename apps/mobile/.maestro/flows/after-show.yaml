@@ -31,6 +31,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 
 # The plan page asks the server once a minute, so it can take that long to say the show is over.
 - tapOn: "Plans"

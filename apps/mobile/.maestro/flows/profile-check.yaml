@@ -30,6 +30,7 @@ env:
       REASON: private_or_empty
       EVENT_ID: ""
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*That account is private or has nothing on it yet.*"
     timeout: 80000
@@ -64,6 +65,7 @@ env:
       REASON: ""
       EVENT_ID: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/back-to.yaml
     env:

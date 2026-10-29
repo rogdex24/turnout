@@ -1,23 +1,18 @@
-# The meet card, from a push to "I'm here". Signs in as the seeded member whose group is live (the seed's meet_card_live state), opens
-# the card the way a tap on the "Meet your group" push does (the e2e build's own link, turnout-e2e://push), then checks what the card
-# draws, moves the emulator to the cafe, and checks in.
+# The meet card, from a push to "I'm here". Signs in as a member of the seed's live group (scripts/seed-staging.ts, Lata), opens the
+# card the way a tap on the "Meet your group" push does (the e2e build's own link, turnout-e2e://push), then checks what the card
+# draws, moves the device to the cafe, and checks in.
 #
-# Needs, and has not been run against:
-#  - The seed (scripts/seed-staging.ts) holding the plan and group rows for the meet_card_live member. M3 adds them; PLAN_ID is that plan's id.
-#  - The phone's own clock inside the check-in window (T-90m to T+60m of the show). The server's __test/clock hook moves the server only,
-#    and the phone decides when "I'm here" is on and whether the location line shows, so on a CI emulator set the date first, for example
-#    `adb shell date` with the seeded show's time, or seed a show that starts about an hour from the real now.
-#  - An emulator for the location step. Maestro's setLocation is the same as `adb emu geo fix <lng> <lat>`; the cafe is at 17.4435, 78.3772.
+# The seed's live show starts 75 minutes after the server starts, so check-in (T-90m to T+60m) is open on the phone's own clock and
+# the server's for about two hours. config.yaml runs this flow before any flow moves the server's clock.
+# Maestro's setLocation is the same as `adb emu geo fix <lng> <lat>`; the cafe is at 17.4435, 78.3772.
 # The e2e build has no Maps key, so the card draws the static map. The real map needs a Play-signed phone and is checked by hand.
-# config.yaml leaves it out of the CI run (excludeTags) until the seed rows exist; run it by path. It has not run on a device yet.
 appId: com.turnout.app.e2e
 name: loop-meet
 tags:
   - loop
-  - needs-group-seed
 env:
-  MEET_MEMBER: "+12025550107"
-  PLAN_ID: plan-meet-live
+  MEET_MEMBER: "+12025550114"
+  EVENT_ID: seed-show-meet-live
 ---
 - runFlow:
     file: ../subflows/sign-in-seed.yaml
@@ -32,11 +27,26 @@ env:
     permissions:
       location: allow
 
+# The plan's id and its meet card notice come from the server: the seed makes both with fresh ids on every run, and the app reads
+# the group from the notice, so a made-up notice id opens the plan instead of the card.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: plan
+      PHONE: ${MEET_MEMBER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: ""
+
 # The push for a live meet card opens the card.
 - runFlow:
     file: ../subflows/open-link-to.yaml
     env:
-      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
       SCREEN: meet
 
 # The card draws the meet time, the cafe with its map and the group. The e2e build shows the static map.

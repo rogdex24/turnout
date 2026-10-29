@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { meResponseSchema } from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
-import { SEED_MEMBERS, SEED_PHONES, SEED_SHOW_IDS, type SeedState, seedStaging, UNDELIVERABLE_PHONE } from "../scripts/seed-staging.js";
+import {
+  SEED_CAFE,
+  SEED_MEET_MEMBERS,
+  SEED_MEMBERS,
+  SEED_PHONES,
+  SEED_SHOW_IDS,
+  type SeedState,
+  seedPhone,
+  seedStaging,
+  UNDELIVERABLE_PHONE,
+} from "../scripts/seed-staging.js";
 import { createAppContext } from "../src/app-api/index.js";
 import type { FakeOtpSender } from "../src/app-api/vendors/otpSender.js";
 import { migrate } from "../src/migrate.js";
@@ -54,13 +64,14 @@ describe("the staging seed", () => {
     );
   });
 
-  test("three shows land at T+2d, T+26h and T+2h and the first two can have a group", async () => {
+  test("the shows land at T+2d, T+26h, T+2h and T+75m and the first two can have a group", async () => {
     const { t, result } = await seeded();
     const now = t.clock().getTime();
     expect(result.shows.map((s) => [s.id, Date.parse(s.startsAt) - now])).toEqual([
       [SEED_SHOW_IDS.in2Days, 48 * HOUR],
       [SEED_SHOW_IDS.in26Hours, 26 * HOUR],
       [SEED_SHOW_IDS.in2Hours, 2 * HOUR],
+      [SEED_SHOW_IDS.meetLive, 1.25 * HOUR],
     ]);
     const response = siteResponse(t.db, new Request("http://localhost/api/events?limit=200&to=2026-11-05"), t.clock);
     const body = (await response.json()) as { events: { title: string; group_eligible: boolean }[] };
@@ -69,6 +80,7 @@ describe("the staging seed", () => {
     expect(byTitle.get("Seed live music")).toBe(true);
     // Two hours out is inside the 24-hour join cutoff: listed, but no new group.
     expect(byTitle.get("Seed theatre evening")).toBe(false);
+    expect(byTitle.get("Seed open mic")).toBe(false);
   });
 
   test("running it again keeps every id, moves the shows and puts members back in their state", async () => {
@@ -79,8 +91,14 @@ describe("the staging seed", () => {
 
     const again = await seedStaging(t.db, t.app.store, new Date(t.clock().getTime() + 5 * 60_000));
     expect(ids(again)).toEqual(ids(result));
-    expect((t.db.query("SELECT count(*) AS n FROM member").get() as { n: number }).n).toBe(12);
-    expect((t.db.query("SELECT count(*) AS n FROM event WHERE id LIKE 'seed-show-%'").get() as { n: number }).n).toBe(3);
+    expect((t.db.query("SELECT count(*) AS n FROM member").get() as { n: number }).n).toBe(16);
+    expect((t.db.query("SELECT count(*) AS n FROM event WHERE id LIKE 'seed-show-%'").get() as { n: number }).n).toBe(4);
+    // The live group is built again for the moved show: still one group of four, live, and the old one is gone.
+    expect(ids({ ...again, members: again.meetGroup.members })).toEqual(ids({ ...result, members: result.meetGroup.members }));
+    expect(t.db.query("SELECT state, count(*) AS n FROM show_group WHERE event_id = ? GROUP BY state").all(SEED_SHOW_IDS.meetLive)).toEqual(
+      [{ state: "live", n: 1 }],
+    );
+    expect((t.db.query("SELECT count(*) AS n FROM plan WHERE event_id = ?").get(SEED_SHOW_IDS.meetLive) as { n: number }).n).toBe(4);
     expect(
       (t.db.query("SELECT first_name FROM profile WHERE member_id = ?").get(result.members[3]?.id ?? null) as { first_name: string })
         .first_name,
@@ -122,6 +140,32 @@ describe("the staging seed", () => {
       expect(me.profile.photo).not.toBeNull();
     }
     expect((await meAfterSignIn(t, "matchable")).profile.groupPref).toBe("women_only");
+  });
+
+  test("the live group: four members on one live group with the cafe, a meet card plan each, and check-in open", async () => {
+    const { t, result } = await seeded();
+    expect(SEED_MEET_MEMBERS.map((m) => m.state)).toEqual(["meet_card_live", "meet_card_live", "meet_card_live", "meet_card_live"]);
+    const { accessToken } = await t.signIn(seedPhone(SEED_MEET_MEMBERS[0] as (typeof SEED_MEET_MEMBERS)[number]));
+    const plans = t.db.query("SELECT state, group_id FROM plan WHERE event_id = ? ORDER BY member_id").all(SEED_SHOW_IDS.meetLive) as {
+      state: string;
+      group_id: string;
+    }[];
+    expect(plans.map((p) => p.state)).toEqual(["meet_card_live", "meet_card_live", "meet_card_live", "meet_card_live"]);
+    expect(new Set(plans.map((p) => p.group_id))).toEqual(new Set([result.meetGroup.groupId]));
+
+    const group = (await (await t.call("GET", `/groups/${result.meetGroup.groupId}`, { token: accessToken })).json()) as {
+      state: string;
+      cafe: { name: string; lat: number; lng: number; isFallback: boolean };
+      members: { firstName: string | null; isYou: boolean }[];
+    };
+    expect(group.state).toBe("live");
+    expect(group.cafe).toMatchObject({ name: SEED_CAFE.name, lat: SEED_CAFE.lat, lng: SEED_CAFE.lng, isFallback: false });
+    expect(group.members.map((m) => m.firstName).sort()).toEqual(SEED_MEET_MEMBERS.map((m) => m.firstName).sort());
+    // The show is 75 minutes away, inside check-in (T-90m to T+60m).
+    const checkin = await t.call("POST", `/groups/${result.meetGroup.groupId}/checkin`, { token: accessToken });
+    expect(checkin.status).toBe(200);
+    // The members with one seeded state each have no plan: the flows make theirs on the device.
+    expect((t.db.query("SELECT count(*) AS n FROM plan WHERE event_id != ?").get(SEED_SHOW_IDS.meetLive) as { n: number }).n).toBe(0);
   });
 
   test("every seeded photo is a JPEG in the store and the signed link serves it", async () => {

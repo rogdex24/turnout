@@ -98,6 +98,17 @@ describe("Maestro flows", () => {
   });
 
   // On iOS the tab bar floats over the bottom of the You list and Maestro calls a row under it visible, so a tap there hits the bar.
+  test("every call to the operator passes TEXT, and the subflow sets no default that would replace it", async () => {
+    const subflow = await Bun.file(`${root}/subflows/operator.yaml`).text();
+    expect(subflow.split("\n---\n")[0]).not.toMatch(/^env:/m);
+    for (const file of files) {
+      const text = await Bun.file(`${root}/${file}`).text();
+      for (const block of text.match(/file: (?:\.\.\/subflows\/)?operator\.yaml\n(?: {4}.*\n)+/g) ?? []) {
+        expect(block).toMatch(/^\s+TEXT:/m);
+      }
+    }
+  });
+
   test("every scroll to a You row centers it", async () => {
     for (const file of files) {
       const text = await Bun.file(`${root}/${file}`).text();

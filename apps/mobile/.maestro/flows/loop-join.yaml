@@ -37,6 +37,7 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""
 - extendedWaitUntil:
@@ -56,6 +57,7 @@ env:
       EVENT_ID: ${SHOW_ID}
       DECISION: approve
       PHONES: ""
+      TEXT: ""
       REASON: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
@@ -82,5 +84,6 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""
