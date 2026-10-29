@@ -16,6 +16,7 @@ export default function Meet() {
       onOpenThread={() => router.push({ pathname: "/groups/[groupId]/thread", params: { groupId } })}
       onReport={() => router.push({ pathname: "/report", params: { groupId } })}
       onClosed={() => router.replace("/plans")}
+      onOpenAfter={() => router.push(`/groups/${groupId}/after`)}
     />
   );
 }

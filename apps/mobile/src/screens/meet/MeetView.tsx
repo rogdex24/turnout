@@ -13,6 +13,7 @@ import {
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import { after as afterCopy } from "@/copy/after";
 import { common } from "@/copy/common";
 import { meet as copy } from "@/copy/meet";
 import { countdownText, hereButton, hereCount, istClock, type LocationLine, venueWalkMinutes } from "@/model/meetCard";
@@ -84,6 +85,8 @@ export interface MeetViewProps {
   onLeave: (() => void) | null;
   /** From the closed card back to the plans. */
   onClosed: () => void;
+  /** From the closed card to the after-the-show screen. Null until the group is done. */
+  onOpenAfter: (() => void) | null;
 }
 
 function BigTime({ meetAt, now }: { meetAt: string; now: number }) {
@@ -356,7 +359,11 @@ export function MeetView(props: MeetViewProps) {
           icon={CalendarX}
           title={copy.closed.title}
           body={copy.closed.body}
-          action={{ title: copy.closed.action, onPress: props.onClosed }}
+          action={
+            props.onOpenAfter
+              ? { title: afterCopy.open, onPress: props.onOpenAfter }
+              : { title: copy.closed.action, onPress: props.onClosed }
+          }
         />
       ) : null}
       {state.status === "error" ? <ErrorState kind={state.kind} onRetry={props.onRetry} /> : null}

@@ -18,7 +18,7 @@ export function parsePushData(data: unknown): PushPayload | null {
 
 /** The kinds that open a group screen, so the group id (which the push does not carry) is read from the notice. */
 export function needsGroupId(kind: NoticeKind): boolean {
-  return kind === "meet_card_live" || kind === "head_over" || kind === "thread_message";
+  return kind === "meet_card_live" || kind === "head_over" || kind === "thread_message" || kind === "morning_after";
 }
 
 const segment = (id: string) => encodeURIComponent(id);
@@ -30,9 +30,9 @@ export interface RouteIds {
 
 /**
  * The screen for a kind. Ticket and group kinds and `no_group` open the plan; a rejected ticket opens the ticket sheet; a rejected
- * handle opens the social settings; the meet card kinds open the meet card; a thread message opens the group thread. Where the screen
- * is not built yet (the morning-after screen), or the group is not known, the plan opens instead, and Home when there is no plan to
- * open. Unknown kinds open Home.
+ * handle opens the social settings; the meet card kinds open the meet card; a thread message opens the group thread; the
+ * morning-after notice opens the after-the-show screen. Where the group id could not be read, the plan opens instead, and Home
+ * when there is no plan to open. Unknown kinds open Home.
  */
 export function routeForNotice(kind: NoticeKind, { planId, groupId }: RouteIds): string {
   const plan = planId === null ? HOME : `/plans/${segment(planId)}`;
@@ -54,7 +54,7 @@ export function routeForNotice(kind: NoticeKind, { planId, groupId }: RouteIds):
     case "thread_message":
       return groupId === null ? plan : `/groups/${segment(groupId)}/thread`;
     case "morning_after":
-      return plan;
+      return groupId === null ? plan : `/groups/${segment(groupId)}/after`;
     default:
       return HOME;
   }

@@ -20,6 +20,7 @@ const base: PlanViewProps = {
   onBack: noop,
   onAddTicket: noop,
   onOpenMeetCard: noop,
+  onOpenAfter: noop,
   onLeave: noop,
   onFindShow: noop,
   onChangeHandle: noop,

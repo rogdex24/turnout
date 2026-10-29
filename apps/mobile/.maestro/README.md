@@ -18,7 +18,8 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `flows/profile-check.yaml` | A handle in review turned down with a reason, Change handle sending a new one, and the operator accepting it so the strip goes |
 | `flows/loop-group.yaml` | Three more people join Dev's show and the plan says group confirmed with a count and a reveal time, and no names |
 | `flows/loop-no-group.yaml` | The server's clock passes T-24h with nobody to group with: the plan says no group this time and offers the next show |
-| `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs last |
+| `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs near the end |
+| `flows/after-show.yaml` | The morning after: the server's clock passes 10:00 IST, the plan offers "How did it go?", the page says doing nothing is fine and shows first names and photos, and "I didn't feel comfortable" asks first and then marks one person privately; each person has a Report entry. Moves the clock, so it runs last, after group-shrinks |
 | `flows/push-routing.yaml` | A tap on a push opens the screen its kind names, through the e2e build's `turnout-e2e://push` link; an unknown kind or a bad id lands on Home |
 | `flows/loop-meet.yaml` | The meet card from the "Meet your group" push to "I'm here": the static map, the walk line from a set location, the Safety sheet and the check-in. Left out of the CI run until the seed has the group rows (tag `needs-group-seed`); needs a phone clock inside the check-in window (see its header) |
 | `flows/thread.yaml` | The group chat from the meet card: another member's line arriving on the poll, a written line, a quick chip, no link in a line, and a long press offering Report. Same seed needs as loop-meet (tag `needs-group-seed`) |

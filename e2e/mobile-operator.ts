@@ -10,6 +10,7 @@
  *   POST /operator/crowd     { eventId, phones }                                           each phone gets an approved ticket, then one grouping pass
  *   POST /operator/withdraw  { phone, eventId }                                            the member's live plan ends as cancelled
  *   POST /operator/say       { phone, eventId, text }                                      the member posts to their group's thread
+ *   POST /operator/after     { eventId }                                                   the clock moves to an hour past the morning after the show, then one ticker pass
  *
  * The time they act at is the server's own clock (`POST /__test/clock` moves it), so a leaver after the lock is a leaver after the lock.
  */
@@ -21,6 +22,7 @@ import { ticketRejectReasonSchema } from "@turnout/contract/ticket";
 import { z } from "zod";
 import { runGroupingPass, withdrawPlan } from "../src/social/groups.js";
 import { getMemberByPhone } from "../src/social/members.js";
+import { milestones } from "../src/social/model/schedule.js";
 import { approveHandle, approveTicket, rejectHandle, rejectTicket } from "../src/social/operator.js";
 import { createPlan, type PlanRow } from "../src/social/plans.js";
 import { postMessage } from "../src/social/thread.js";
@@ -39,6 +41,7 @@ const bodies = {
   crowd: z.strictObject({ eventId: z.string(), phones: z.array(phone).min(1).max(12) }),
   withdraw: z.strictObject({ phone, eventId: z.string() }),
   say: z.strictObject({ phone, eventId: z.string(), text: z.string().trim().min(1).max(500) }),
+  after: z.strictObject({ eventId: z.string() }),
 };
 
 /** Every route's body, with the fields a route does not take left out of its own check. */
@@ -101,6 +104,7 @@ async function perform(
   name: keyof typeof bodies,
   raw: unknown,
   now: Date,
+  setClock: (to: Date) => Promise<void>,
 ): Promise<unknown> {
   const parsed = bodies[name].safeParse(raw);
   if (!parsed.success) return refuse(400, parsed.error.message);
@@ -163,6 +167,16 @@ async function perform(
     }
     return { ok: true, grouping: runGroupingPass(db, body.eventId, now) };
   }
+  if (name === "after") {
+    const show = db.query("SELECT starts_at FROM event WHERE id = ?").get(body.eventId) as { starts_at: string } | null;
+    if (show === null) return refuse(404, `no show ${body.eventId}`);
+    // One hour past 10:00 IST the next morning: the ticker moves the group and the plans to done and sends the morning-after notice.
+    const at = new Date(Date.parse(milestones(show.starts_at).morningAfterAt) + 60 * 60_000);
+    // The clock only moves forward, so a flow that ran earlier and is already past this time keeps it.
+    const to = at.getTime() > now.getTime() ? at : now;
+    await setClock(to);
+    return { ok: true, at: to.toISOString() };
+  }
   const id = memberId(db, body.phone);
   const plan = livePlan(db, id, body.eventId, [
     "needs_ticket",
@@ -186,6 +200,8 @@ export function startOperator(options: {
   token: string;
   port: number;
   serverNow: () => Promise<Date>;
+  /** Sets the server's clock to this time and runs one ticker pass. */
+  setClock: (to: Date) => Promise<void>;
 }): Operator {
   const db = openDb(options.dbPath);
   const store = diskStore({ dir: path.resolve(options.filesDir), link: () => "" });
@@ -197,7 +213,7 @@ export function startOperator(options: {
       if (request.method !== "POST" || request.headers.get(TOKEN_HEADER) !== options.token || !(name in bodies))
         return new Response("not found", { status: 404 });
       try {
-        const answer = await perform(db, store, name, await request.json().catch(() => ({})), await options.serverNow());
+        const answer = await perform(db, store, name, await request.json().catch(() => ({})), await options.serverNow(), options.setClock);
         return Response.json(answer);
       } catch (error) {
         if (error instanceof Refusal) return Response.json({ error: error.message }, { status: error.status });

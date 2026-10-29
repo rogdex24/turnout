@@ -791,7 +791,7 @@ Where the build differs from the plan or fills a gap.
 
 1. **The push routing hook is in `src/providers`,** not `src/app`, because `routes-are-entry` forbids route files from holding logic. The route files stay thin.
 2. **An e2e-only link, `turnout-e2e://push?kind=..&noticeId=..&planId=..`,** stands in for a tap on a push, because a real push needs a Play-signed build and a Firebase key. The link filter lets it through in the e2e variant only; any other build goes Home.
-3. **The thread and morning-after kinds open the plan** (Home when there is no plan). Those screens are M4. The meet card kinds open `/groups/<groupId>/meet`.
+3. **The thread kind opens the plan** (Home when there is no plan); the thread screen is M4. The meet card kinds open `/groups/<groupId>/meet`. The morning-after kind now opens `/groups/<groupId>/after` (A20, below), and the plan when the notice names no group.
 4. **The push permission is asked only after the person has a plan.** A12 can call `registerDevice` with `mayAsk` when it lands.
 5. **iOS skips registration** (GET /config says push is off) and `enableRemoteNotifications` is false for iOS in `app.config.ts`.
 6. **No notification icon asset is in the repo.** The owner adds a 96x96 white-on-transparent icon.
@@ -827,3 +827,20 @@ Where the build differs from the plan or fills a gap.
 13. **The operator sidecar has a `say` route,** so a flow can make another member of a group write. `thread.yaml` and `report.yaml` are tagged `needs-group-seed` like `loop-meet.yaml` and have not run on a device.
 
 Evidence. `src/model/thread.test.ts`, `report.test.ts`, `src/api/persister.test.ts`, `src/screens/thread/ThreadScreen.test.tsx`, `src/screens/report/ReportScreen.test.tsx`, `src/screens/meet/*.test.tsx`, `src/ui/useBlockCapture.test.tsx`, `test/mobileServer.test.ts` (the `say` route).
+
+## 2026-10-29: M4 app, A20 (after the show)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The after screen has its own query key, `["after", groupId]`, and it is not on disk.** It holds faces, so it is left out of `PERSISTED_PREFIXES` and read again after five minutes. The meet card's `["group", id]` stays on disk as before. A phone with no signal shows the error state, not old faces.
+2. **Faces use the image cache in memory only.** `PersonAvatar` takes `memoryCacheKey`, which sets `cachePolicy="memory"` and a stable `cacheKey` of `<groupId>:<memberRef>`, so a renewed signed link does not load the photo again. There is no share, save or long-press on a face.
+3. **The after screen uses the same `useBlockCapture` as the thread and report screens** (A19 item 10). The A20 branch had its own copy keyed `turnout-faces`; the merge kept one hook.
+4. **The server decides "not yet", the phone clock does not.** The screen shows its content only while `state` is `done`; before that it says the page opens the morning after. "Closed" is a 404 or `feedbackOpenUntil` passing (72 hours), the second by the phone clock, which only closes a page that the server would close a moment later.
+5. **The person's own tile is left out.** Nobody is asked to mark themselves, and the server answers 404 for it.
+6. **"I didn't feel comfortable" asks first (a Sheet), then posts to `/groups/:id/downvotes`.** It is a replayable mutation (`"feedback"`, already on the replay list), so a mark made offline is sent when the phone is back. The server answers 204 to a repeat, so a replay does no harm. The screen marks the person at once and puts it back on a failure. The copy says it is private and that the person is not told.
+7. **The page says doing nothing is fine, first.** Nothing is sent and nobody is told unless the person acts. There is no count of marks and no guilt copy.
+8. **Report is `router.push` to `/report` with `groupId` and `memberRef`.** It opens A21's report screen.
+9. **Entries.** The plan page's dock gets "How did it go?" when the plan is done and has a group. The meet card, once the group is done and the card has closed, offers it in place of "Back to your plans". A `morning_after` push opens the after screen (`notificationRoute.ts`).
+10. **The Maestro flow `after-show.yaml` runs last** (after `group-shrinks`) because it moves the server's clock to an hour past 10:00 IST the morning after, through a new operator route `POST /operator/after { eventId }`. The clock only goes forward. The flow has not run on a device.
+
+Evidence. `src/ui/useBlockCapture.test.tsx`, `src/screens/after/*.test.tsx`, `src/model/notificationRoute.test.ts`, `src/api/notifications.test.ts`, `src/screens/plan/PlanScreen.test.tsx`, `src/screens/meet/MeetScreen.test.tsx`, `src/ui/components.test.tsx`. The `after` operator route was called against `e2e/mobile-server.ts` and moved the clock to 11:00 IST on the morning after the seeded show.

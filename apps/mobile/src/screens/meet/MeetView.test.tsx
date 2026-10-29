@@ -36,6 +36,7 @@ function view(over: Partial<MeetViewProps> = {}, cardOver: Partial<MeetCardData>
       onReport={noop}
       onLeave={noop}
       onClosed={noop}
+      onOpenAfter={null}
       {...over}
     />,
   );

@@ -3,6 +3,7 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import { createSession, revokeOnServer, type Session } from "../api/auth";
 import { type ApiClient, createApiClient, fetchTransport, type Transport } from "../api/client";
 import { type Connectivity, createConnectivity } from "../api/connectivity";
+import { registerFeedback } from "../api/feedback";
 import { registerCheckin } from "../api/groups";
 import { removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
@@ -75,6 +76,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
   registerCheckin(queryClient, api);
   registerThreadSend(queryClient, api);
   registerReport(queryClient, api);
+  registerFeedback(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
 

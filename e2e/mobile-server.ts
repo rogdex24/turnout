@@ -119,6 +119,13 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
             });
             return new Date(((await response.json()) as { now: string }).now);
           },
+          setClock: async (to) => {
+            await fetch(`${url}/api/app/v1/__test/clock`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-staging-test-token": testToken },
+              body: JSON.stringify({ set: to.toISOString(), tick: true }),
+            });
+          },
         });
         return { url, port, operatorUrl: operator.url, dbPath, testToken, stop };
       }

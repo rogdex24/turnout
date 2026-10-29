@@ -41,8 +41,7 @@ describe("routeForNotice", () => {
     ["meet_card_live", "/groups/grp1/meet"],
     ["head_over", "/groups/grp1/meet"],
     ["thread_message", "/groups/grp1/thread"],
-    // The morning-after screen is not reached by a tap yet, so it opens the plan.
-    ["morning_after", "/plans/plan%201"],
+    ["morning_after", "/groups/grp1/after"],
   ] as const)("opens %s at %s", (kind, route) => {
     expect(routeForNotice(kind, ids)).toBe(route);
   });
@@ -54,6 +53,7 @@ describe("routeForNotice", () => {
   it("opens the plan when the group id could not be read, and Home when there is no plan either", () => {
     expect(routeForNotice("meet_card_live", { planId: "p1", groupId: null })).toBe("/plans/p1");
     expect(routeForNotice("thread_message", { planId: "p1", groupId: null })).toBe("/plans/p1");
+    expect(routeForNotice("morning_after", { planId: "p1", groupId: null })).toBe("/plans/p1");
     expect(routeForNotice("meet_card_live", { planId: null, groupId: null })).toBe("/");
     expect(routeForNotice("ticket_rejected", { planId: null, groupId: null })).toBe("/");
     expect(routeForNotice("no_group", { planId: null, groupId: null })).toBe("/");
@@ -71,7 +71,7 @@ describe("routeForNotice", () => {
 
 describe("needsGroupId", () => {
   it("is true for the kinds that open a group screen", () => {
-    expect(NOTICE_KINDS.filter(needsGroupId)).toEqual(["meet_card_live", "head_over", "thread_message"]);
+    expect(NOTICE_KINDS.filter(needsGroupId)).toEqual(["meet_card_live", "head_over", "thread_message", "morning_after"]);
   });
 });
 

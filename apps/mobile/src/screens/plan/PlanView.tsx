@@ -2,6 +2,7 @@ import type { Plan } from "@turnout/contract/app/plans";
 import { ChatCircle, Info, SignOut, Ticket } from "phosphor-react-native";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import { after as afterCopy } from "@/copy/after";
 import { plan as copy } from "@/copy/plan";
 import { ticket as ticketCopy } from "@/copy/ticket";
 import type { GroupFacts } from "@/model/groupFacts";
@@ -33,6 +34,8 @@ export interface PlanViewProps {
   onBack: () => void;
   onAddTicket: () => void;
   onOpenMeetCard: () => void;
+  /** Opens the after-the-show screen of the group (A20). */
+  onOpenAfter: () => void;
   onLeave: () => void;
   onFindShow: () => void;
   onChangeHandle: () => void;
@@ -182,7 +185,7 @@ function stateCard(props: PlanViewProps): { card: ReactNode; dock: Dock | null }
             <Body>{facts && facts.others > 0 ? copy.done.withGroup(facts.others) : copy.done.alone}</Body>
           </>
         ),
-        dock: null,
+        dock: plan.group ? { primary: { title: afterCopy.open, onPress: props.onOpenAfter, testID: "plan-open-after" } } : null,
       };
     default:
       return assertNever(state);
