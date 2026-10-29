@@ -3,7 +3,7 @@ import { Linking } from "react-native";
 import { groupsEnabled } from "@/api/features";
 import { memberShowQuery } from "@/api/plans";
 import { showDetailQuery } from "@/api/shows";
-import { isApiError } from "@/model/apiError";
+import { errorKind, isApiError } from "@/model/apiError";
 import { safeWebUrl } from "@/model/externalLink";
 import { useApi } from "@/providers/hooks";
 import { type ShowDetailState, ShowView } from "./ShowView";
@@ -55,10 +55,4 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
       onGo={onGo}
     />
   );
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }

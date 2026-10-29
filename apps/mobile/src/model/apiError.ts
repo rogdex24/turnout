@@ -56,3 +56,10 @@ export function classifyFailure(status: number, bodyText: string, retryAfter: st
   }
   return new ApiError(kindFor(status), status, code, retryAfterSeconds(retryAfter), detail);
 }
+
+/** The kind of error state a screen shows for a failed read: the three with their own copy, anything else as "other". */
+export function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
+  if (!isApiError(error)) return "other";
+  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
+  return "other";
+}

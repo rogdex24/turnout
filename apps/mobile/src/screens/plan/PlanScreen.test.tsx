@@ -1,9 +1,9 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
+import { queryKeys } from "@/api/keys";
 import { confirmedPlayed, markConfirmedPlayed } from "@/api/prefs";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { common } from "@/copy/common";
 import { plan as copy } from "@/copy/plan";
-import { plans } from "@/copy/plans";
 import { ticket as ticketCopy } from "@/copy/ticket";
 import { groupBeforeRevealFixture, groupRevealedFixture, memberShowFixture, PLANS, planFixture, REVEAL_AT } from "@/model/planFixtures";
 import { AppProviders } from "@/providers/AppProviders";
@@ -29,6 +29,7 @@ async function open(
   routes: Record<string, RouteReply | RouteReply[]> = {},
   at = BEFORE_REVEAL,
   played = false,
+  seed?: (app: Awaited<ReturnType<typeof createTestApp>>) => void,
 ) {
   // The clock starts at `at` and keeps running, so waiting in the test still times out.
   const real = Date.now.bind(Date);
@@ -55,6 +56,7 @@ async function open(
     },
   });
   if (played) markConfirmedPlayed(app.prefs, plan.id);
+  seed?.(app);
   await render(
     <AppProviders deps={app.deps}>
       <PlanScreen planId={plan.id} {...handlers} />
@@ -92,7 +94,8 @@ describe("PlanScreen", () => {
 
   describe("group size", () => {
     it("says so when the group is smaller than usual, and goes ahead with N", async () => {
-      await open(PLANS.group_confirmed, {
+      const smaller = planFixture({ ...PLANS.group_confirmed, group: { ...PLANS.group_confirmed.group!, size: 3 } });
+      await open(smaller, {
         "GET /groups/group-1": json(200, groupBeforeRevealFixture({ size: 3, belowPlan: true })),
       });
       expect(await screen.findByText(copy.confirmed.smaller(3))).toBeOnTheScreen();
@@ -235,6 +238,19 @@ describe("PlanScreen", () => {
       const app = await open(planFixture({ id: "plan-gone" }), { "GET /plans/plan-gone": json(404, { code: "not_found" }) });
       await fireEvent.press(await screen.findByText(copy.missing.action));
       expect(app.onPlans).toHaveBeenCalled();
+    });
+
+    it("opens from the kept plan list while its own answer is not in", async () => {
+      const plan = PLANS.checking_ticket;
+      await open(plan, { [`GET /plans/${plan.id}`]: () => new Promise(() => {}) }, BEFORE_REVEAL, false, (app) =>
+        app.queryClient.setQueryData(queryKeys.plansList(), { plans: [plan] }),
+      );
+      expect(await screen.findByText(copy.checking.title)).toBeOnTheScreen();
+    });
+
+    it("says it is offline, not loading forever, for a plan never seen", async () => {
+      await open(planFixture({ id: "plan-unseen" }), {}, BEFORE_REVEAL, false, (app) => app.deps.connectivity.report(false));
+      expect(await screen.findByText(common.errorOffline)).toBeOnTheScreen();
     });
 
     it("shows a plain error with a retry", async () => {

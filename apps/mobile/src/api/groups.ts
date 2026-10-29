@@ -6,20 +6,14 @@ import {
   type GroupRevealed,
   groupResponseSchema,
 } from "@turnout/contract/app/groups";
-import { type Plan, type PlanListResponse, planListResponseSchema } from "@turnout/contract/app/plans";
+import type { Plan } from "@turnout/contract/app/plans";
 import { isApiError } from "@/model/apiError";
 import { type Point, toPoint } from "@/model/walk";
 import type { ApiClient } from "./client";
 import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
+import { fetchPlans } from "./plans";
 import { fetchShow } from "./shows";
-
-export function fetchPlans(api: ApiClient): Promise<PlanListResponse> {
-  return api.request({ path: "/plans", schema: planListResponseSchema });
-}
-
-/** The person's plans. The meet card reads it to find the show its group is for, and the push setup reads it to know the person has a plan. */
-export const plansListQuery = (api: ApiClient) => ({ queryKey: queryKeys.plansList(), queryFn: () => fetchPlans(api) });
 
 /** The plan that holds this group, or null when the list does not have it (not loaded yet, or the plan is gone). */
 export function planOfGroup(plans: readonly Plan[], groupId: string): Plan | null {

@@ -48,6 +48,7 @@ export function GoScreen({ publicId, onClose, onPlan, onFinish }: GoScreenProps)
       const existing = existingPlanId(failure);
       if (existing) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.plansList() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.showMember(publicId) });
         markGoExplained(prefs);
         onPlan(existing);
         return;

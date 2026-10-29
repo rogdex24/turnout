@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { plansListQuery } from "@/api/plans";
-import { isApiError } from "@/model/apiError";
+import { errorKind } from "@/model/apiError";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
 import { type PlansState, PlansView } from "./PlansView";
@@ -39,9 +39,4 @@ export function PlansScreen({ onOpenPlan, onFindShow }: PlansScreenProps) {
       onFindShow={onFindShow}
     />
   );
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  return error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited" ? error.kind : "other";
 }

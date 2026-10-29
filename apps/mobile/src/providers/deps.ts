@@ -83,6 +83,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     clearImages: parts.clearImages ?? (async () => {}),
     stopTelemetry: parts.stopTelemetry ?? (() => {}),
   });
+  // A session refused at refresh ends with no token to call the server; the wipe empties the stored device with the other prefs.
   session.onSignedOut(() => wipe.run());
   registerCheckin(queryClient, api);
   registerThreadSend(queryClient, api);

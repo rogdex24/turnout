@@ -174,6 +174,14 @@ describe("HomeScreen", () => {
   });
 
   describe("plan bar", () => {
+    // The bar reads the plans, which are asked for only in a build with groups on.
+    beforeEach(() => {
+      process.env.EXPO_PUBLIC_GROUPS_ENABLED = "1";
+    });
+    afterEach(() => {
+      delete process.env.EXPO_PUBLIC_GROUPS_ENABLED;
+    });
+
     it("has no bar when there is no plan that can move", async () => {
       await open({ "GET /plans": json(200, { plans: [PLANS.withdrawn, PLANS.done] }) });
       await screen.findByTestId("show-card-monsoon-theory");

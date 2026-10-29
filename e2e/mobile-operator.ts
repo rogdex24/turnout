@@ -162,7 +162,8 @@ async function perform(
         const ticket = db.query("SELECT id FROM ticket_proof WHERE plan_id = ? AND status = 'pending' LIMIT 1").get(waiting.id) as {
           id: string;
         };
-        approveTicket(db, ticket.id, now);
+        const approved = approveTicket(db, ticket.id, now);
+        if (!approved.ok) refuse(409, approved.error);
       }
     }
     return { ok: true, grouping: runGroupingPass(db, body.eventId, now) };
@@ -205,12 +206,14 @@ export function startOperator(options: {
 }): Operator {
   const db = openDb(options.dbPath);
   const store = diskStore({ dir: path.resolve(options.filesDir), link: () => "" });
+  // Loopback only: Maestro scripts on the host call these routes, the app never does.
   const server = Bun.serve({
+    hostname: "127.0.0.1",
     port: options.port,
     async fetch(request) {
       const url = new URL(request.url);
       const name = url.pathname.replace(/^\/operator\//, "") as keyof typeof bodies;
-      if (request.method !== "POST" || request.headers.get(TOKEN_HEADER) !== options.token || !(name in bodies))
+      if (request.method !== "POST" || request.headers.get(TOKEN_HEADER) !== options.token || !Object.hasOwn(bodies, name))
         return new Response("not found", { status: 404 });
       try {
         const answer = await perform(db, store, name, await request.json().catch(() => ({})), await options.serverNow(), options.setClock);

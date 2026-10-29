@@ -1,5 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react-native";
-import type { PushNative } from "@/api/notifications";
+import { type PushNative, permissionChanged } from "@/api/notifications";
+import { PREF_KEYS } from "@/api/prefs";
 import { clearTestClients, json } from "@/api/testing";
 import { SAMPLE_CONFIG } from "@/screens/notice/fixtures";
 import { AppProviders } from "./AppProviders";
@@ -82,9 +83,34 @@ describe("useNotificationRouting", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenLastCalledWith("/"));
   });
 
+  it("never asks the system itself, and registers once the ticket page's question was answered yes", async () => {
+    let granted = false;
+    const requestPermission = jest.fn(async () => ({ status: "granted" as const, canAskAgain: true }));
+    const { native } = fakeNative({
+      permission: async () => (granted ? { status: "granted", canAskAgain: true } : { status: "undetermined", canAskAgain: true }),
+      requestPermission,
+    });
+    const app = await open(native);
+    await waitFor(() => expect(native.setUpChannels).toHaveBeenCalled());
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(app.transport.callsTo("POST /devices")).toHaveLength(0);
+    granted = true;
+    await act(() => permissionChanged());
+    await waitFor(() => expect(app.transport.callsTo("POST /devices")).toHaveLength(1));
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+
   it("gives the server the token for a person on Android", async () => {
     const { native } = fakeNative();
     const app = await open(native);
     await waitFor(() => expect(app.transport.callsTo("POST /devices")).toHaveLength(1));
+  });
+
+  it("forgets the stored device when the session ends, so the next person registers afresh", async () => {
+    const { native } = fakeNative();
+    const app = await open(native);
+    await waitFor(() => expect(app.prefs.getString(PREF_KEYS.pushDevice)).toBeDefined());
+    await act(() => app.deps.session.signOut());
+    expect(app.prefs.getString(PREF_KEYS.pushDevice)).toBeUndefined();
   });
 });

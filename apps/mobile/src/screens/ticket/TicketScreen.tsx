@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { CalendarX } from "phosphor-react-native";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { queryKeys } from "@/api/keys";
+import { permissionChanged } from "@/api/notifications";
 import { memberShowQuery, planDetailQuery, putTicket } from "@/api/plans";
 import { markTicketAsked, ticketAsked } from "@/api/prefs";
 import { ticket as copy } from "@/copy/ticket";
@@ -19,6 +20,8 @@ import { SkeletonRow } from "@/ui/SkeletonRow";
 import { askNotifications } from "./askNotifications";
 import { TicketView } from "./TicketView";
 import { chooseTicket, readTicket } from "./ticketPicker";
+
+const CHECKING_POLL_MS = 60_000;
 
 export interface TicketScreenProps {
   planId: string;
@@ -40,7 +43,11 @@ export function TicketScreen({ planId, onBack, onLater, onDone, onPlan }: Ticket
   const api = useApi();
   const { queryClient, prefs, connectivity } = useDeps();
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
-  const plan = useQuery(planDetailQuery(api, planId));
+  // While the ticket is being checked the page asks again every minute, so an answer shows without leaving it.
+  const plan = useQuery({
+    ...planDetailQuery(api, planId, queryClient),
+    refetchInterval: (query) => (query.state.data?.state === "checking_ticket" ? CHECKING_POLL_MS : false),
+  });
   const planData = plan.data;
   const member = useQuery({ ...memberShowQuery(api, planData?.eventId ?? ""), enabled: planData !== undefined });
   const proofKind = member.data?.proofKind ?? "screenshot";
@@ -81,14 +88,15 @@ export function TicketScreen({ planId, onBack, onLater, onDone, onPlan }: Ticket
 
   if (!planData) {
     const missing = plan.isError && isApiError(plan.error) && plan.error.kind === "not_found";
+    const stalledOffline = plan.fetchStatus === "paused";
     return (
       <SafeAreaView className="flex-1 bg-bg" testID="ticket-loading">
         <BackBar onBack={onBack} />
         {missing ? (
           <EmptyState icon={CalendarX} title={copy.load.missing} />
-        ) : plan.isError ? (
+        ) : plan.isError || stalledOffline ? (
           <ErrorState
-            kind={isApiError(plan.error) && plan.error.kind === "offline" ? "offline" : "other"}
+            kind={stalledOffline || (isApiError(plan.error) && plan.error.kind === "offline") ? "offline" : "other"}
             onRetry={() => void plan.refetch()}
           />
         ) : (
@@ -99,22 +107,33 @@ export function TicketScreen({ planId, onBack, onLater, onDone, onPlan }: Ticket
   }
 
   const choose = async () => {
+    // A tap before the show's answer is in waits for it, so a seller that takes PDFs is not narrowed to screenshots. If the show
+    // cannot be read (offline, or no longer listed) the stricter rule stands.
+    const kind = member.data
+      ? proofKind
+      : await queryClient.fetchQuery(memberShowQuery(api, planData.eventId)).then(
+          (show) => show.proofKind,
+          () => proofKind,
+        );
     let picked: PickedTicket | null;
     try {
-      picked = await chooseTicket(proofKind);
+      picked = await chooseTicket(kind);
     } catch {
       // The picker failed to open or the file could not be read: nothing was chosen, so there is nothing to say.
       return;
     }
     if (!picked) return;
     setFile(picked);
-    setProblem(checkPicked(proofKind, picked));
+    setProblem(checkPicked(kind, picked));
   };
 
   const answerNotify = async (on: boolean) => {
     setAskNotify(false);
     markTicketAsked(prefs);
-    if (on) await askNotifications();
+    if (on) {
+      await askNotifications();
+      permissionChanged();
+    }
   };
 
   return (

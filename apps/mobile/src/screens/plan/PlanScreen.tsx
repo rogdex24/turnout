@@ -51,13 +51,14 @@ export function PlanScreen({
   onPlans,
 }: PlanScreenProps) {
   const api = useApi();
-  const { prefs, connectivity } = useDeps();
+  const { prefs, connectivity, queryClient } = useDeps();
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
   const now = useNow(POLL_MS);
-  const plan = useQuery({ ...planDetailQuery(api, planId), refetchInterval: POLL_MS });
+  const plan = useQuery({ ...planDetailQuery(api, planId, queryClient), refetchInterval: POLL_MS });
   const data = plan.data;
   const wantsGroup = data?.group != null && (data.state === "group_confirmed" || data.state === "meet_card_live");
-  const group = useQuery({ ...groupQuery(api, data?.group?.id ?? ""), enabled: wantsGroup });
+  // Polled with the plan, so a group that shrinks after the lock shows its new size and the smaller-than-usual note.
+  const group = useQuery({ ...groupQuery(api, data?.group?.id ?? ""), enabled: wantsGroup, refetchInterval: POLL_MS });
   const looking = useQuery({ ...memberShowQuery(api, data?.eventId ?? ""), enabled: data?.state === "finding_group" });
 
   const confirmed = data?.state === "group_confirmed";
@@ -69,6 +70,8 @@ export function PlanScreen({
 
   if (!data) {
     const missing = plan.isError && isApiError(plan.error) && plan.error.kind === "not_found";
+    // Offline with nothing kept: the query waits for the network without failing, so say so instead of loading forever.
+    const stalledOffline = plan.fetchStatus === "paused";
     return (
       <SafeAreaView className="flex-1 bg-bg" testID="plan-loading">
         <BackBar onBack={onBack} />
@@ -79,9 +82,9 @@ export function PlanScreen({
             body={copy.missing.body}
             action={{ title: copy.missing.action, onPress: onPlans }}
           />
-        ) : plan.isError ? (
+        ) : plan.isError || stalledOffline ? (
           <ErrorState
-            kind={isApiError(plan.error) && plan.error.kind === "offline" ? "offline" : "other"}
+            kind={stalledOffline || (isApiError(plan.error) && plan.error.kind === "offline") ? "offline" : "other"}
             onRetry={() => void plan.refetch()}
           />
         ) : (

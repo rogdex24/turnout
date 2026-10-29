@@ -7,7 +7,7 @@ import { queryKeys } from "@/api/keys";
 import { nativeLocation } from "@/api/locationNative";
 import { type Replayable, replayable } from "@/api/mutations";
 import { showsRealMap } from "@/api/variant";
-import { isApiError } from "@/model/apiError";
+import { errorKind, isApiError } from "@/model/apiError";
 import { locationLine, mapsUrl } from "@/model/meetCard";
 import { meetPhase, watchesLocation } from "@/model/meetWindow";
 import { toPoint } from "@/model/walk";
@@ -39,12 +39,6 @@ export interface MeetScreenProps {
   onClosed: () => void;
   /** From the closed card of a group that is done to the after-the-show screen (A20). */
   onOpenAfter: () => void;
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }
 
 function open(url: string) {

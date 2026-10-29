@@ -18,7 +18,8 @@ export interface GroupFacts {
 
 export function groupFacts(plan: Pick<Plan, "group">, group: GroupResponse | null | undefined): GroupFacts | null {
   if (plan.group === null) return null;
-  const size = group?.size ?? plan.group.size;
+  // The plan is polled on its page and carries the size the server holds now; a group answer may be older.
+  const size = plan.group.size;
   return {
     size,
     others: othersCount(size),

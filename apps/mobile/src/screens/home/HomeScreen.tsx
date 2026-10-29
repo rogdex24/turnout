@@ -1,8 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState, useSyncExternalStore } from "react";
+import { groupsEnabled } from "@/api/features";
 import { plansListQuery } from "@/api/plans";
 import { areasQuery, showsListQuery } from "@/api/shows";
-import { isApiError } from "@/model/apiError";
+import { errorKind } from "@/model/apiError";
 import { activePlan } from "@/model/plan";
 import { planStatus } from "@/model/planStatus";
 import { istShort } from "@/model/planTime";
@@ -38,7 +39,7 @@ export function HomeScreen({ onOpenShow, onOpenPlan, onChangeHandle }: HomeScree
   const me = useMe().data;
   const areas = useQuery(areasQuery(api));
   const shows = useInfiniteQuery(showsListQuery(api, area));
-  const plans = useQuery(plansListQuery(api));
+  const plans = useQuery({ ...plansListQuery(api), enabled: groupsEnabled() });
 
   const stalledOffline = shows.isPending && shows.fetchStatus === "paused" && shows.failureCount > 0;
   let list: HomeList;
@@ -89,10 +90,4 @@ export function HomeScreen({ onOpenShow, onOpenPlan, onChangeHandle }: HomeScree
       onOpenShow={onOpenShow}
     />
   );
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }

@@ -36,10 +36,12 @@ export function CancelScreen({ planId, onClose }: CancelScreenProps) {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.planDetail(planId), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.plansList() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.showMember(updated.eventId) });
       onClose();
     },
     onError: (failure) => {
-      if (isApiError(failure) && failure.code === "plan_closed") {
+      // An ended plan (409) or one that is gone (404): read it again and show it as it is.
+      if (isApiError(failure) && (failure.code === "plan_closed" || failure.kind === "not_found")) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.planDetail(planId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.plansList() });
         onClose();

@@ -18,10 +18,12 @@ const DEFAULT_WAIT_SECONDS = 60;
 
 /**
  * The phone field as it is typed or pasted: digits only, a pasted +91, 91 or leading 0 dropped, ten digits at most, grouped in
- * fives. Dev and e2e builds keep a full +1 202 555 01xx seed number whole.
+ * fives. Dev and e2e builds keep a full +1 202 555 01xx seed number whole, and keep a lone + so the number can be typed one key at
+ * a time, which is how Maestro enters it.
  */
 export function phoneFieldText(raw: string, options: PhoneOptions = {}): string {
   const trimmed = raw.trim();
+  if (options.allowSeedNumbers && trimmed === "+") return trimmed;
   if (options.allowSeedNumbers && trimmed.startsWith("+1")) return `+${digitsOnly(trimmed).slice(0, 11)}`;
   let digits = digitsOnly(trimmed);
   if (digits.length >= 12 && digits.startsWith("91")) digits = digits.slice(2);
