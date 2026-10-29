@@ -6,8 +6,6 @@ name: ticket-rejected
 tags:
   - plans
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   MEMBER: "+12025550107"
   SHOW_ID: seed-show-t2d
 ---

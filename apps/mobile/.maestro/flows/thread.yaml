@@ -15,8 +15,6 @@ tags:
   - thread
   - needs-group-seed
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   MEMBER: "+12025550107"
   SPEAKER: "+12025550106"
   EVENT_ID: seed-show-meet-live

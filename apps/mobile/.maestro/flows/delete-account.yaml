@@ -6,8 +6,6 @@ name: delete-account
 tags:
   - settings
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   MEMBER: "+12025550109"
 ---
 - runFlow:

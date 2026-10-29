@@ -5,8 +5,6 @@ name: browse
 tags:
   - browse
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   MATCHABLE_MEMBER: "+12025550104"
   PENDING_MEMBER: "+12025550102"
   REJECTED_MEMBER: "+12025550103"

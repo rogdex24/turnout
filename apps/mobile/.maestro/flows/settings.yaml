@@ -7,8 +7,6 @@ name: settings
 tags:
   - settings
 env:
-  SERVER_URL: http://localhost:3917
-  TEST_TOKEN: ""
   MEMBER: "+12025550104"
 ---
 - runFlow:
