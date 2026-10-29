@@ -49,37 +49,70 @@ maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
 echo "::endgroup::"
 
 echo "::group::visual capture"
+# One Maestro run per theme and text size, not one per story. Every run starts Maestro and its driver, which took about 10 s on
+# Android and about 75 s on iOS, so the 40 single-story runs spent about 7 and 50 minutes on start-up. Each story is written out
+# as its own flow with its own shot name, next to flows/ so the story flow's ../subflows path still resolves. The stories share
+# no state (each launches with clearState), so a story with no shot after its batch is captured again on its own, up to twice.
+# A story still without a shot fails the job; a shot is never taken from another run.
+batch="$here/visual-run"
+app_id="$(sed -n 's/^appId: //p' "$here/visual/capture-story.yaml")"
+write_story_flow() {
+  local story="$1" folder
+  folder="$(jq -r .folder <<< "$story")"
+  {
+    echo "appId: $app_id"
+    echo "name: $(jq -c '"capture " + .folder' <<< "$story")"
+    echo "env:"
+    echo "  STORY_ID: $(jq -c .id <<< "$story")"
+    echo "  READY_TEXT: $(jq -c .ready <<< "$story")"
+    sed -n '/^---$/,$p' "$here/visual/capture-story.yaml" | sed "s/^- takeScreenshot: capture\$/- takeScreenshot: $folder/"
+  } > "$batch/$folder.yaml"
+  grep -q "^- takeScreenshot: $folder\$" "$batch/$folder.yaml"
+}
+# The job uploads ~/.maestro/tests when it fails, so the screenshots and the view tree of a failed capture go there.
+keep_debug() { mkdir -p "$HOME/.maestro/tests"; mv "$1" "$HOME/.maestro/tests/$2"; }
+
 mkdir -p "$SHOT_DIR"
+rm -rf "$batch"
+mkdir -p "$batch"
+jq -c '.[]' "$here/visual/stories.json" | while read -r story; do write_story_flow "$story"; done
 for theme in light dark; do
   for text in default largest; do
     "wait_${platform}"
     "set_${platform}_theme" "$theme"
     "set_${platform}_text" "$text"
-    jq -c '.[]' "$here/visual/stories.json" | while read -r story; do
-      folder="$(jq -r .folder <<< "$story")"
+    out="$(mktemp -d)"
+    keep_out=no
+    "wait_${platform}"
+    if ! maestro test --test-output-dir "$out" "$batch" < /dev/null; then
+      echo "::warning::visual capture $theme-$text: a story failed in the batch run, it is captured again on its own"
+      keep_out=yes
+    fi
+    jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
       mkdir -p "$SHOT_DIR/$folder"
-      # Maestro 2 writes a screenshot only inside its own output folder (<out>/<flow>/takeScreenshot/), so each run gets a
-      # fresh folder and the one shot is moved to $SHOT_DIR/<story>/<theme>-<text>.png afterwards.
-      out="$(mktemp -d)"
-      "wait_${platform}"
-      if ! maestro test \
-        --test-output-dir "$out" \
-        -e "STORY_ID=$(jq -r .id <<< "$story")" \
-        -e "READY_TEXT=$(jq -r .ready <<< "$story")" \
-        "$here/visual/capture-story.yaml" < /dev/null; then
-        # The job uploads ~/.maestro/tests when it fails, so the screenshots and the view tree of the failed capture go there.
-        mkdir -p "$HOME/.maestro/tests"
-        mv "$out" "$HOME/.maestro/tests/visual-$folder-$theme-$text"
-        exit 1
-      fi
-      shot="$(find "$out" -type f -name capture.png | head -n 1)"
+      shot="$(find "$out" -type f -name "$folder.png" | head -n 1)"
+      for attempt in 1 2; do
+        [ -n "$shot" ] && break
+        echo "::warning::visual capture $folder/$theme-$text: no shot yet, capture on its own (try $attempt of 2)"
+        retry="$(mktemp -d)"
+        "wait_${platform}"
+        maestro test --test-output-dir "$retry" "$batch/$folder.yaml" < /dev/null || true
+        shot="$(find "$retry" -type f -name "$folder.png" | head -n 1)"
+        if [ -n "$shot" ]; then
+          mv "$shot" "$out/$folder.png"
+          shot="$out/$folder.png"
+        fi
+        keep_debug "$retry" "visual-$folder-$theme-$text-try$attempt"
+      done
       if [ -z "$shot" ]; then
-        echo "no capture.png under $out for $folder/$theme-$text" >&2
+        echo "no $folder.png for $folder/$theme-$text after the batch and two tries on its own" >&2
+        keep_debug "$out" "visual-batch-$theme-$text"
         exit 1
       fi
       mv "$shot" "$SHOT_DIR/$folder/$theme-$text.png"
-      rm -rf "$out"
     done
+    if [ "$keep_out" = yes ]; then keep_debug "$out" "visual-batch-$theme-$text"; else rm -rf "$out"; fi
   done
 done
+rm -rf "$batch"
 echo "::endgroup::"

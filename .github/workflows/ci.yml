@@ -5,11 +5,29 @@ name: ci
 #   - pull_request only, never pull_request_target, and no repository secrets in PR jobs.
 #   - Every action is pinned by full commit SHA with the version in a comment.
 #   - Required status checks should list only `ci-gate`, so jobs can be added or skipped without editing branch protection.
+#
+# Device job switches. The device jobs (and the native builds they need) run when the `mobile` filter matches. To change that:
+#   - PR label `ci:skip-device`: skip them, for a change that cannot affect the app. ci-gate still passes, with a warning.
+#   - PR label `ci:force-device`: run them even when no mobile path changed.
+#   - PR label `ci:fail-fast`: cancel the other device job of a platform as soon as one fails.
+#   - A manual run (Actions, ci, Run workflow) takes the same three choices as inputs.
+# Labels are read when the run starts, so after adding one, push or re-run all jobs.
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      device:
+        description: "Device jobs: auto follows the mobile paths, skip leaves them out, force runs them"
+        type: choice
+        options: [auto, skip, force]
+        default: auto
+      fail-fast:
+        description: "Cancel the other device job of a platform when one fails"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,10 +56,14 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: read
       pull-requests: read
     outputs:
       web: ${{ steps.filter.outputs.web }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      device: ${{ steps.device.outputs.run }}
+      device-skipped-by: ${{ steps.device.outputs.skipped-by }}
+      fail-fast: ${{ steps.device.outputs.fail-fast }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,6 +93,42 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - '.github/workflows/ci.yml'
+      # The labels come from the API, not the event, so a re-run sees a label added after the push.
+      - name: Device job switches
+        id: device
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          MOBILE: ${{ steps.filter.outputs.mobile }}
+          INPUT_DEVICE: ${{ inputs.device }}
+          INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
+        run: |
+          set -euo pipefail
+          mode=auto
+          fail_fast=false
+          if [ "$EVENT" = workflow_dispatch ]; then
+            mode="${INPUT_DEVICE:-auto}"
+            fail_fast="${INPUT_FAIL_FAST:-false}"
+          elif [ "$EVENT" = pull_request ]; then
+            labels="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" --jq '.[].name')"
+            if grep -qx 'ci:skip-device' <<< "$labels"; then mode=skip; fi
+            if grep -qx 'ci:force-device' <<< "$labels"; then mode=force; fi
+            if grep -qx 'ci:fail-fast' <<< "$labels"; then fail_fast=true; fi
+          fi
+          case "$mode" in
+            force) run=true ;;
+            skip) run=false ;;
+            *) run="$MOBILE" ;;
+          esac
+          skipped_by=""
+          if [ "$mode" = skip ] && [ "$MOBILE" = true ]; then skipped_by="$EVENT"; fi
+          echo "device jobs: mode=$mode mobile=$MOBILE run=$run fail-fast=$fail_fast"
+          {
+            echo "run=$run"
+            echo "skipped-by=$skipped_by"
+            echo "fail-fast=$fail_fast"
+          } >> "$GITHUB_OUTPUT"
 
   check:
     runs-on: ubuntu-24.04
@@ -188,7 +246,7 @@ jobs:
 
   build-android:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.device == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -251,7 +309,7 @@ jobs:
 
   build-ios:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.device == 'true'
     runs-on: macos-26
     timeout-minutes: 75
     steps:
@@ -303,11 +361,13 @@ jobs:
   # android-small and android-large. `name` makes each run show as its target.
   android-device:
     name: ${{ matrix.target }}
-    needs: build-android
+    # `check` is a need so a run that already failed its unit tests, types or lint does not spend 40 minutes on devices. It ends
+    # before the builds do, so it adds no wait to a green run.
+    needs: [changes, check, build-android]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.changes.outputs.fail-fast == 'true' }}
       matrix:
         include:
           # 360 dp wide: device-run.sh sets 720x1520 at 320 dpi on top of this profile.
@@ -394,11 +454,11 @@ jobs:
   # ios-small and ios-large.
   ios-device:
     name: ${{ matrix.target }}
-    needs: build-ios
+    needs: [changes, check, build-ios]
     runs-on: macos-26
     timeout-minutes: 75
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.changes.outputs.fail-fast == 'true' }}
       matrix:
         include:
           - target: ios-small
@@ -489,8 +549,12 @@ jobs:
       - name: Require every needed job to pass or be skipped
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          DEVICE_SKIPPED_BY: ${{ needs.changes.outputs.device-skipped-by }}
         run: |
           echo "needed job results: ${RESULTS}"
+          if [ -n "$DEVICE_SKIPPED_BY" ]; then
+            echo "::warning::Mobile paths changed, but the device jobs were skipped by the ci:skip-device switch ($DEVICE_SKIPPED_BY)."
+          fi
           for r in ${RESULTS}; do
             case "$r" in
               success|skipped) ;;

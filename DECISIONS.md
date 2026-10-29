@@ -925,3 +925,39 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
 - **The PII scan treats systemd unit names as file names.** `turnout@production.service` matched the email pattern.
   The scan already skips `name@x.png` and `pkg@1.0.patch`; `.service`, `.timer`, `.socket` and `.target` join that
   list, with a test.
+
+## 2026-10-29: CI and hook speed
+
+Measured over the 29 finished runs of PR 19 (medians): 23.6 minutes from push to result, 30.5 Linux and 39.4 macOS job
+minutes a run. The repo is public, so the cost is the wait and the 5 macOS jobs GitHub allows at once, not money.
+
+- **The visual capture runs one Maestro run per theme and text size, not one per story.** Each `maestro test` starts
+  Maestro and its driver: about 10 s on Android and about 75 s on iOS. Forty single-story runs spent about 7 minutes of an
+  Android job and about 50 minutes of an iOS job on start-up, which is why the large iOS simulator hit its limit. The
+  shots, their names and the baselines are the same.
+- **A story with no shot is captured again on its own, up to twice.** This is not the re-run the entry above forbids: the
+  stories are Storybook screens opened with `clearState`, they read no seeded data, and the flows are still one pass. The
+  capture failures seen so far were infra (the Android emulator going offline, the iOS "Open in" prompt not coming). A
+  retry that passes leaves a `::warning::` on the run, and a story still without a shot fails the job as before.
+- **Device jobs need `check`.** A run whose types, lint or unit tests fail does not spend 40 minutes on devices. `check`
+  ends before the native builds, so a green run waits no longer.
+- **Switches for the device jobs:** the labels `ci:skip-device`, `ci:force-device` and `ci:fail-fast`, and the same three
+  choices on a manual run. A skip with mobile changes leaves a warning on `ci-gate`, which still passes, so the switch is
+  for a change that cannot reach the app. The labels are read from the API, so a re-run sees a label added after the push.
+- **`check` and its halves run their parts side by side** with `bun run --parallel --no-exit-on-error`, so every failing
+  part still reports and the exit code is still non-zero. `bun test --parallel` runs the files in worker processes. Locally
+  (4 cores) `check:server` went from 64 s to 27 s, `check:mobile` from 42 s to 25 s and `check` from 106 s to 50 s.
+- **The write benchmark test writes to /dev/shm when it exists.** It checks journal modes and row counts, not disk speed,
+  and its 1,600 fsyncs took 21 of the 46 s of `bun test`. On /dev/shm it takes 0.5 s.
+- **The pre-commit checks run as a parallel group after the format job,** which stays first because it restages files.
+
+Tried and not taken:
+- Caching `~/.bun/install/cache`: it is 1.8 GB, and `bun install` takes 7 to 13 s on Linux and about 23 s on macOS, so a
+  restore would cost as much as it saves.
+- Caching the Playwright browser: the step is 20 s and most of it is the apt packages that `--with-deps` installs anyway.
+- More Playwright workers: 2, 3 and 4 workers all took 143 to 145 s locally, so the suite is not bound by workers.
+- An AVD snapshot cache: the emulator boots in about 1.4 minutes of a 40-minute job, and restoring a 2 GB snapshot costs
+  about half of that. Not worth a new way for the emulator to start badly.
+- Sharding the flows over two devices: flows share seeded members (104 and 105) and three move the clock, so they cannot
+  run at the same time on one server.
+- A docs-only skip of `check`: `check` is 2.2 minutes, it lints DESIGN.md, and tests read docs and flows.
