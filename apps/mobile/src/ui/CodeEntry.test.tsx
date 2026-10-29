@@ -59,4 +59,11 @@ describe("CodeEntry", () => {
     );
     expect(ringed).toEqual([false, false, true, false, false, false]);
   });
+
+  test("the field is see-through, not at zero opacity, so screen readers and the device tests can find it", async () => {
+    await render(<Harness />);
+    const className = screen.getByTestId("code-input").props.className as string;
+    expect(className.split(" ")).not.toContain("opacity-0");
+    expect(className.split(" ")).toEqual(expect.arrayContaining(["text-transparent", "bg-transparent"]));
+  });
 });
