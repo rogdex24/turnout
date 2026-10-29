@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "test": "jest",
     "doctor": "expo-doctor",
-    "export": "expo export --platform all"
+    "export": "expo export --platform all",
+    "scan-bundle": "bun scripts/scan-bundle.ts"
   },
   "dependencies": {
     "@expo-google-fonts/big-shoulders": "0.4.1",

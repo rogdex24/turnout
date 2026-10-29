@@ -173,6 +173,18 @@ jobs:
       - name: Expo packages match the SDK
         working-directory: apps/mobile
         run: bunx expo install --check
+      # The production variant is exported the way EAS builds it, and the JS bundle is scanned for secrets and development
+      # settings (docs/security/masvs-app.md, MASVS-CODE). The values here are placeholders, not credentials.
+      - name: Export the production bundle and scan it
+        working-directory: apps/mobile
+        env:
+          APP_VARIANT: production
+          EXPO_PUBLIC_STORYBOOK: "0"
+          EXPO_PUBLIC_API_URL: https://api.turnout.example
+          GOOGLE_MAPS_ANDROID_API_KEY: ci-placeholder
+        run: |
+          bunx expo export --platform android --output-dir "$RUNNER_TEMP/turnout-export"
+          bun scripts/scan-bundle.ts "$RUNNER_TEMP/turnout-export" --release
 
   build-android:
     needs: changes
