@@ -53,7 +53,7 @@ export function CodeEntry({
             key={i}
             testID={testID ? `${testID}-box-${i}` : undefined}
             className={cn(
-              "h-16 flex-1 items-center justify-center rounded-field border bg-surface",
+              "min-h-16 flex-1 items-center justify-center rounded-field border bg-surface",
               focused && editable && i === next ? "border-ink" : "border-outline",
             )}
           >
