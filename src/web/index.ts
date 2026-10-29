@@ -2,6 +2,7 @@ import type { Database } from "bun:sqlite";
 import { eventsApiDetail, eventsApiList, jsonResponse, listAreasTool, listVenuesTool, whatsOnThisWeekendTool } from "./api.js";
 import { type AppLinksConfig, aasaResponse, assetlinksResponse } from "./appLinks.js";
 import { faviconResponse } from "./brand.js";
+import { deleteAccountPage } from "./deleteAccount.js";
 import { categoryOrAreaIcsFeed, eventIcs, eventsIcsFeed, llmsTxt, robotsTxt, sitemapXml, textResponse } from "./feeds.js";
 import { fontResponse } from "./fonts.js";
 import { htmlResponse } from "./html.js";
@@ -66,6 +67,7 @@ const ROUTES: Array<[RegExp, RouteHandler]> = [
   ],
 
   [/^\/privacy$/, ({ options }) => privacyPage(options.grievance ?? null)],
+  [/^\/delete-account$/, ({ options }) => deleteAccountPage(options.grievance ?? null)],
 
   // Fetched by the phone to check that go.<host> links belong to the app. Exact paths, and a 404 (never a redirect) until set.
   [/^\/\.well-known\/assetlinks\.json$/, exactPath("/.well-known/assetlinks.json", ({ options }) => assetlinksResponse(options.appLinks))],

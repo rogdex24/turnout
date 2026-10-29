@@ -9,7 +9,7 @@ owner's password manager and pasted into Play Console only.
 | Field | Value | State |
 | --- | --- | --- |
 | Privacy policy URL | `https://<domain>/privacy` | Placeholder. The server serves `/privacy` (A28 requires it live, see `docs/release-gate.md`). The owner pastes the real domain. |
-| Account deletion URL (Data safety, "Delete account URL") | `https://<domain>/delete-account` | **Placeholder, and the page does not exist yet.** Deleting an account works inside the app (Settings, Privacy). Play also wants a public web page that tells a person who has uninstalled the app how to ask for deletion, and what is kept. Nothing in the repo serves that page. Follow-up before the production submit: add a static `/delete-account` route next to `/privacy` that says how to delete in the app, gives the grievance contact for someone who cannot open the app, and lists what is kept (the banned-only phone hash, reports, after the account goes). Source for the list: `docs/data-map.md`. |
+| Account deletion URL (Data safety, "Delete account URL") | `https://<domain>/delete-account` | The page is built (`src/web/site/DeleteAccount.tsx`, tested by `test/deleteAccountPage.test.ts`). It gives the in-app steps (the You tab, Delete account, a code on WhatsApp), the lists of what is deleted and what is kept (the same lists the app shows, from `@turnout/contract/app/deletion`), and the grievance contact for someone who cannot open the app. Owner step: replace `<domain>` once production is deployed and check the page loads there. |
 | Website (optional) | `https://<domain>` | Placeholder. |
 | Support email | `<support email>` | Placeholder. Use the same address `GET /config` returns for grievance contact. |
 

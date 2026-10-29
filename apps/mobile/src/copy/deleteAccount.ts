@@ -1,23 +1,16 @@
+import { DELETION_ERASED, DELETION_KEPT } from "@turnout/contract/app/deletion";
+
 /**
- * Deleting the account. The lists come from docs/data-map.md: what goes, and what stays and for how long. The phone number is
+ * Deleting the account. The lists are shared with the site's /delete-account page and come from docs/data-map.md: what goes, and what stays and for how long. The phone number is
  * named once, as kept only if the account was banned. The tone is plain: no guilt and no second thoughts offered as a lure.
  */
 export const deleteAccount = {
   title: "Delete your account",
   lead: "This erases your account from Turnout and signs you out of every phone.",
   erasedTitle: "What we delete",
-  erased: [
-    "Your name, photo and gender",
-    "Your Instagram or LinkedIn handle",
-    "Your plans, tickets and messages",
-    "Your place in any group",
-    "Your phone number",
-  ],
+  erased: DELETION_ERASED,
   keptTitle: "What we keep",
-  kept: [
-    "A record that you agreed to our notice, and any reports you made or that were made about you. They stay for one year under a number that doesn't name you.",
-    "A scrambled one-way form of your phone number, only if the account was banned. It cannot be turned back into the number.",
-  ],
+  kept: DELETION_KEPT,
   groupTold: "You have a plan with a group coming up. The group will be told someone left, never who.",
   continue: "Continue",
   confirm: {
