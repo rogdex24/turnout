@@ -1,9 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { type ComponentType, createElement, type ReactElement } from "react";
+import { createElement, type ReactElement } from "react";
 import { Pressable, Switch, TextInput } from "react-native";
 import type { TestInstance } from "test-renderer";
+import { loadStories, STORY_FILES } from "../jest/stories";
 import { Ready } from "./screens/after/AfterView.stories";
 import { SafetySheet } from "./screens/meet/SafetySheet";
 import { Conversation } from "./screens/thread/ThreadView.stories";
@@ -13,26 +12,6 @@ import { Conversation } from "./screens/thread/ThreadView.stories";
  * the same ones the visual capture takes) and the tree is searched for anything a person can press, switch or type into that a
  * screen reader could not name: no role, or no label. This file is the A24 check in code; A11Y.md lists what only a phone can show.
  */
-
-interface StoryModule {
-  default: { title: string; component?: ComponentType<never>; args?: object };
-  [name: string]: unknown;
-}
-
-interface Story {
-  render?: () => ReactElement;
-  args?: object;
-}
-
-function storyFiles(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return storyFiles(full);
-    return entry.name.endsWith(".stories.tsx") ? [full] : [];
-  });
-}
-
-const FILES = storyFiles(path.join(__dirname)).sort();
 
 const hasText = (value: unknown): boolean => typeof value === "string" && value.trim() !== "";
 const named = (props: Props): boolean =>
@@ -73,27 +52,20 @@ function accessibilityMisses(root: TestInstance): string[] {
   return misses;
 }
 
-function storyElement(module: StoryModule, story: Story): ReactElement {
-  if (story.render) return createElement(story.render);
-  if (!module.default.component) throw new Error(`${module.default.title} has a story with no render and no component`);
-  return createElement(module.default.component as ComponentType<object>, { ...module.default.args, ...story.args });
-}
-
 describe("every story", () => {
-  it("finds the stories", () => {
-    expect(FILES.length).toBeGreaterThanOrEqual(50);
+  it("finds the stories, at least one per file, under unique titles so the Storybook ids are unique", () => {
+    const titleByFile = new Map(loadStories().map((story) => [story.file, story.title]));
+    const titles = [...titleByFile.values()];
+    expect(STORY_FILES.length).toBeGreaterThanOrEqual(50);
+    expect(titleByFile.size).toBe(STORY_FILES.length);
+    for (const title of titles) expect(title).toMatch(/^[A-Za-z]+\/[A-Za-z]+$/);
+    expect(new Set(titles).size).toBe(titles.length);
   });
 
-  for (const file of FILES) {
-    const module = require(file) as StoryModule;
-    const stories = Object.entries(module).filter(([name]) => name !== "default");
-    describe(module.default.title, () => {
-      for (const [name, story] of stories) {
-        it(`${name}: every pressable has a role and a label`, async () => {
-          await render(storyElement(module, story as Story));
-          expect(accessibilityMisses(screen.container)).toEqual([]);
-        });
-      }
+  for (const story of loadStories()) {
+    it(`${story.title} ${story.name}: renders, and every pressable has a role and a label`, async () => {
+      await render(story.element());
+      expect(accessibilityMisses(screen.container)).toEqual([]);
     });
   }
 });

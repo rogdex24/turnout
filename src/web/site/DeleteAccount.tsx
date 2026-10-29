@@ -1,6 +1,6 @@
 import { DELETION_ERASED, DELETION_KEPT } from "@turnout/contract/app/deletion";
 import { Header } from "./Header.js";
-import type { GrievanceBlock } from "./Privacy.js";
+import { type GrievanceBlock, GrievanceDetails } from "./Privacy.js";
 
 /**
  * /delete-account: the store deletion URL. It says how to delete the account in the app, what goes and what stays, and how to
@@ -36,22 +36,7 @@ export function DeleteAccount({ grievance }: { grievance: GrievanceBlock | null 
         If you no longer have the app or the phone, write to the grievance officer from the number on the account, or say which number it
         is. We confirm the request with you and delete the account within 7 days.
       </p>
-      {grievance ? (
-        <dl>
-          <dt>Name</dt>
-          <dd>{grievance.name}</dd>
-          <dt>Email</dt>
-          <dd>
-            <a className="link" href={`mailto:${grievance.email}`}>
-              {grievance.email}
-            </a>
-          </dd>
-          <dt>Phone</dt>
-          <dd>{grievance.phone}</dd>
-        </dl>
-      ) : (
-        <p>Details not set.</p>
-      )}
+      <GrievanceDetails grievance={grievance} />
       <p>
         <a className="link" href="/privacy">
           Privacy notice

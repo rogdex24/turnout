@@ -1,8 +1,9 @@
 import { DELETION_ERASED, DELETION_KEPT } from "@turnout/contract/app/deletion";
 
 /**
- * Deleting the account. The lists are shared with the site's /delete-account page and come from docs/data-map.md: what goes, and what stays and for how long. The phone number is
- * named once, as kept only if the account was banned. The tone is plain: no guilt and no second thoughts offered as a lure.
+ * Deleting the account. The lists are shared with the site's /delete-account page and come from docs/data-map.md: what goes,
+ * and what stays and for how long. The phone number is named once, as kept only if the account was banned. The tone is plain:
+ * no guilt and no second thoughts offered as a lure.
  */
 export const deleteAccount = {
   title: "Delete your account",
