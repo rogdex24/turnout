@@ -18,7 +18,9 @@ const base: ShowViewProps = {
   onRetry: noop,
   onSeeShows: noop,
   onOpenLink: noop,
+  onBuy: noop,
   onGo: noop,
+  onGoTapped: noop,
 };
 
 const ready = (show = showFixture(), over: Partial<ShowViewProps> = {}) => framed({ detail: { status: "ready", show }, ...over });

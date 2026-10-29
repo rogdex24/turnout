@@ -10,6 +10,9 @@ import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
 import { ShowScreen } from "./ShowScreen";
 
+const mockTrack = jest.fn();
+jest.mock("@/analytics", () => ({ telemetry: () => ({ start: () => undefined, setConsent: () => undefined, track: mockTrack }) }));
+
 let openURL: jest.SpyInstance;
 beforeEach(() => {
   openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
@@ -18,6 +21,7 @@ beforeEach(() => {
 afterEach(() => {
   clearTestClients();
   openURL.mockRestore();
+  mockTrack.mockClear();
   delete process.env.EXPO_PUBLIC_GROUPS_ENABLED;
 });
 
@@ -120,6 +124,23 @@ describe("ShowScreen", () => {
     const { onGo } = await open();
     await fireEvent.press(await screen.findByTestId("show-go"));
     expect(onGo).toHaveBeenCalledWith("monsoon-theory");
+  });
+
+  it("counts the funnel: the show once it is on screen, Buy, and Go with the flag", async () => {
+    await open();
+    await screen.findByTestId("show-ticket");
+    expect(mockTrack).toHaveBeenCalledWith("show_viewed", { show_id: "monsoon-theory" });
+    await fireEvent.press(screen.getByTestId("show-buy"));
+    expect(mockTrack).toHaveBeenCalledWith("buy_tapped", { show_id: "monsoon-theory" });
+    await fireEvent.press(screen.getByTestId("show-go"));
+    expect(mockTrack).toHaveBeenCalledWith("go_tapped", { show_id: "monsoon-theory", groups_enabled: false });
+    expect(mockTrack.mock.calls.filter(([name]) => name === "show_viewed")).toHaveLength(1);
+  });
+
+  it("does not count a view for a show that did not load", async () => {
+    await open({ "GET /api/events/monsoon-theory": json(404, { error: "not_found" }) });
+    expect(await screen.findByText(copy.notFound.title)).toBeOnTheScreen();
+    expect(mockTrack).not.toHaveBeenCalledWith("show_viewed", expect.anything());
   });
 
   it("disables Go with a group for a show that is not eligible", async () => {

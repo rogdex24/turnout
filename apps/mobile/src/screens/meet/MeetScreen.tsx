@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CheckinResponse, GroupResponse } from "@turnout/contract/app/groups";
 import { useSyncExternalStore } from "react";
 import { Linking } from "react-native";
+import { telemetry } from "@/analytics";
 import { type CheckinVariables, checkinMutationKey, groupQuery, isRevealed, markCheckedIn, meetContextQuery } from "@/api/groups";
 import { queryKeys } from "@/api/keys";
 import { nativeLocation } from "@/api/locationNative";
@@ -62,7 +63,7 @@ export function MeetScreen({
 }: MeetScreenProps) {
   const api = useApi();
   const queryClient = useQueryClient();
-  const { connectivity } = useDeps();
+  const { connectivity, prefs } = useDeps();
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
   const now = useNow(CLOCK_EVERY_MS);
   const group = useQuery({ ...groupQuery(api, groupId), refetchInterval: focused ? REFRESH_EVERY_MS : false });
@@ -141,6 +142,7 @@ export function MeetScreen({
 
   const onHere = () => {
     moments.imHere();
+    if (plan) telemetry(prefs).track("im_here_tapped", { plan_id: plan.planId });
     checkin.mutate(replayable({ groupId }));
   };
 
