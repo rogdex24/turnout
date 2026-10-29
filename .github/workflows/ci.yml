@@ -356,8 +356,7 @@ jobs:
           test -n "$token"
           echo "::add-mask::$token"
           echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
-      # `script` runs one line at a time. The second line is the one automatic re-run; a flow that needs it often is fixed or
-      # quarantined that week (docs/plans/mobile-ci-budget.md).
+      # `script` runs one line at a time. device-run.sh re-runs the flows once when they fail (see the script).
       - name: Run the flows and the visual capture
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
@@ -369,7 +368,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             adb install -r apk/e2e.apk
-            apps/mobile/.maestro/ci/device-run.sh ${{ matrix.target }} || apps/mobile/.maestro/ci/device-run.sh ${{ matrix.target }}
+            apps/mobile/.maestro/ci/device-run.sh ${{ matrix.target }}
       - name: Compare the shots with the baselines
         run: apps/mobile/.maestro/ci/visual-compare.sh "${{ matrix.target }}"
       - name: Upload the shots
@@ -454,10 +453,9 @@ jobs:
           test -n "$token"
           echo "::add-mask::$token"
           echo "TEST_TOKEN=$token" >> "$GITHUB_ENV"
-      # The second command is the one automatic re-run (see the Android job).
       - name: Run the flows and the visual capture
         run: |
-          apps/mobile/.maestro/ci/device-run.sh "${{ matrix.target }}" || apps/mobile/.maestro/ci/device-run.sh "${{ matrix.target }}"
+          apps/mobile/.maestro/ci/device-run.sh "${{ matrix.target }}"
       - name: Compare the shots with the baselines
         run: apps/mobile/.maestro/ci/visual-compare.sh "${{ matrix.target }}"
       - name: Upload the shots

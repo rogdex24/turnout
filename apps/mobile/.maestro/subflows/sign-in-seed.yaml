@@ -3,6 +3,12 @@ appId: com.turnout.app.e2e
 name: sign in seed
 ---
 - runFlow: open-sign-in.yaml
+# Flows sign the same members in again within minutes, faster than the server's per-number limit allows a person.
+- runScript:
+    file: ../scripts/reset-limits.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
 - runFlow:
     file: send-code.yaml
     env:

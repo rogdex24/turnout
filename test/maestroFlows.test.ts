@@ -25,10 +25,28 @@ describe("Maestro flows", () => {
       const text = await Bun.file(`${root}/${file}`).text();
       expect(text).not.toMatch(/^\s*- back\s*$/m);
     });
+
+    // The iOS simulator asks before it opens a custom-scheme link and waits for an answer, so every link goes through the subflow
+    // that answers it.
+    if (file !== "subflows/open-link.yaml") {
+      test(`${file} opens links through subflows/open-link.yaml`, async () => {
+        const text = await Bun.file(`${root}/${file}`).text();
+        expect(text).not.toMatch(/^\s*- openLink:/m);
+      });
+    }
   }
 
+  // Flows sign the same seeded members in one after another, faster than the per-number limit allows, and the job runs the flows a
+  // second time on the same server when the first run fails.
+  test("signing in a seeded member empties the rate limits before it asks for a code", async () => {
+    const text = await Bun.file(`${root}/subflows/sign-in-seed.yaml`).text();
+    const reset = text.indexOf("scripts/reset-limits.js");
+    expect(reset).toBeGreaterThan(-1);
+    expect(reset).toBeLessThan(text.indexOf("send-code.yaml"));
+  });
+
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the
-  // sequence aborts. after-show moves the server clock past every show, so running it early breaks the retry in device-run.sh.
+  // sequence aborts. after-show moves the server clock past every show, so running it early breaks the re-run in device-run.sh.
   test("every flow in flowsOrder runs, so after-show stays inside the ordered sequence", async () => {
     const config = await Bun.file(`${root}/config.yaml`).text();
     const excluded = [...config.matchAll(/^excludeTags:\n((?:\s+- .+\n)+)/gm)].flatMap((m) =>

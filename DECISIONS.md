@@ -189,7 +189,9 @@ Deviations from the plan and choices made while scaffolding:
   the events list is an M2 screen. `visual-compare.sh` passes with a notice until a target has an
   accepted baseline; none could be made without an emulator.
 - Device jobs are two matrix jobs, `android-device` and `ios-device`, whose run names are the four
-  targets. The one automatic re-run is `cmd || cmd` in the job script.
+  targets. The one automatic re-run is `run_flows || run_flows` inside `device-run.sh`, and it
+  re-runs only the flows: a failed visual capture does not run every flow a second time, after
+  after-show has moved the server clock past every show.
 - The iOS runner is `macos-26` instead of `macos-latest`, with the simulator runtime pinned to
   iOS 26.2, so a runner image change cannot move the baselines. actionlint does not know the
   `macos-26` label yet and reports it; the label is valid on GitHub.

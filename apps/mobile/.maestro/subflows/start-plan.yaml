@@ -10,7 +10,10 @@ name: start plan
       PHONE: ${PHONE}
       SERVER_URL: ${SERVER_URL}
       TEST_TOKEN: ${TEST_TOKEN}
-- openLink: turnout-e2e://show/${SHOW_ID}
+- runFlow:
+    file: open-link.yaml
+    env:
+      LINK: turnout-e2e://show/${SHOW_ID}
 - extendedWaitUntil:
     visible:
       id: show

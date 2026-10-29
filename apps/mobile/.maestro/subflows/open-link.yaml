@@ -1,0 +1,20 @@
+# Opens LINK in the app. The iOS simulator asks "Open in “Turnout (e2e)”?" before it hands a custom-scheme link to the app, and the
+# question stays up until someone answers it, so on iOS this waits a moment for it and taps Open. Android does not ask.
+# Run with runFlow and LINK.
+appId: com.turnout.app.e2e
+name: open link
+---
+- openLink: ${LINK}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: "Open in .*"
+          timeout: 5000
+          optional: true
+      - runFlow:
+          when:
+            visible: "Open in .*"
+          commands:
+            - tapOn: "Open"

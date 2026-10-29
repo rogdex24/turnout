@@ -38,13 +38,28 @@ else
   xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 fi
 
+# Puts the seeded server's clock back and empties its rate limits. after-show moves the clock past every show, so a second run of
+# the flows on the same server would find no shows without this.
+reset_server() {
+  if [ -n "${TEST_TOKEN:-}" ]; then
+    for route in limits clock; do
+      body='{}'
+      [ "$route" = clock ] && body='{"reset":true}'
+      curl -sf -X POST -H "x-staging-test-token: $TEST_TOKEN" -H "content-type: application/json" -d "$body" \
+        "$SERVER_URL/api/app/v1/__test/$route" > /dev/null
+    done
+  fi
+}
+
+run_flows() {
+  reset_server
+  maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
+}
+
 echo "::group::flows"
-# The job runs this script a second time when the first run fails, on the same server, so each run empties the server's rate
-# limits first: otherwise the sign-in flows hit the per phone limit on the second run.
-if [ -n "${TEST_TOKEN:-}" ]; then
-  curl -sf -X POST -H "x-staging-test-token: $TEST_TOKEN" -H "content-type: application/json" -d '{}' "$SERVER_URL/api/app/v1/__test/limits" > /dev/null
-fi
-maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
+# The one automatic re-run, on the same server. Only the flows run again: a failed capture below fails the job without running
+# every flow a second time. A flow that needs the re-run often is fixed or quarantined that week (docs/plans/mobile-ci-budget.md).
+run_flows || run_flows
 echo "::endgroup::"
 
 echo "::group::visual capture"
@@ -59,11 +74,16 @@ for theme in light dark; do
       # Maestro 2 writes a screenshot only inside its own output folder (<out>/<flow>/takeScreenshot/), so each run gets a
       # fresh folder and the one shot is moved to $SHOT_DIR/<story>/<theme>-<text>.png afterwards.
       out="$(mktemp -d)"
-      maestro test \
+      if ! maestro test \
         --test-output-dir "$out" \
         -e "STORY_ID=$(jq -r .id <<< "$story")" \
         -e "READY_TEXT=$(jq -r .ready <<< "$story")" \
-        "$here/visual/capture-story.yaml" < /dev/null
+        "$here/visual/capture-story.yaml" < /dev/null; then
+        # The job uploads ~/.maestro/tests when it fails, so the screenshots and the view tree of the failed capture go there.
+        mkdir -p "$HOME/.maestro/tests"
+        mv "$out" "$HOME/.maestro/tests/visual-$folder-$theme-$text"
+        exit 1
+      fi
       shot="$(find "$out" -type f -name capture.png | head -n 1)"
       if [ -z "$shot" ]; then
         echo "no capture.png under $out for $folder/$theme-$text" >&2

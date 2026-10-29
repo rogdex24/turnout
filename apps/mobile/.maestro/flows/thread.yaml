@@ -28,7 +28,10 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 - launchApp:
     clearState: false
-- openLink: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
 - extendedWaitUntil:
     visible:
       id: meet
