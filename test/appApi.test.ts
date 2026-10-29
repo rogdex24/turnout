@@ -276,6 +276,7 @@ describe("production settings", () => {
     const asProduction = { ...t.app, config: { ...t.app.config, env: "production" as const } };
     expect(patterns(asProduction)).not.toContain("/__test/otp");
     expect(patterns(asProduction)).not.toContain("/__test/clock");
+    expect(patterns(asProduction)).not.toContain("/__test/limits");
     const config = await loadAppConfig({ TURNOUT_ENV: "production", STAGING_TEST_TOKEN: "x" }).catch(() => null);
     expect(config).toBeNull();
   });
@@ -302,6 +303,16 @@ describe("staging test routes", () => {
     const reviewer = await t.call("POST", "/__test/otp", { body: { phone: REVIEWER_PHONE }, headers: header });
     expect(((await reviewer.json()) as { code: string }).code).toBe(REVIEWER_CODE);
     expect((await t.call("POST", "/__test/otp", { body: { phone: PHONES[5] }, headers: header })).status).toBe(404);
+  });
+
+  test("/__test/limits empties the rate limits, so a re-run of the device flows can ask for codes again", async () => {
+    const t = await testApp();
+    const ask = () => t.call("POST", "/auth/otp", { body: { phone: PHONES[0], purpose: "sign_in" } });
+    for (let i = 0; i < 3; i++) expect((await ask()).status).toBe(200);
+    expect((await ask()).status).toBe(429);
+    expect((await t.call("POST", "/__test/limits", { body: {} })).status).toBe(404);
+    expect((await t.call("POST", "/__test/limits", { body: {}, headers: header })).status).toBe(200);
+    expect((await ask()).status).toBe(200);
   });
 
   test("/__test/clock moves a staging server's clock; a fixed test clock is left alone", async () => {

@@ -98,6 +98,7 @@ const ROWS: Row[] = [
   // The staging routes: they answer 404 without the token, so a production-like caller cannot tell they exist.
   { method: "POST", pattern: "/__test/otp", path: "/__test/otp", auth: "none", anonymous: 404 },
   { method: "POST", pattern: "/__test/clock", path: "/__test/clock", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/limits", path: "/__test/limits", auth: "none", anonymous: 404 },
 ];
 
 const errorOf = async (response: Response) => errorBodySchema.parse(await response.json()).error;

@@ -94,3 +94,8 @@ export function isPhoneBlocked(db: Database, pepper: string, phone: string, now:
       .get(rateKey(pepper, "notrequested", phone), epoch) !== null
   );
 }
+
+/** Every limit and "I didn't request this code" block starts again. Only the staging test route calls it. */
+export function clearLimits(db: Database): void {
+  db.query("DELETE FROM rate_bucket").run();
+}

@@ -4,6 +4,7 @@ import { normalizePhone } from "../../social/model/phone.js";
 import type { Route } from "../context.js";
 import { invalidRequest, notFound } from "../errors.js";
 import { ok, parseBody } from "../http.js";
+import { clearLimits } from "../rateLimit.js";
 import { runTickerPass } from "../ticker.js";
 import type { FakeOtpSender } from "../vendors/otpSender.js";
 
@@ -35,8 +36,8 @@ function tokenMatches(given: string | null, expected: string): boolean {
 }
 
 /**
- * Routes for the end-to-end tests on a staging server: read the last sign-in code for a number (no WhatsApp in staging) and move
- * the server's clock. They exist only outside production, only with `STAGING_TEST_TOKEN` set, and answer 404 without it.
+ * Routes for the end-to-end tests on a staging server: read the last sign-in code for a number (no WhatsApp in staging), move
+ * the server's clock and empty the rate limits. They exist only outside production, only with `STAGING_TEST_TOKEN` set, and answer 404 without it.
  * `appRoutes` leaves them out of the route table in production, so there is nothing to find.
  */
 export const testOnlyRoutes: Route[] = [
@@ -71,6 +72,19 @@ export const testOnlyRoutes: Route[] = [
       if (body.advanceMs !== undefined) app.adjustClock.advance(body.advanceMs);
       if (body.tick) await runTickerPass(app, "test-clock");
       return ok({ now: app.adjustClock().toISOString() });
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/__test/limits",
+    auth: "none",
+    // The device job runs the flows a second time on the same server when the first run fails, and the sign-in flows would then
+    // hit the per phone limit. Each run starts by emptying the limits.
+    handler: async ({ app, request }) => {
+      const token = app.config.stagingTestToken;
+      if (token === null || !tokenMatches(request.headers.get(TEST_TOKEN_HEADER), token)) throw notFound();
+      clearLimits(app.db);
+      return ok({});
     },
   },
 ];
