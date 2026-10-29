@@ -116,6 +116,14 @@ test("the operator routes act for the operator and the other members, on the ser
     };
     const show = "seed-show-t2d";
 
+    // The plan route names the seeded live group's plan for a push link, and refuses a member with no plan on the show.
+    const meet = await operator("plan", { phone: phone("0114"), eventId: "seed-show-meet-live" });
+    expect(meet.status).toBe(200);
+    const lata = { authorization: `Bearer ${await signIn(phone("0114"))}` };
+    const plan = (await (await fetch(`${api}/plans/${meet.body.planId}`, { headers: lata })).json()) as { state: string };
+    expect(plan.state).toBe("meet_card_live");
+    expect((await operator("plan", { phone: phone("0104"), eventId: "seed-show-meet-live" })).status).toBe(404);
+
     // A handle in review is turned down with a reason and then accepted, as the profile-check flow does.
     const asha = { authorization: `Bearer ${await signIn(phone("0102"))}` };
     const handle = async () =>

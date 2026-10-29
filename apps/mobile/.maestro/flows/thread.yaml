@@ -1,24 +1,16 @@
-# The group chat, from the meet card. Signs in as the seeded member whose group is live (the seed's meet_card_live state), opens the
-# card the way the "Meet your group" push does, and goes in through the Group chat row. Another member of the group speaks through the
-# operator's `say` route, and the flow checks it arrives on the 5 second poll, then writes a line and sends a quick chip. A long
+# The group chat, from the meet card. Signs in as a member of the seed's live group (scripts/seed-staging.ts, Lata), opens the card
+# the way the "Meet your group" push does, and goes in through the Group chat row. Another member of the group (Manu) speaks through
+# the operator's `say` route, and the flow checks it arrives on the 5 second poll, then writes a line and sends a quick chip. A long
 # press on the other member's line offers Report and opens the report form.
-#
-# Needs, and has not been run against (the same as loop-meet):
-#  - The seed holding the group rows for the meet_card_live member and a second member in the same group (SPEAKER, Esha by default).
-#    M3 adds them; PLAN_ID is the member's plan and EVENT_ID is the show the group is for.
-#  - The thread is open from T-3h to T+24h of the show. The server's clock is moved with scripts/clock.js; the phone decides the
-#    window for the waiting state too, so on a CI emulator set its date first (see loop-meet).
-# config.yaml leaves it out of the CI run (excludeTags) until the seed rows exist; run it by path.
+# The thread is open from T-3h to T+24h of the show; config.yaml runs this flow before any flow moves the server's clock.
 appId: com.turnout.app.e2e
 name: thread
 tags:
   - thread
-  - needs-group-seed
 env:
-  MEMBER: "+12025550107"
-  SPEAKER: "+12025550106"
+  MEMBER: "+12025550114"
+  SPEAKER: "+12025550115"
   EVENT_ID: seed-show-meet-live
-  PLAN_ID: plan-meet-live
 ---
 - runFlow:
     file: ../subflows/sign-in-seed.yaml
@@ -28,10 +20,22 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 - launchApp:
     clearState: false
+# The plan's id comes from the server: the seed builds the plan with a fresh id on every run.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: plan
+      PHONE: ${MEMBER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
 - runFlow:
     file: ../subflows/open-link-to.yaml
     env:
-      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${output.planId}
       SCREEN: meet
 
 # The card has a way into the chat.

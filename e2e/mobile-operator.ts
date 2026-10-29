@@ -11,6 +11,7 @@
  *   POST /operator/withdraw  { phone, eventId }                                            the member's live plan ends as cancelled
  *   POST /operator/say       { phone, eventId, text }                                      the member posts to their group's thread
  *   POST /operator/after     { eventId }                                                   the clock moves to an hour past the morning after the show, then one ticker pass
+ *   POST /operator/plan      { phone, eventId }                                            answers the id of the member's plan on the show, for a push link
  *
  * The time they act at is the server's own clock (`POST /__test/clock` moves it), so a leaver after the lock is a leaver after the lock.
  */
@@ -42,6 +43,7 @@ const bodies = {
   withdraw: z.strictObject({ phone, eventId: z.string() }),
   say: z.strictObject({ phone, eventId: z.string(), text: z.string().trim().min(1).max(500) }),
   after: z.strictObject({ eventId: z.string() }),
+  plan: z.strictObject({ phone, eventId: z.string() }),
 };
 
 /** Every route's body, with the fields a route does not take left out of its own check. */
@@ -146,6 +148,15 @@ async function perform(
     // A fresh client id each time: the flow means every call to be a new message.
     const posted = postMessage(db, plan.group_id, id, { body: body.text, clientId: crypto.randomUUID() }, now);
     return posted.ok ? { ok: true, messageId: posted.message.id } : refuse(409, `the thread refused the message: ${posted.error}`);
+  }
+  if (name === "plan") {
+    const id = memberId(db, body.phone);
+    const plan = db
+      .query("SELECT id FROM plan WHERE member_id = ? AND event_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(id, body.eventId) as {
+      id: string;
+    } | null;
+    return plan === null ? refuse(404, `no plan for this member on ${body.eventId}`) : { ok: true, planId: plan.id };
   }
   if (name === "crowd") {
     for (const number of body.phones as string[]) {
