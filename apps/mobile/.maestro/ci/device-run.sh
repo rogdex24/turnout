@@ -42,10 +42,43 @@ else
   xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 fi
 
+# The job uploads ~/.maestro/tests when it fails, so each run writes its screenshots and view tree there.
+debug="$HOME/.maestro/tests"
+
 echo "::group::flows"
 # One pass, with no re-run inside the job. Many flows change the seeded members, plans and groups, so a second pass on the same
 # server checks different data. A flaky device job is re-run whole, which starts a fresh server.
-maestro test -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here"
+# The one exception is a device drop: the Android emulator has gone "device offline" mid run, and the flow running then fails at
+# once. After a reconnect the run goes on from that flow, so each flow still runs to the end once. A failure that is not a
+# device drop, or a second drop, fails the job.
+flows_out="$debug/flows"
+resume_config="$here/resume-config.yaml"
+dropped() {
+  find "$flows_out" -path "*/$1/*" -name maestro.log -exec grep -qE 'device offline|DeviceServerDiedException' {} + 2> /dev/null
+}
+mkdir -p "$flows_out"
+if ! maestro test --test-output-dir "$flows_out" -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here" < /dev/null |
+  tee "$flows_out/summary.txt"; then
+  failed="$(sed -n 's/^\[Failed\] \([a-z0-9-]*\) .*/\1/p' "$flows_out/summary.txt" | head -n 1)"
+  if [ "$platform" != android ] || [ -z "$failed" ] || ! dropped "$failed"; then exit 1; fi
+  echo "::warning::flows: the device dropped during $failed, it is reconnected and the run goes on from $failed"
+  rest="$(sed -n '/^  flowsOrder:$/,$p' "$here/config.yaml" | sed -n 's/^    - //p' | sed -n "/^$failed\$/,\$p")"
+  {
+    echo "# Written by ci/device-run.sh to go on after a device drop; deleted when the run ends."
+    echo "flows:"
+    while read -r flow; do echo "  - flows/$flow.yaml"; done <<< "$rest"
+    echo "executionOrder:"
+    echo "  continueOnFailure: false"
+    echo "  flowsOrder:"
+    while read -r flow; do echo "    - $flow"; done <<< "$rest"
+  } > "$resume_config"
+  wait_android
+  status=0
+  maestro test --config "$resume_config" --test-output-dir "$flows_out-resume" -e "SERVER_URL=$SERVER_URL" \
+    -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here" < /dev/null || status=$?
+  rm -f "$resume_config"
+  [ "$status" -eq 0 ] || exit "$status"
+fi
 echo "::endgroup::"
 
 echo "::group::visual capture"
@@ -69,9 +102,6 @@ write_story_flow() {
   } > "$batch/$folder.yaml"
   grep -q "^- takeScreenshot: $folder\$" "$batch/$folder.yaml"
 }
-# The job uploads ~/.maestro/tests when it fails, so each run writes its screenshots and view tree there.
-debug="$HOME/.maestro/tests"
-
 mkdir -p "$SHOT_DIR"
 rm -rf "$batch"
 mkdir -p "$batch"
