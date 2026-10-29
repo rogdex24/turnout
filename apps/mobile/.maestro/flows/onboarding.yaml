@@ -80,7 +80,8 @@ env:
 - tapOn:
     id: first-name
 - inputText: "Ananya"
-- hideKeyboard
+# hideKeyboard fails on some iOS keyboards. A single-line field blurs on submit, so the return key closes the keyboard instead.
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       id: gender-woman
@@ -112,7 +113,7 @@ env:
 - tapOn:
     id: handle
 - inputText: "https://www.instagram.com/ananya.k/"
-- hideKeyboard
+- pressKey: Enter
 - scrollUntilVisible:
     element: "So we can check you're a real person. Others in your group never see it."
     direction: DOWN

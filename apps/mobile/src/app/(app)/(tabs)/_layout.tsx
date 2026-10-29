@@ -36,7 +36,8 @@ export default function TabsLayout() {
       <NativeTabs.Trigger name="plans">
         <NativeTabs.Trigger.Icon sf={{ default: "calendar.badge.checkmark", selected: "calendar.badge.checkmark" }} md="event_available" />
         <NativeTabs.Trigger.Label>{nav.tabs.plans}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Badge hidden={waiting === 0}>{String(waiting)}</NativeTabs.Trigger.Badge>
+        {/* expo-router shows any child as the badge text and ignores hidden then, so a zero count renders no badge at all. */}
+        {waiting > 0 ? <NativeTabs.Trigger.Badge>{String(waiting)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="you">
         <NativeTabs.Trigger.Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} md="account_circle" />
