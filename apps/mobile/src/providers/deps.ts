@@ -4,7 +4,7 @@ import { createSession, revokeOnServer, type Session } from "../api/auth";
 import { type ApiClient, createApiClient, fetchTransport, type Transport } from "../api/client";
 import { type Connectivity, createConnectivity } from "../api/connectivity";
 import { registerCheckin } from "../api/groups";
-import { removeDeviceOnSignOut } from "../api/notifications";
+import { forgetDevice, removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
@@ -66,6 +66,9 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
 
   const persister = createCachePersister(cacheStore, { buster: () => cacheBuster(appVersion, session.getState().userId) });
   session.onSignedOut(() => {
+    // A session refused at refresh ends with no token to call the server, so the stored device goes here too; the next person on
+    // this phone registers it again.
+    forgetDevice(prefs);
     queryClient.clear();
     persister.removeClient();
     localFlags.forgetNotice();
