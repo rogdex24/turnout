@@ -21,11 +21,24 @@ env:
       SERVER_URL: ${SERVER_URL}
       TEST_TOKEN: ${TEST_TOKEN}
 
-# The location permission is granted up front, so the card goes straight to the walk line instead of the system dialog.
-- launchApp:
-    clearState: false
-    permissions:
-      location: allow
+# The location permission is granted up front, so the card goes straight to the walk line instead of the system dialog. iOS refuses
+# "allow" for location and wants a level, so each platform gets its own value.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: false
+          permissions:
+            location: allow
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          clearState: false
+          permissions:
+            location: inuse
 
 # The plan's id and its meet card notice come from the server: the seed makes both with fresh ids on every run, and the app reads
 # the group from the notice, so a made-up notice id opens the plan instead of the card.

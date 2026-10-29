@@ -70,6 +70,12 @@ env:
 # Pick the person and what happened, add a line, and send.
 - tapOn: ${SUBJECT}
 - tapOn: "Made me feel unsafe"
+# At the real type sizes the details field is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: report-details
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: report-details
 - inputText: "Kept messaging me after I said no"

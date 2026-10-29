@@ -34,11 +34,22 @@ env:
 - assertVisible: "Delete your account"
 - assertVisible:
     id: delete-erased
+# At the real type sizes this is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: delete-kept
+    direction: DOWN
+    centerElement: true
 - assertVisible:
     id: delete-kept
 - assertVisible: ".*only if the account was banned.*"
 
 # Keeping the account is one tap and changes nothing.
+- scrollUntilVisible:
+    element:
+      id: delete-continue
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: delete-continue
 - extendedWaitUntil:
@@ -60,6 +71,11 @@ env:
     visible:
       id: settings-delete-account
     timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: delete-continue
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: delete-continue
 - tapOn:

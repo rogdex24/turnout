@@ -73,7 +73,16 @@ env:
 - assertVisible: "Enter your first name."
 - assertVisible: "Choose one."
 - assertVisible: "Add a photo of your face to continue."
-- assertVisible: "Add your Instagram or LinkedIn."
+# At the real type sizes the form is longer than a small screen, so the last error line is below the fold.
+- scrollUntilVisible:
+    element: "Add your Instagram or LinkedIn."
+    direction: DOWN
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: first-name
+    direction: UP
+    centerElement: true
 
 # The women-only switch appears for women and goes away for men. The error lines make the form longer than a small screen, and the
 # keyboard covers the lower half, so the flow closes the keyboard and scrolls to each control before it uses it.
