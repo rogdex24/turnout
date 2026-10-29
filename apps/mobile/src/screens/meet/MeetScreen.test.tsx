@@ -1,9 +1,19 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
-import { groupBeforeRevealFixture, groupFixture, MEET_AT, MEET_CONTEXT, MEMBERS, planFixture, SHOW_STARTS_AT } from "@/api/groupFixtures";
+import {
+  doneGroupFixture,
+  groupBeforeRevealFixture,
+  groupFixture,
+  MEET_AT,
+  MEET_CONTEXT,
+  MEMBERS,
+  planFixture,
+  SHOW_STARTS_AT,
+} from "@/api/groupFixtures";
 import { nativeLocation } from "@/api/locationNative";
 import { showDetailFixture } from "@/api/showFixtures";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
+import { after } from "@/copy/after";
 import { meet as copy } from "@/copy/meet";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
@@ -48,7 +58,7 @@ const routes = (over: Record<string, RouteReply | RouteReply[]> = {}): Record<st
 });
 
 async function open(over: Record<string, RouteReply | RouteReply[]> = {}) {
-  const props = { onBack: jest.fn(), onOpenShow: jest.fn(), onLeave: jest.fn(), onClosed: jest.fn() };
+  const props = { onBack: jest.fn(), onOpenShow: jest.fn(), onLeave: jest.fn(), onClosed: jest.fn(), onOpenAfter: jest.fn() };
   const app = await createTestApp({ me: meFixture({ handle: { state: "approved" } }), welcomeSeen: true, routes: routes(over) });
   await render(
     <AppProviders deps={app.deps}>
@@ -94,6 +104,13 @@ describe("MeetScreen", () => {
     clock.mockReturnValue(Date.parse(SHOW_STARTS_AT) + 25 * 3_600_000);
     await open();
     expect(await screen.findByText(copy.closed.title)).toBeOnTheScreen();
+  });
+
+  it("leads the closed card to the after-the-show screen once the group is done", async () => {
+    clock.mockReturnValue(Date.parse(SHOW_STARTS_AT) + 25 * 3_600_000);
+    const { onOpenAfter } = await open({ "GET /groups/g1": json(200, doneGroupFixture()) });
+    await fireEvent.press(await screen.findByText(after.open));
+    expect(onOpenAfter).toHaveBeenCalled();
   });
 
   describe("I'm here", () => {

@@ -1,6 +1,6 @@
 # A group that loses a person after it locks keeps going with three. Dev's group of four locks when the server's clock passes T-24h,
 # Gita leaves, and the plan page says the group is smaller than usual and still going ahead. The count drops from 3 to 2 others and
-# no name is shown. This moves the server's clock another 22 hours, so it runs last. Written for CI; it has not run on a device yet.
+# no name is shown. This moves the server's clock another 22 hours, so it runs late (after-show follows it). Written for CI; it has not run on a device yet.
 appId: com.turnout.app.e2e
 name: group-shrinks
 tags:

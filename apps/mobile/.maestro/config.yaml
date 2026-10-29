@@ -22,3 +22,4 @@ executionOrder:
     - loop-group
     - loop-no-group
     - group-shrinks
+    - after-show

@@ -26,6 +26,8 @@ export interface PlanScreenProps {
   onAddTicket: () => void;
   /** Opens the meet card of this group (A15's page). */
   onOpenMeetCard: (groupId: string) => void;
+  /** Opens the after-the-show screen of this group (A20). */
+  onOpenAfter: (groupId: string) => void;
   onLeave: () => void;
   onFindShow: () => void;
   onChangeHandle: () => void;
@@ -37,7 +39,17 @@ export interface PlanScreenProps {
  * One plan on live data. The plan is read again every minute, so a ticket the operator has looked at or a group that has formed shows
  * up without a pull. The group is asked for only while it is confirmed or live, and only its size and times are kept (`groupFacts`).
  */
-export function PlanScreen({ planId, onBack, onAddTicket, onOpenMeetCard, onLeave, onFindShow, onChangeHandle, onPlans }: PlanScreenProps) {
+export function PlanScreen({
+  planId,
+  onBack,
+  onAddTicket,
+  onOpenMeetCard,
+  onOpenAfter,
+  onLeave,
+  onFindShow,
+  onChangeHandle,
+  onPlans,
+}: PlanScreenProps) {
   const api = useApi();
   const { prefs, connectivity } = useDeps();
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
@@ -89,6 +101,7 @@ export function PlanScreen({ planId, onBack, onAddTicket, onOpenMeetCard, onLeav
       onBack={onBack}
       onAddTicket={onAddTicket}
       onOpenMeetCard={() => data.group && onOpenMeetCard(data.group.id)}
+      onOpenAfter={() => data.group && onOpenAfter(data.group.id)}
       onLeave={onLeave}
       onFindShow={onFindShow}
       onChangeHandle={onChangeHandle}

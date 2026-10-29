@@ -38,6 +38,7 @@ async function open(
     onBack: jest.fn(),
     onAddTicket: jest.fn(),
     onOpenMeetCard: jest.fn(),
+    onOpenAfter: jest.fn(),
     onLeave: jest.fn(),
     onFindShow: jest.fn(),
     onChangeHandle: jest.fn(),
@@ -187,6 +188,12 @@ describe("PlanScreen", () => {
     it("says how many the person went with when done", async () => {
       await open(PLANS.done);
       expect(await screen.findByText(copy.done.withGroup(4))).toBeOnTheScreen();
+    });
+
+    it("opens the after-the-show screen of its group when done", async () => {
+      const app = await open(PLANS.done);
+      await fireEvent.press(await screen.findByTestId("plan-open-after"));
+      expect(app.onOpenAfter).toHaveBeenCalledWith("group-1");
     });
 
     it("opens the leave sheet from the last row", async () => {

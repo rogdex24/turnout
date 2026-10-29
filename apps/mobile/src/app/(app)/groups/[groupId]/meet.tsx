@@ -14,6 +14,7 @@ export default function Meet() {
       onOpenShow={(eventId) => router.push({ pathname: "/show/[publicId]", params: { publicId: eventId } })}
       onLeave={(planId) => router.push({ pathname: "/plans/[planId]/cancel", params: { planId } })}
       onClosed={() => router.replace("/plans")}
+      onOpenAfter={() => router.push(`/groups/${groupId}/after`)}
     />
   );
 }

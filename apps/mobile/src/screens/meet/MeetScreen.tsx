@@ -33,6 +33,8 @@ export interface MeetScreenProps {
   onLeave: (planId: string) => void;
   /** From the closed card back to the plans. */
   onClosed: () => void;
+  /** From the closed card of a group that is done to the after-the-show screen (A20). */
+  onOpenAfter: () => void;
 }
 
 function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
@@ -49,7 +51,7 @@ function open(url: string) {
  * The meet card on live data. It opens from the group kept on disk, so a person with no signal still sees the cafe, the map pins and
  * the group. "I'm here" is sent with no body: where the phone is stays on the phone, and is only used for the walk line.
  */
-export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onClosed }: MeetScreenProps) {
+export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onClosed, onOpenAfter }: MeetScreenProps) {
   const api = useApi();
   const queryClient = useQueryClient();
   const { connectivity } = useDeps();
@@ -154,6 +156,7 @@ export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onCl
       onCall={() => open(EMERGENCY_URL)}
       onLeave={plan ? () => onLeave(plan.planId) : null}
       onClosed={onClosed}
+      onOpenAfter={group.data?.state === "done" ? onOpenAfter : null}
     />
   );
 }
