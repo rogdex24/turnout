@@ -27,6 +27,8 @@ export interface Session extends SessionPort {
   /** Reads the refresh token from the keychain. Call once at start. */
   load(): Promise<void>;
   signIn(pair: TokenPair): Promise<void>;
+  /** Ends the session on this phone only. For after the account was deleted, when the server has no session left to end. */
+  endLocal(): Promise<void>;
   /** Runs when the session ends for any reason (sign-out, a refresh the server refused), before the keychain is emptied. */
   onSignedOut(callback: () => void | Promise<void>): void;
 }
@@ -149,6 +151,7 @@ export function createSession({ secure, prefs, origin, transport, now = Date.now
       return refresh();
     },
     signOut: () => endSession({ revokeOnServer: true }),
+    endLocal: () => endSession({ revokeOnServer: false }),
   };
 }
 

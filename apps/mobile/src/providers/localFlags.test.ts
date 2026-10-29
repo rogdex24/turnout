@@ -27,12 +27,17 @@ describe("local flags", () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
-  test("forgetting the notice keeps the welcome cards seen", () => {
-    const flags = createLocalFlags(memoryKv());
+  test("refresh reads a store that was changed from outside and tells listeners", () => {
+    const prefs = memoryKv();
+    const flags = createLocalFlags(prefs);
     flags.markWelcomeSeen();
     flags.acceptNotice("2026-10-26");
-    flags.forgetNotice();
+    const listener = jest.fn();
+    flags.subscribe(listener);
+    prefs.remove(PREF_KEYS.acceptedNotice);
+    flags.refresh();
     expect(flags.getSnapshot()).toEqual({ welcomeSeen: true, acceptedNotice: null });
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   test("an unsubscribed listener hears nothing", () => {

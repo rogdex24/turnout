@@ -39,6 +39,9 @@ export interface TestAppOptions {
   routes?: Record<string, RouteReply | RouteReply[]>;
   now?: () => number;
   whatsappOtp?: WhatsAppOtp;
+  /** What sign-out does to the image cache and to telemetry, to be watched. */
+  clearImages?: () => Promise<void>;
+  stopTelemetry?: () => void;
 }
 
 export interface TestApp {
@@ -75,6 +78,8 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
     queryClient,
     now,
     whatsappOtp: options.whatsappOtp,
+    clearImages: options.clearImages,
+    stopTelemetry: options.stopTelemetry,
   });
   return { deps, queryClient, transport, prefs, secure };
 }

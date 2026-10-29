@@ -1,0 +1,140 @@
+# Deleting an account: the explain page (what goes, what stays), the question, the code on WhatsApp, and then Welcome. After a
+# relaunch the phone is back at Welcome, and the same number starts fresh at the profile form, with nothing of the old account.
+# Hari (+12025550109, the member whose show is over) has no other flow. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: delete-account
+tags:
+  - settings
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550109"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- tapOn: "You"
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: you-delete-account
+- tapOn:
+    id: you-delete-account
+- extendedWaitUntil:
+    visible:
+      id: settings-delete-account
+    timeout: 10000
+
+# Explain: what goes and what stays. The phone number is named once, as kept only if the account was banned.
+- assertVisible: "Delete your account"
+- assertVisible:
+    id: delete-erased
+- assertVisible:
+    id: delete-kept
+- assertVisible: ".*only if the account was banned.*"
+
+# Keeping the account is one tap and changes nothing.
+- tapOn:
+    id: delete-continue
+- extendedWaitUntil:
+    visible:
+      id: delete-confirm
+    timeout: 10000
+- assertVisible: ".*ending 0109.*"
+- tapOn:
+    id: delete-keep
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# Delete: the code goes to WhatsApp, a wrong code leaves the account, the right one deletes it.
+- tapOn:
+    id: you-delete-account
+- extendedWaitUntil:
+    visible:
+      id: settings-delete-account
+    timeout: 10000
+- tapOn:
+    id: delete-continue
+- tapOn:
+    id: delete-send
+- extendedWaitUntil:
+    visible:
+      id: delete-code
+    timeout: 15000
+- tapOn:
+    id: delete-code-field
+- inputText: "000000"
+- extendedWaitUntil:
+    visible: ".*That code isn't right.*"
+    timeout: 15000
+- assertVisible:
+    id: delete-code
+- runScript:
+    file: ../scripts/otp-code.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      PHONE: ${MEMBER}
+- tapOn:
+    id: delete-code-field
+- inputText: ${output.code}
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
+
+# Relaunch: still at Welcome, nothing of the old account on the phone.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
+
+# The same number starts fresh: a new member goes to the profile form, not to the shows.
+- tapOn:
+    id: welcome-skip
+- extendedWaitUntil:
+    visible:
+      id: notice
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible: "Loading the grievance officer's details"
+    timeout: 15000
+- tapOn:
+    id: agree
+- extendedWaitUntil:
+    visible:
+      id: sign-in
+    timeout: 10000
+- runFlow:
+    file: ../subflows/send-code.yaml
+    env:
+      PHONE: ${MEMBER}
+- extendedWaitUntil:
+    visible:
+      id: code
+    timeout: 10000
+- runScript:
+    file: ../scripts/otp-code.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      PHONE: ${MEMBER}
+- runFlow:
+    file: ../subflows/enter-code.yaml
+    env:
+      CODE: ${output.code}
+- extendedWaitUntil:
+    visible:
+      id: profile
+    timeout: 20000
+- assertNotVisible:
+    id: home

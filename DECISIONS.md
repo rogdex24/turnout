@@ -844,3 +844,24 @@ Where the build differs from the plan or fills a gap.
 10. **The Maestro flow `after-show.yaml` runs last** (after `group-shrinks`) because it moves the server's clock to an hour past 10:00 IST the morning after, through a new operator route `POST /operator/after { eventId }`. The clock only goes forward. The flow has not run on a device.
 
 Evidence. `src/ui/useBlockCapture.test.tsx`, `src/screens/after/*.test.tsx`, `src/model/notificationRoute.test.ts`, `src/api/notifications.test.ts`, `src/screens/plan/PlanScreen.test.tsx`, `src/screens/meet/MeetScreen.test.tsx`, `src/ui/components.test.tsx`. The `after` operator route was called against `e2e/mobile-server.ts` and moved the clock to 11:00 IST on the morning after the seeded show.
+
+## 2026-10-29: M4 app, A22 and A23 (settings, safety, deletion)
+
+Where the build differs from the plan or fills a gap.
+
+1. **One local wipe serves sign-out, a refused refresh and deletion** (`src/api/signOut.ts`). It stops telemetry, clears the query cache, the disk cache, MMKV and the image cache, and runs through `session.onSignedOut`. Ordinary sign-out keeps the welcome cards seen (the plan sends it to the notice screen); deletion clears them too, so the app starts at Welcome. `KeyValueStore.clearAll()` and `Session.endLocal()` exist for this: after `DELETE /me` every token is dead, so the session ends on the phone only and makes no sign-out call.
+2. **Delete account is one route with three steps** (explain, confirm, code), not three routes. Back steps back inside the route and leaves from the first step. "Keep my account" is on both later steps, worded as a neutral choice.
+3. **The data map is mirrored in `src/copy/deleteAccount.ts`.** The phone hash is named once, as kept only if the account was banned, and the consent record and reports as kept for one year under a number that does not name the person.
+4. **The group is told someone left** when a plan with a group is not over and the show is within 3 hours or already started (`groupWillBeTold`, the same window as the meet card). Before the reveal a withdrawal is quiet.
+5. **The privacy page shows the notice the app carries** (`NOTICE_PARAGRAPHS`), not the `GET /config` copy, so it opens offline and cannot differ from what was agreed. The version is the one on the account.
+6. **`how-matching-works.md` is mirrored in `src/content/howMatchingWorks.ts`,** because Metro does not bundle Markdown. `howMatchingWorks.test.ts` fails when the two drift.
+7. **The women-only switch saves at once** with the whole profile (`PATCH /me/profile` needs all three fields), through the same `saveSteps` and `runSave` the profile form uses, so the cached member follows the server. It is offered when `womenOnlyAvailable` is true (woman or non-binary). A refused save keeps the old value and says why in one line.
+8. **Grievance details count as "not set"** when the name or address says "not set", the email is on example.com, org or net, or the phone is in the +1 202 555 01xx range (`grievanceNotSet`), which are the server's dev and staging placeholders. Only the production variant fails the start-up check, and only on details that were read. A config that cannot be read (offline, a server error) never blocks start. Preview builds point at staging, which only has placeholders, so they show "Details not set" like development.
+9. **"Share usage data"** turns PostHog and Sentry off at once through `telemetry(prefs).setConsent`, and reads the saved choice when the page opens. The wipe removes the choice.
+10. **The blocked list is read only and in memory only** (`queryKeys.blocked()`, not persisted), because it holds first names.
+11. **The "Safety and 112" page is not built.** It is not in the A22 file list. The meet card keeps its Call 112 row.
+12. **Both Maestro flows are written for CI and have not run on a device.** `settings.yaml` uses Chitra and puts her women-only choice back; `delete-account.yaml` uses Hari, who no other flow signs in as.
+
+Why. Each keeps what the plan promises (a way out that is plain, nothing kept that the data map does not name, no guilt copy) and fills the gaps the contract left without a new package.
+
+Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/grievance.test.ts`, `src/content/howMatchingWorks.test.ts`, `src/screens/settings/*.test.tsx`, `src/screens/you/YouScreen.test.tsx` and `src/router.test.tsx`.

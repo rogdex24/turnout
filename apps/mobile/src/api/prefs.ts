@@ -3,6 +3,8 @@ export interface KeyValueStore {
   getString(key: string): string | undefined;
   set(key: string, value: string): void;
   remove(key: string): unknown;
+  /** Every key, for the wipe at sign-out and after deletion. */
+  clearAll(): void;
 }
 
 export const PREF_KEYS = {
@@ -22,6 +24,7 @@ export function memoryKv(): KeyValueStore {
     getString: (key) => map.get(key),
     set: (key, value) => void map.set(key, value),
     remove: (key) => map.delete(key),
+    clearAll: () => map.clear(),
   };
 }
 
