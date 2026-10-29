@@ -18,4 +18,6 @@ env:
     visible:
       id: welcome
     timeout: 30000
-- assertVisible: "Turnout"
+# iOS reads each welcome card as one element whose label leaves out the wordmark, so the flow looks for the first card, not the word Turnout.
+- assertVisible:
+    id: welcome-card-1
