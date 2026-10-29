@@ -169,7 +169,9 @@ describe("ShowScreen", () => {
 
   it("goes back from the back button", async () => {
     const { onBack } = await open();
-    await fireEvent.press(await screen.findByTestId("back"));
+    // The loading view has its own back button, which the loaded show replaces; press the one that stays.
+    await screen.findByTestId("show-ticket");
+    await fireEvent.press(screen.getByTestId("back"));
     expect(onBack).toHaveBeenCalled();
   });
 });

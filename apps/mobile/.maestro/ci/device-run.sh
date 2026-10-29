@@ -82,25 +82,33 @@ for theme in light dark; do
     "set_${platform}_theme" "$theme"
     "set_${platform}_text" "$text"
     out="$debug/visual-batch-$theme-$text"
-    mkdir -p "$out"
+    rerun="$out-rerun"
+    mkdir -p "$out" "$rerun"
     "wait_${platform}"
     maestro test --test-output-dir "$out" "$batch" < /dev/null ||
       echo "::warning::visual capture $theme-$text: a story failed in the batch run, it is captured again on its own"
-    # Most stories with no shot means the device stopped, not that a story failed. Forty single retries would then run into
-    # the job's time limit, so the job fails here with a clear message.
-    total=0
-    missing=0
-    while read -r folder; do
-      total=$((total + 1))
-      [ -n "$(find "$out" -type f -name "$folder.png" | head -n 1)" ] || missing=$((missing + 1))
-    done < <(jq -r '.[].folder' "$here/visual/stories.json")
-    if [ $((missing * 2)) -gt "$total" ]; then
-      echo "the $theme-$text batch left $missing of $total stories with no shot, so the device likely stopped" >&2
-      exit 1
-    fi
+    # Most stories with no shot means the device stopped, not that a story failed. A device that went offline mostly comes back
+    # after a reconnect, so the batch runs once more. Forty single retries would run into the job's time limit, so if the second
+    # batch also leaves most shots missing the job fails here with a clear message.
+    for pass in first second; do
+      total=0
+      missing=0
+      while read -r folder; do
+        total=$((total + 1))
+        [ -n "$(find "$out" "$rerun" -type f -name "$folder.png" | head -n 1)" ] || missing=$((missing + 1))
+      done < <(jq -r '.[].folder' "$here/visual/stories.json")
+      [ $((missing * 2)) -le "$total" ] && break
+      if [ "$pass" = second ]; then
+        echo "the $theme-$text batch left $missing of $total stories with no shot twice, so the device likely stopped" >&2
+        exit 1
+      fi
+      echo "::warning::visual capture $theme-$text: $missing of $total stories have no shot, the device is reconnected and the batch runs again"
+      "wait_${platform}"
+      maestro test --test-output-dir "$rerun" "$batch" < /dev/null || true
+    done
     jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
       mkdir -p "$SHOT_DIR/$folder"
-      shot="$(find "$out" -type f -name "$folder.png" | head -n 1)"
+      shot="$(find "$out" "$rerun" -type f -name "$folder.png" | head -n 1)"
       for attempt in 1 2; do
         [ -n "$shot" ] && break
         echo "::warning::visual capture $folder/$theme-$text: no shot yet, capture on its own (try $attempt of 2)"

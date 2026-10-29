@@ -105,12 +105,13 @@ describe("Maestro flows", () => {
     expect(text).not.toMatch(/^(\w+) \|\| \1$/m);
   });
 
-  // The capture writes one flow per story from capture-story.yaml and may run a story again; it never runs a flow from flows/.
+  // The capture writes one flow per story from capture-story.yaml. It may run the batch once more after a device drop and a
+  // story again on its own; it never runs a flow from flows/.
   test("the visual capture runs only the story flows it writes, again only one story at a time", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();
     const runs = [...text.matchAll(/^\s*maestro test (.*)$/gm)].map((m) => m[1] ?? "");
-    expect(runs).toHaveLength(3);
-    expect(runs.filter((run) => run.includes('"$batch" < /dev/null'))).toHaveLength(1);
+    expect(runs).toHaveLength(4);
+    expect(runs.filter((run) => run.includes('"$batch" < /dev/null'))).toHaveLength(2);
     expect(runs.filter((run) => run.includes('"$batch/$folder.yaml"'))).toHaveLength(1);
     const story = await Bun.file(`${root}/visual/capture-story.yaml`).text();
     expect(story).toMatch(/^appId: \S+$/m);

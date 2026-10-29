@@ -13,7 +13,8 @@ import { type ApiClient, buildUrl, type SessionPort, type Transport } from "./cl
 import { type KeyValueStore, PREF_KEYS } from "./prefs";
 import { SECRET_KEYS, type SecretStore } from "./secureStorage";
 
-export type SessionStatus = "loading" | "signed_out" | "signed_in";
+/** `signing_out` covers the wipe at sign-out: the tokens are gone but the phone still holds the member's data, so no screen may read or show it. */
+export type SessionStatus = "loading" | "signing_out" | "signed_out" | "signed_in";
 
 export interface SessionState {
   status: SessionStatus;
@@ -124,6 +125,8 @@ export function createSession({ secure, prefs, origin, transport, now = Date.now
     accessToken = null;
     refreshToken = null;
     accessExpiresAt = 0;
+    // Without this the member's queries refetch with no token while the wipe runs, and their failures show as an error screen.
+    set({ status: "signing_out", userId: null });
     try {
       // One callback that fails does not keep the others, the keychain or the state from ending.
       for (const callback of signedOutCallbacks) {
