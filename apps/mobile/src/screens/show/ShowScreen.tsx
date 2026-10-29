@@ -5,7 +5,7 @@ import { telemetry } from "@/analytics";
 import { groupsEnabled } from "@/api/features";
 import { memberShowQuery } from "@/api/plans";
 import { showDetailQuery } from "@/api/shows";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead } from "@/model/apiError";
 import { safeWebUrl } from "@/model/externalLink";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
@@ -45,13 +45,8 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
 
   let detail: ShowDetailState;
   if (query.data) detail = { status: "ready", show: query.data };
-  else if (query.isError)
-    detail =
-      isApiError(query.error) && query.error.kind === "not_found"
-        ? { status: "not_found" }
-        : { status: "error", kind: errorKind(query.error) };
-  else if (query.isPending && query.fetchStatus === "paused" && query.failureCount > 0) detail = { status: "error", kind: "offline" };
-  else detail = { status: "loading" };
+  else if (isApiError(query.error) && query.error.kind === "not_found") detail = { status: "not_found" };
+  else detail = pendingRead(query);
 
   return (
     <ShowView

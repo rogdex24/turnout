@@ -3,7 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import { groupsEnabled } from "@/api/features";
 import { plansListQuery } from "@/api/plans";
 import { areasQuery, showsListQuery } from "@/api/shows";
-import { errorKind } from "@/model/apiError";
+import { pendingRead } from "@/model/apiError";
 import { activePlan } from "@/model/plan";
 import { planStatus } from "@/model/planStatus";
 import { istShort } from "@/model/planTime";
@@ -41,15 +41,9 @@ export function HomeScreen({ onOpenShow, onOpenPlan, onChangeHandle }: HomeScree
   const shows = useInfiniteQuery(showsListQuery(api, area));
   const plans = useQuery({ ...plansListQuery(api), enabled: groupsEnabled() });
 
-  const stalledOffline = shows.isPending && shows.fetchStatus === "paused" && shows.failureCount > 0;
-  let list: HomeList;
-  if (shows.data) {
-    list = { status: "ready", items: listItems(dayGroups(mergePages(shows.data.pages), now)) };
-  } else if (shows.isError || stalledOffline) {
-    list = { status: "error", kind: stalledOffline ? "offline" : errorKind(shows.error) };
-  } else {
-    list = { status: "loading" };
-  }
+  const list: HomeList = shows.data
+    ? { status: "ready", items: listItems(dayGroups(mergePages(shows.data.pages), now)) }
+    : pendingRead(shows);
 
   let strip: ProfileCheckStripProps | null = null;
   if (me?.handle.state === "pending") strip = { state: "pending" };

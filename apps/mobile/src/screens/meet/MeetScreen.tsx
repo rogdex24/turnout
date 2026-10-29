@@ -8,7 +8,7 @@ import { queryKeys } from "@/api/keys";
 import { nativeLocation } from "@/api/locationNative";
 import { type Replayable, replayable } from "@/api/mutations";
 import { showsRealMap } from "@/api/variant";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead } from "@/model/apiError";
 import { locationLine, mapsUrl } from "@/model/meetCard";
 import { meetPhase, watchesLocation } from "@/model/meetWindow";
 import { toPoint } from "@/model/walk";
@@ -98,11 +98,7 @@ export function MeetScreen({
   if (group.isError && isApiError(group.error) && group.error.kind === "not_found") {
     state = { status: "closed" };
   } else if (group.data === undefined) {
-    const stalledOffline = group.isPending && group.fetchStatus === "paused" && group.failureCount > 0;
-    state =
-      group.isError || stalledOffline
-        ? { status: "error", kind: stalledOffline ? "offline" : errorKind(group.error) }
-        : { status: "loading" };
+    state = pendingRead(group);
   } else if (phase === "closed") {
     state = { status: "closed" };
   } else if (phase === "waiting" || revealed === null) {

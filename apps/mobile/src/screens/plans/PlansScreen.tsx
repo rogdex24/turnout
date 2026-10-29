@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { plansListQuery } from "@/api/plans";
-import { errorKind } from "@/model/apiError";
+import { pendingRead } from "@/model/apiError";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
 import { type PlansState, PlansView } from "./PlansView";
@@ -18,15 +18,7 @@ export function PlansScreen({ onOpenPlan, onFindShow }: PlansScreenProps) {
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
   const list = useQuery(plansListQuery(api));
 
-  const stalledOffline = list.fetchStatus === "paused" && list.failureCount > 0;
-  let state: PlansState;
-  if (list.data) {
-    state = { status: "ready", plans: list.data.plans };
-  } else if (list.isError || stalledOffline) {
-    state = { status: "error", kind: stalledOffline ? "offline" : errorKind(list.error) };
-  } else {
-    state = { status: "loading" };
-  }
+  const state: PlansState = list.data ? { status: "ready", plans: list.data.plans } : pendingRead(list);
 
   return (
     <PlansView

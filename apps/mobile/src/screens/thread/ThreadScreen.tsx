@@ -5,7 +5,7 @@ import { groupQuery, isRevealed } from "@/api/groups";
 import { type Replayable, replayable } from "@/api/mutations";
 import { type ThreadSendVariables, threadQuery, threadSendMutationKey } from "@/api/thread";
 import { thread as copy } from "@/copy/thread";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead, stalledOffline } from "@/model/apiError";
 import { istShort } from "@/model/planTime";
 import { type PendingMessage, threadClosesAt, threadItems, threadPhase } from "@/model/thread";
 import { useDeps } from "@/providers/AppProviders";
@@ -96,8 +96,6 @@ export function ThreadScreen({ groupId, focused, onBack, onReport, onClosed }: T
 
   const revealed = group.data && isRevealed(group.data) ? group.data : null;
 
-  const stalledOffline = (query: { isPending: boolean; fetchStatus: string; failureCount: number }) =>
-    query.isPending && query.fetchStatus === "paused" && query.failureCount > 0;
   const messagesGone = messages.isError && notFound(messages.error);
 
   let state: ThreadViewState;
@@ -106,9 +104,8 @@ export function ThreadScreen({ groupId, focused, onBack, onReport, onClosed }: T
   } else if (phase === "gone" || (messages.data === undefined && messagesGone)) {
     state = { status: "closed" };
   } else if (messages.data === undefined) {
-    if (messages.isError) state = { status: "error", kind: errorKind(messages.error) };
-    else if (stalledOffline(messages) || (!groupAnswered && stalledOffline(group))) state = { status: "error", kind: "offline" };
-    else state = { status: "loading" };
+    // The chat read waits for the group read, so a group read stalled offline means offline too.
+    state = !messages.isError && !groupAnswered && stalledOffline(group) ? { status: "error", kind: "offline" } : pendingRead(messages);
   } else {
     // A chat the server no longer has (the group was called off) stays readable from what the phone holds, and takes nothing new.
     const readOnly = messages.data.thread === "read_only" || phase === "read_only" || messagesGone;

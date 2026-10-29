@@ -63,3 +63,18 @@ export function errorKind(error: unknown): "offline" | "server" | "rate_limited"
   if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
   return "other";
 }
+
+/** The parts of a TanStack query result that `stalledOffline` and `pendingRead` read. */
+export type ReadProgress = { isPending: boolean; isError: boolean; error: unknown; fetchStatus: string; failureCount: number };
+
+/** A first read that failed once and is now paused for the network: the screen says offline, not loading forever. */
+export function stalledOffline(read: Omit<ReadProgress, "isError" | "error">): boolean {
+  return read.isPending && read.fetchStatus === "paused" && read.failureCount > 0;
+}
+
+/** What a screen shows while a read has no data yet: an error state with its kind, or loading. */
+export function pendingRead(read: ReadProgress): { status: "loading" } | { status: "error"; kind: ReturnType<typeof errorKind> } {
+  if (read.isError) return { status: "error", kind: errorKind(read.error) };
+  if (stalledOffline(read)) return { status: "error", kind: "offline" };
+  return { status: "loading" };
+}
