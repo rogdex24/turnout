@@ -39,6 +39,7 @@ export const ERROR_CODES = [
   "invalid_code",
   "unknown_notice_version",
   "account_suspended",
+  "forbidden",
   // Profile, handle and photo.
   "women_only",
   "bad_handle",

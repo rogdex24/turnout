@@ -1,11 +1,14 @@
 /** Response shapes come straight from the API functions, so the two cannot drift. */
 import type {
   createMute,
+  getAccount,
   getEvent,
   getRun,
   listEvents,
+  listFailedNotices,
   listHandles,
   listMutes,
+  listReports,
   listRuns,
   listSources,
   listTickets,
@@ -40,3 +43,8 @@ export type ShowsResponse = ReturnType<typeof listUpcomingShows>;
 export type ShowItem = ShowsResponse["shows"][number];
 export type HandlesResponse = ReturnType<typeof listHandles>;
 export type HandleItem = HandlesResponse["handles"][number];
+
+export type ReportsResponse = ReturnType<typeof listReports>;
+export type ReportCard = ReportsResponse["reports"][number];
+export type AccountResponse = ReturnType<typeof getAccount>;
+export type NoticesResponse = ReturnType<typeof listFailedNotices>;

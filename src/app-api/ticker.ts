@@ -1,4 +1,5 @@
 import { NOTICE_PUSH_TEXT } from "@turnout/contract/app/notices";
+import { closeFeedback } from "../social/feedback.js";
 import {
   expireReceipts,
   type PushResult,
@@ -118,6 +119,7 @@ export async function runTickerPass(app: AppContext, holder: string): Promise<Pa
         }
       },
     ],
+    ["feedback", () => closeFeedback(app.db, app.config.banPepper, app.now(), t)],
     ["push", () => sendPushes(app, app.now())],
     ["receipts", () => readReceipts(app, app.now())],
     ["ticket-files", () => deleteTicketFiles(app, app.now())],

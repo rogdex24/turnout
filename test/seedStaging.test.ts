@@ -4,6 +4,7 @@ import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { SEED_MEMBERS, SEED_PHONES, SEED_SHOW_IDS, type SeedState, seedStaging, UNDELIVERABLE_PHONE } from "../scripts/seed-staging.js";
 import { createAppContext } from "../src/app-api/index.js";
 import type { FakeOtpSender } from "../src/app-api/vendors/otpSender.js";
+import { migrate } from "../src/migrate.js";
 import { openDb } from "../src/utils/openDb.js";
 import { siteResponse } from "../src/web/index.js";
 import { type TestApp, testApp } from "./appHelpers.js";
@@ -169,8 +170,10 @@ describe("the staging seed", () => {
   });
 
   test("a staging server marks the seed's undeliverable number from FAKE_UNDELIVERABLE_PHONES", async () => {
+    const db = openDb(":memory:");
+    migrate(db);
     const app = await createAppContext({
-      db: openDb(":memory:"),
+      db,
       env: { TURNOUT_ENV: "staging", FAKE_UNDELIVERABLE_PHONES: UNDELIVERABLE_PHONE, TEST_PHONE_ALLOWLIST: SEED_PHONES.join(",") },
     });
     const sender = app.sender as FakeOtpSender;

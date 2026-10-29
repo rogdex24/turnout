@@ -44,6 +44,10 @@ export type Cafe = z.infer<typeof cafeSchema>;
 export const groupRevealedSchema = groupBeforeRevealSchema.extend({
   cafe: cafeSchema,
   members: z.array(groupMemberSchema),
+  /** Once the group is done: when the 72 hour window for "I didn't feel comfortable" closes. */
+  feedbackOpenUntil: z.string().optional(),
+  /** Once the group is done: the refs the caller has already marked, so the app can show them as done. Never sent to anyone else. */
+  downvotedRefs: z.array(z.string()).optional(),
 });
 export type GroupRevealed = z.infer<typeof groupRevealedSchema>;
 

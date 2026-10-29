@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
 import type { Gender } from "@turnout/contract/profile";
 import { appRoutes } from "../src/app-api/routes/index.js";
+import { milestones } from "../src/social/model/schedule.js";
 import { tick } from "../src/social/tick.js";
 import { PHONES, type TestApp, testApp } from "./appHelpers.js";
 import { memberSession, type Session } from "./helpers/appFixture.js";
@@ -39,6 +40,9 @@ const ROWS: Row[] = [
   { method: "PUT", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/me/photo", path: "/me/photo", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/me/consent", path: "/me/consent", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/reports", path: "/reports", auth: "member", anonymous: 401 },
+  { method: "POST", pattern: "/me/delete-code", path: "/me/delete-code", auth: "member", anonymous: 401 },
+  { method: "DELETE", pattern: "/me", path: "/me", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/shows/:publicId", path: "/shows/show-a", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/plans", path: "/plans", auth: "member", anonymous: 401 },
@@ -66,6 +70,28 @@ const ROWS: Row[] = [
     auth: "member",
     anonymous: 401,
   },
+  {
+    method: "GET",
+    pattern: "/groups/:groupId/messages",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/messages",
+    auth: "member",
+    anonymous: 401,
+  },
+  {
+    method: "POST",
+    pattern: "/groups/:groupId/messages",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/messages",
+    auth: "member",
+    anonymous: 401,
+  },
+  {
+    method: "POST",
+    pattern: "/groups/:groupId/downvotes",
+    path: "/groups/01hzzzzzzzzzzzzzzzzzzzzzzz/downvotes",
+    auth: "member",
+    anonymous: 401,
+  },
+  { method: "GET", pattern: "/me/blocked", path: "/me/blocked", auth: "member", anonymous: 401 },
   { method: "GET", pattern: "/notices", path: "/notices", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/notices/read", path: "/notices/read", auth: "member", anonymous: 401 },
   { method: "POST", pattern: "/devices", path: "/devices", auth: "member", anonymous: 401 },
@@ -121,6 +147,7 @@ describe("authorization matrix, anonymous and bad credentials", () => {
     t.db.query("UPDATE member SET status = 'suspended' WHERE phone_e164 = ?").run(PHONES[2] as string);
     for (const row of memberRows) {
       if (row.pattern === "/auth/sign-out") continue; // signing out must keep working for anyone holding a session
+      if (row.pattern === "/me/delete-code" || (row.method === "DELETE" && row.pattern === "/me")) continue; // a suspended member may erase themselves
       const response = await send(t, row, accessToken);
       expect([row.method, row.pattern, response.status, (await errorOf(response)).code]).toEqual([
         row.method,
@@ -390,5 +417,158 @@ describe("authorization matrix, people and groups", () => {
       const mineIds = (w.t.db.query("SELECT id FROM notice WHERE member_id = ?").all(who.memberId) as { id: string }[]).map((n) => n.id);
       expect(notices.notices.map((n) => n.id).sort()).toEqual([...mineIds].sort());
     }
+  });
+
+  test("the thread: a caller outside the group gets the one 404 at any time, and a co-member only from T-3h", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    const outsiders = [w.b[0] as Session, w.y[0] as Session, w.waiting];
+    const note = { body: "hello", clientId: "client-authz-1" };
+    for (const [offset, mineStatus] of [
+      [-3 * HOUR - MINUTE, 404],
+      [-3 * HOUR, 200],
+    ] as const) {
+      await w.at(offset);
+      expect([offset, await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)]).toEqual([offset, mineStatus]);
+      for (const who of outsiders) {
+        const read = await w.t.call("GET", `/groups/${w.groupA}/messages`, { token: who.token });
+        const write = await w.t.call("POST", `/groups/${w.groupA}/messages`, { token: who.token, body: note });
+        expect([read.status, write.status]).toEqual([404, 404]);
+        expect(await read.json()).toEqual({ error: { code: "not_found", message: "not found" } });
+      }
+    }
+    expect(w.t.db.query("SELECT count(*) AS n FROM message").get()).toEqual({ n: 0 });
+    // a member of another group posts into theirs only
+    const own = await w.t.call("POST", `/groups/${w.groupB}/messages`, { token: (w.b[0] as Session).token, body: note });
+    expect(own.status).toBe(201);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, w.b[0] as Session)).toBe(404);
+  });
+
+  test("a suspended member is 403 on the thread and a banned one 401", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(-3 * HOUR, me);
+    w.t.db.query("UPDATE member SET status = 'suspended' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)).toBe(403);
+    expect(await statusOf(w.t, "POST", `/groups/${w.groupA}/messages`, me)).toBe(403);
+    w.t.db.query("UPDATE member SET status = 'banned' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", `/groups/${w.groupA}/messages`, me)).toBe(401);
+  });
+});
+
+describe("authorization matrix, feedback", () => {
+  const downvoteAs = (w: World, who: Session, groupId: string, memberRef: string) =>
+    w.t.call("POST", `/groups/${groupId}/downvotes`, { token: who.token, body: { memberRef } });
+
+  test("only a current member of a done group can mark someone in it, and a ref from another group is the one 404", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR);
+    const target = w.refOf(w.groupA, w.a[1] as Session);
+    for (const who of [w.b[0] as Session, w.y[0] as Session, w.waiting]) {
+      expect((await downvoteAs(w, who, w.groupA, target)).status).toBe(404);
+    }
+    expect((await downvoteAs(w, me, w.groupA, w.refOf(w.groupB, w.b[1] as Session))).status).toBe(404);
+    expect((await downvoteAs(w, me, w.groupB, w.refOf(w.groupB, w.b[1] as Session))).status).toBe(404);
+    expect(w.t.db.query("SELECT count(*) AS n FROM downvote").get()).toEqual({ n: 0 });
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(204);
+  });
+
+  test("a suspended member is 403 and a banned one 401 on both routes", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR, me);
+    const target = w.refOf(w.groupA, w.a[1] as Session);
+    w.t.db.query("UPDATE member SET status = 'suspended' WHERE id = ?").run(me.memberId);
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(403);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(403);
+    w.t.db.query("UPDATE member SET status = 'banned' WHERE id = ?").run(me.memberId);
+    expect((await downvoteAs(w, me, w.groupA, target)).status).toBe(401);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(401);
+  });
+
+  test("a stopped member can still read their own blocked list", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    await w.at(15 * HOUR, me);
+    w.t.db.query("UPDATE member SET status = 'stopped' WHERE id = ?").run(me.memberId);
+    expect(await statusOf(w.t, "GET", "/me/blocked", me)).toBe(200);
+  });
+});
+
+describe("authorization matrix, accounts, devices and the staging routes", () => {
+  test("a sign-in challenge cannot confirm a deletion: 403 for its owner, 400 for anyone else, and both accounts stay", async () => {
+    const w = await world();
+    const [me, other] = [w.a[0] as Session, w.a[1] as Session];
+    const signIn = await w.t.call("POST", "/auth/otp", { body: { phone: other.phone, purpose: "sign_in" } });
+    const { challengeId } = (await signIn.json()) as { challengeId: string };
+    const code = w.t.sender.lastCode(other.phone) as string;
+    const own = await w.t.call("DELETE", "/me", { token: other.token, body: { challengeId, code } });
+    expect(own.status).toBe(403);
+    expect((await errorOf(own)).code).toBe("forbidden");
+    // a challenge that is not the caller's is refused as a wrong code and deletes nothing
+    expect((await w.t.call("DELETE", "/me", { token: me.token, body: { challengeId, code } })).status).toBe(400);
+    expect(w.t.db.query("SELECT status FROM member WHERE id IN (?, ?)").all(me.memberId, other.memberId)).toEqual([
+      { status: "active" },
+      { status: "active" },
+    ]);
+  });
+
+  test("another member's device is the same 404 as a missing one, and the device stays", async () => {
+    const w = await world();
+    const [owner, other] = [w.a[0] as Session, w.a[1] as Session];
+    const registered = await w.t.call("POST", "/devices", {
+      token: owner.token,
+      body: { expoPushToken: "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]", platform: "android" },
+    });
+    const { deviceId } = (await registered.json()) as { deviceId: string };
+    const foreign = await w.t.call("DELETE", `/devices/${deviceId}`, { token: other.token });
+    const missing = await w.t.call("DELETE", "/devices/01hzzzzzzzzzzzzzzzzzzzzzzz", { token: other.token });
+    expect([foreign.status, missing.status]).toEqual([404, 404]);
+    expect(await foreign.json()).toEqual(await missing.json());
+    expect(w.t.db.query("SELECT COUNT(*) AS n FROM device").get()).toEqual({ n: 1 });
+  });
+
+  test("a production app has no staging route in its table, so each answers the generic 404", async () => {
+    const t = await testApp();
+    const production = { ...t.app, config: { ...t.app.config, env: "production" as const } };
+    const patterns = appRoutes(production).map((route) => route.pattern);
+    expect(patterns.filter((pattern) => pattern.startsWith("/__test"))).toEqual([]);
+    for (const row of ROWS.filter((r) => r.pattern.startsWith("/__test"))) {
+      const response = await send({ ...t, app: production } as TestApp, row);
+      expect([row.pattern, response.status]).toEqual([row.pattern, 404]);
+    }
+  });
+
+  test("each window opens and closes on the later side for a member and never for an outsider: the thread at T-3h and T+24h, feedback at the morning after and 72 hours", async () => {
+    const w = await world();
+    const me = w.a[0] as Session;
+    const outsider = w.b[0] as Session;
+    const note = (n: number) => ({ body: "hi", clientId: `client-window-${n}` });
+    const thread = async (offset: number, n: number) => {
+      await w.at(offset, me, outsider);
+      const mine = await w.t.call("POST", `/groups/${w.groupA}/messages`, { token: me.token, body: note(n) });
+      const theirs = await w.t.call("POST", `/groups/${w.groupA}/messages`, { token: outsider.token, body: note(n + 100) });
+      return [mine.status, theirs.status];
+    };
+    expect(await thread(-3 * HOUR - MINUTE, 1)).toEqual([404, 404]);
+    expect(await thread(-3 * HOUR, 2)).toEqual([201, 404]);
+    expect(await thread(24 * HOUR - MINUTE, 3)).toEqual([201, 404]);
+    expect(await thread(24 * HOUR, 4)).toEqual([409, 404]);
+    // Group state moves on with the clock and does not go back, so feedback runs in a fresh world, forward only.
+    const f = await world();
+    const voter = f.a[0] as Session;
+    const outside = f.b[0] as Session;
+    const target = f.refOf(f.groupA, f.a[1] as Session);
+    const vote = async (offset: number, who: Session) => {
+      await f.at(offset, who);
+      return (await f.t.call("POST", `/groups/${f.groupA}/downvotes`, { token: who.token, body: { memberRef: target } })).status;
+    };
+    const opens = 14.5 * HOUR;
+    const closes = Date.parse(milestones(SHOW_START).feedbackClosesAt) - START;
+    expect(await vote(opens - MINUTE, voter)).toBe(409);
+    expect(await vote(opens, outside)).toBe(404);
+    expect(await vote(closes - MINUTE, voter)).toBe(204);
+    expect(await vote(closes, voter)).toBe(409);
   });
 });
