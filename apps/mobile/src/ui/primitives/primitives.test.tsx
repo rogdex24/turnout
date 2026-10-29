@@ -49,8 +49,8 @@ describe("hit areas", () => {
         <Button variant="secondary" title="Secondary" onPress={() => undefined} />
       </>,
     );
-    expect(screen.getByRole("button", { name: "Primary" }).props.className).toContain("h-14");
-    expect(screen.getByRole("button", { name: "Secondary" }).props.className).toContain("h-12");
+    expect(screen.getByRole("button", { name: "Primary" }).props.className).toContain("min-h-14");
+    expect(screen.getByRole("button", { name: "Secondary" }).props.className).toContain("min-h-12");
   });
 });
 

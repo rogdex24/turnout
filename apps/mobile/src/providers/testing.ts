@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { MeResponse } from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
-import { memoryKv, PREF_KEYS } from "../api/prefs";
+import { type KeyValueStore, memoryKv, PREF_KEYS } from "../api/prefs";
 import { memorySecretStore, SECRET_KEYS } from "../api/secureStorage";
 import { json, type RouteReply, routedTransport, testQueryClient, tokenPairBody } from "../api/testing";
 import type { WhatsAppOtp } from "../api/whatsappOtp";
@@ -37,6 +37,8 @@ export interface TestAppOptions {
   /** The notice version stored on this phone before sign-in. */
   acceptedNotice?: string;
   routes?: Record<string, RouteReply | RouteReply[]>;
+  /** The disk cache as the last run left it, for a warm start. Empty when left out. */
+  cacheStore?: KeyValueStore;
   now?: () => number;
   whatsappOtp?: WhatsAppOtp;
   /** What sign-out does to the image cache, the picked files, the notifications and telemetry, to be watched. */
@@ -72,7 +74,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   }
   const transport = routedTransport({ ...routes, ...options.routes });
   const queryClient = testQueryClient();
-  const cacheStore = memoryKv();
+  const cacheStore = options.cacheStore ?? memoryKv();
   const deps = await createAppDeps({
     secure,
     prefs,

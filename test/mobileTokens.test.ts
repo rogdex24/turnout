@@ -104,6 +104,14 @@ describe("app contrast (DESIGN.md, Mobile app)", () => {
         expect(contrast(role("dark", "app-muted"), role(theme, "app-marquee"))).toBeGreaterThanOrEqual(4.5);
       });
 
+      test("photo text and icons are 4.5:1 on the scrim even over a white photo, the worst case", () => {
+        expect(contrast(role(theme, "app-on-photo"), role(theme, "app-scrim"), "#ffffff")).toBeGreaterThanOrEqual(4.5);
+      });
+
+      test("the selected chip's label (bg on ink) is 4.5:1", () => {
+        expect(contrast(role(theme, "app-bg"), role(theme, "app-ink"))).toBeGreaterThanOrEqual(4.5);
+      });
+
       test("control borders and the signal dot are 3:1 on the page", () => {
         expect(contrast(role(theme, "app-outline"), role(theme, "app-bg"))).toBeGreaterThanOrEqual(3);
         expect(contrast(role(theme, "app-signal"), role(theme, "app-bg"))).toBeGreaterThanOrEqual(3);
