@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { apiBaseUrl } from "../api/baseUrl";
-import { openCacheStore, openPrefs } from "../api/mmkvStore";
-import { secureStore } from "../api/secureStorage";
+import { openCacheStore, openInstallMark, openPrefs } from "../api/mmkvStore";
+import { forgetSecretsFromAnOldInstall, secureStore } from "../api/secureStorage";
 import { createStubWhatsAppOtp } from "../api/whatsappOtp";
 import { createWhatsAppOtp } from "../api/whatsappOtpNative";
 import { type AppDeps, createAppDeps } from "./deps";
@@ -21,6 +21,7 @@ export function bootApp(): Promise<AppDeps> {
 }
 
 async function start(): Promise<AppDeps> {
+  await forgetSecretsFromAnOldInstall(secureStore, openInstallMark());
   const cacheStore = await openCacheStore(secureStore);
   return createAppDeps({
     secure: secureStore,
