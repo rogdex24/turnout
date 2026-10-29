@@ -13,6 +13,8 @@ import { SAMPLE_CONFIG } from "@/screens/notice/fixtures";
 
 // Skip the native splash and the real stores: MMKV does not load in Jest, so boot hands back in-memory parts.
 jest.mock("@/providers/splash", () => ({ holdSplash: jest.fn(), releaseSplash: jest.fn() }));
+// The first launch loads every route module cold, which takes most of the default 5 seconds on a busy machine.
+jest.setTimeout(20_000);
 let mockApp: TestApp;
 jest.mock("@/providers/boot", () => ({ bootApp: () => Promise.resolve(mockApp.deps) }));
 
@@ -183,6 +185,47 @@ describe("signed in", () => {
     await on("you");
     await fireEvent.press(screen.getByText(you.signOut));
     await on("notice");
+  });
+
+  test("the You rows open the settings pages, and back returns to You", async () => {
+    await launch({ me: meFixture(), welcomeSeen: true });
+    await act(() => router.navigate("/you"));
+    await on("you");
+    for (const [row, page, path] of [
+      ["you-notifications", "settings-notifications", "/settings/notifications"],
+      ["you-blocked", "settings-blocked", "/settings/blocked"],
+      ["you-how-matching", "settings-how-matching", "/settings/how-matching-works"],
+      ["you-privacy", "settings-privacy", "/settings/privacy"],
+      ["you-grievance", "settings-grievance", "/settings/grievance"],
+    ] as const) {
+      await fireEvent.press(screen.getByTestId(row));
+      await on(page);
+      expect(screen).toHavePathname(path);
+      await fireEvent.press(screen.getByTestId("back"));
+      await on("you");
+    }
+  });
+
+  test("deleting the account returns to welcome with everything on the phone forgotten", async () => {
+    await launch({
+      me: meFixture(),
+      welcomeSeen: true,
+      acceptedNotice: NOTICE_VERSION,
+      routes: {
+        "POST /me/delete-code": json(200, { challengeId: "challenge-1", expiresAt: "2099-01-01T00:00:00.000Z" }),
+        "DELETE /me": { status: 204, text: "", retryAfter: null },
+      },
+    });
+    await act(() => router.navigate("/you"));
+    await on("you");
+    await fireEvent.press(screen.getByTestId("you-delete-account"));
+    await on("settings-delete-account");
+    await fireEvent.press(screen.getByTestId("delete-continue"));
+    await fireEvent.press(screen.getByTestId("delete-send"));
+    await on("delete-code");
+    await fireEvent.changeText(screen.getByTestId("delete-code-field"), "123456");
+    await on("welcome");
+    expect(mockApp.deps.localFlags.getSnapshot()).toEqual({ welcomeSeen: false, acceptedNotice: null });
   });
 
   test("the storybook route goes home when Storybook is not bundled", async () => {

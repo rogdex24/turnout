@@ -16,6 +16,8 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `flows/ticket-rejected.yaml` | A ticket the operator cannot use: the reason in plain words, Send another ticket, and a second ticket accepted |
 | `flows/cancel.yaml` | Leave this plan: the sheet, Stay keeps the plan, Leave plan ends it |
 | `flows/profile-check.yaml` | A handle in review turned down with a reason, Change handle sending a new one, and the operator accepting it so the strip goes |
+| `flows/settings.yaml` | The You tab and its pages: the handle check state, the women-only switch saving and saving back, blocked people, notifications, how matching works, the privacy notice with its WhatsApp (Meta) and banned-only phone hash lines, and the grievance page ("Details not set" on this server) |
+| `flows/delete-account.yaml` | Delete account: what goes and what stays, Keep my account, a wrong code, the right code ending at Welcome, then a relaunch and the same number starting fresh at the profile form |
 | `flows/loop-group.yaml` | Three more people join Dev's show and the plan says group confirmed with a count and a reveal time, and no names |
 | `flows/loop-no-group.yaml` | The server's clock passes T-24h with nobody to group with: the plan says no group this time and offers the next show |
 | `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs last |

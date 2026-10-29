@@ -1,0 +1,142 @@
+# The You tab and the pages behind it: the handle check state, the women-only switch saving and saving back, the blocked list, the
+# notification status, how matching works, the privacy notice with the WhatsApp (Meta) and banned-only phone hash lines, and the
+# grievance page, which on this server shows "Details not set". Chitra (+12025550104) chose women-only, so the switch goes off and
+# back on and leaves her as it found her. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: settings
+tags:
+  - settings
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550104"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- tapOn: "You"
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# The handle row shows its check state.
+- assertVisible:
+    id: you-social
+- assertVisible: "Checked"
+
+# Women-only: saved at once, in both directions, with the line that says when it applies.
+- assertVisible: "Applies to plans you join from now on."
+- tapOn:
+    id: you-women-only
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: you-women-only-error
+- tapOn:
+    id: you-women-only
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: you-women-only-error
+
+# Blocked people: a list to look at.
+- scrollUntilVisible:
+    element:
+      id: you-blocked
+- tapOn:
+    id: you-blocked
+- extendedWaitUntil:
+    visible:
+      id: settings-blocked
+    timeout: 10000
+- assertVisible: "Blocked people"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# Notifications: where the phone's permission stands.
+- scrollUntilVisible:
+    element:
+      id: you-notifications
+- tapOn:
+    id: you-notifications
+- extendedWaitUntil:
+    visible:
+      id: settings-notifications
+    timeout: 10000
+- assertVisible:
+    id: notifications-status
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# How matching works.
+- scrollUntilVisible:
+    element:
+      id: you-how-matching
+- tapOn:
+    id: you-how-matching
+- extendedWaitUntil:
+    visible:
+      id: settings-how-matching
+    timeout: 10000
+- assertVisible: "How matching works"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# Privacy notice: the version, the WhatsApp (Meta) line and the banned-only phone hash line.
+- scrollUntilVisible:
+    element:
+      id: you-privacy
+- tapOn:
+    id: you-privacy
+- extendedWaitUntil:
+    visible:
+      id: settings-privacy
+    timeout: 10000
+- assertVisible:
+    id: privacy-version
+- scrollUntilVisible:
+    element:
+      text: ".*WhatsApp, a service of Meta.*"
+- assertVisible: ".*If you are banned, we keep a one-way scrambled form of your phone number.*"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# Grievance officer: the e2e server has no details set, so the page says so.
+- scrollUntilVisible:
+    element:
+      id: you-grievance
+- tapOn:
+    id: you-grievance
+- extendedWaitUntil:
+    visible:
+      id: settings-grievance
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: grievance-not-set
+    timeout: 15000
+- assertVisible: "Details not set"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000

@@ -19,6 +19,8 @@ executionOrder:
     - ticket-rejected
     - cancel
     - profile-check
+    - settings
+    - delete-account
     - loop-group
     - loop-no-group
     - group-shrinks
