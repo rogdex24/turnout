@@ -10,11 +10,9 @@ real person, a real ticket or a real phone number.
 `bun scripts/visual-accept.ts <run-id>` commits them (`docs/plans/mobile-visual-testing.md`). Use the `android-large` target,
 `light-default.png` for the listing (the phone-sized, default text, light theme shot).
 
-State of the baselines on 2026-10-29: **no baseline is committed yet.** `.maestro/visual/README.md` says so, and
-`stories.json` lists 5 stories, not the whole app. So the shots below are a list to capture. Rows marked "in
-`stories.json`" are captured by the next accepted device run. Rows marked "add to `stories.json`" need one line there
-first (`{ "folder": ..., "id": ..., "ready": ... }`) and then a run. This file does not edit `stories.json`, because the
-visual pipeline owns it.
+State of the baselines on 2026-10-29: **no baseline is committed yet.** `stories.json` now lists every screen below, and
+`src/visualStories.test.tsx` checks that each listed story exists and shows its ready text. The next accepted device run
+captures them all.
 
 ## The list, in the order Play shows them
 
@@ -22,11 +20,11 @@ visual pipeline owns it.
 | --- | --- | --- | --- | --- | --- |
 | 1 | Shows coming up | `screens-home--loaded` | `home` | Yes | Pick a show you have a ticket for |
 | 2 | One show, and how it works | `screens-show--ready` | `show` | Yes | See who else is going |
-| 3 | Plan with a confirmed group | `screens-plan--group-confirmed` | `plan-group-confirmed` | Add | We put you in a small group |
-| 4 | Meet card three hours before | `screens-meet--open-to-check-in` | `meet-open` | Add | See where to meet, and how far it is |
-| 5 | Group chat | `screens-thread--conversation` | `thread` | Add | Chat with your group |
-| 6 | After the show | `screens-after--ready` | `after` | Add | Tell us how it went. Only we see it |
-| 7 | Your profile | `screens-profile--filled` | `profile` | Add | One photo, your first name |
+| 3 | Plan with a confirmed group | `screens-plan--group-confirmed` | `plan-group-confirmed` | Yes | We put you in a small group |
+| 4 | Meet card three hours before | `screens-meet--open-to-check-in` | `meet-open` | Yes | See where to meet, and how far it is |
+| 5 | Group chat | `screens-thread--conversation` | `thread` | Yes | Chat with your group |
+| 6 | After the show | `screens-after--ready` | `after` | Yes | Tell us how it went. Only we see it |
+| 7 | Your profile | `screens-profile--filled` | `profile` | Yes | One photo, your first name |
 | 8 | Sign in | `screens-signinphone--empty` | `sign-in-phone` | Yes | A code on WhatsApp, no password |
 
 The first two are the minimum if the others are not ready by Wed 11-11. The sign-in code and "not on WhatsApp" screens
@@ -51,5 +49,4 @@ Story names above come from the `Screens/*` stories (for example `Screens/Plan` 
 ## Steps for the owner
 
 1. After the first accepted device run (`scripts/visual-accept.ts`), `git lfs pull` the `android-large` baselines.
-2. Add the "Add" rows to `stories.json`, run the device job again and accept it.
-3. Crop to the Play aspect ratio and upload in the order above.
+2. Crop to the Play aspect ratio and upload in the order above.
