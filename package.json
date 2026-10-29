@@ -26,6 +26,7 @@
     "icons": "bun scripts/build-category-sprite.ts",
     "tokens:mobile": "bun scripts/build-mobile-tokens.ts",
     "e2e": "bun e2e/run.ts",
+    "load-smoke": "bun scripts/load-smoke.ts",
     "lint": "biome check .",
     "prepare": "lefthook install"
   },

@@ -71,7 +71,7 @@ function Emergency({ onCall }: { onCall: () => void }) {
         variant="secondary"
         title={copy.sos.button}
         accessibilityLabel={copy.sos.label}
-        className="h-11 px-4"
+        className="min-h-11 px-4"
         onPress={onCall}
         testID="report-call-112"
       />

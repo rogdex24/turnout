@@ -20,6 +20,9 @@ import { createTestApp, meFixture } from "@/providers/testing";
 import { moments } from "@/ui/moments";
 import { MeetScreen } from "./MeetScreen";
 
+const mockTrack = jest.fn();
+jest.mock("@/analytics", () => ({ telemetry: () => ({ start: () => undefined, setConsent: () => undefined, track: mockTrack }) }));
+
 const OPEN = Date.parse(SHOW_STARTS_AT) - 80 * 60_000;
 const EARLY = Date.parse(MEET_AT) - 48 * 60_000;
 
@@ -159,6 +162,7 @@ describe("MeetScreen", () => {
       const app = await open({ "GET /groups/g1": [json(200, groupFixture()), json(200, checkedIn)] });
       await fireEvent.press(await screen.findByTestId("meet-here"));
       expect(imHere).toHaveBeenCalledTimes(1);
+      expect(mockTrack).toHaveBeenCalledWith("im_here_tapped", { plan_id: MEET_CONTEXT.planId });
       await waitFor(() => expect(app.transport.callsTo("POST /groups/g1/checkin")).toHaveLength(1));
       const [call] = app.transport.callsTo("POST /groups/g1/checkin") as unknown as { body: string }[];
       expect(JSON.parse(call?.body ?? "")).toEqual({});

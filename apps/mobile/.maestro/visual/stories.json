@@ -1,6 +1,11 @@
 [
   { "folder": "home", "id": "screens-home--loaded", "ready": "Shows coming up" },
   { "folder": "show", "id": "screens-show--ready", "ready": "How it works" },
+  { "folder": "plan-group-confirmed", "id": "screens-plan--group-confirmed", "ready": "Group confirmed" },
+  { "folder": "meet-open", "id": "screens-meet--open-to-check-in", "ready": "Your group" },
+  { "folder": "thread", "id": "screens-thread--conversation", "ready": "Traffic Jam Tales" },
+  { "folder": "after", "id": "screens-after--ready", "ready": "After the show" },
+  { "folder": "profile", "id": "screens-profile--filled", "ready": "Your profile" },
   { "folder": "sign-in-phone", "id": "screens-signinphone--empty", "ready": "Your phone number" },
   { "folder": "sign-in-code", "id": "screens-signincode--partial", "ready": "Enter the code" },
   { "folder": "sign-in-not-on-whatsapp", "id": "screens-signincode--undeliverable", "ready": "That number isn't on WhatsApp" }

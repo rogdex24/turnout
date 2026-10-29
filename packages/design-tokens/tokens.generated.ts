@@ -13,7 +13,7 @@ export const colors = {
     signalSoft: "#94400a14",
     primary: "#181818",
     onPrimary: "#ede8e1",
-    scrim: "#18181873",
+    scrim: "#181818a6",
     onPhoto: "#f3eee7",
     marquee: "#181818",
     pressed: "#18181814",

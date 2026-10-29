@@ -1,7 +1,9 @@
+import { FlashList } from "@shopify/flash-list";
 import { MESSAGE_MAX_CHARS } from "@turnout/contract/app/thread";
+import { spacing } from "@turnout/design-tokens";
 import { CalendarX, CaretLeft, ChatCircle, Flag, Hourglass, Lock, PaperPlaneRight } from "phosphor-react-native";
 import { useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { common } from "@/copy/common";
 import { thread as copy } from "@/copy/thread";
 import type { ThreadItem } from "@/model/thread";
@@ -62,6 +64,11 @@ function statusLine(item: ThreadItem): string | null {
   if (item.status === "failed") return copy.status.failed;
   if (item.status === "refused") return copy.status.refused;
   return null;
+}
+
+/** Messages are recycled by shape: whose it is, and whether it opens a run (which adds the name line and the gap above). */
+function messageType(item: ThreadItem): string {
+  return `${item.isYou ? "you" : "other"}-${item.startsRun ? "run" : "next"}`;
 }
 
 function Message({
@@ -197,7 +204,7 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null
 
 function Header({ title, subtitle, onBack }: { title: string; subtitle: string | null; onBack: () => void }) {
   return (
-    <View className="h-14 flex-row items-center px-2">
+    <View className="min-h-14 flex-row items-center px-2 py-1">
       <IconButton icon={CaretLeft} label={common.back} onPress={onBack} testID="back" />
       <View className="flex-1 items-center px-2">
         <Text variant="control" className="font-semibold" numberOfLines={1} accessibilityRole="header" testID="thread-title">
@@ -242,13 +249,14 @@ function Messages({
   }
   // An inverted list keeps the newest message at the bottom, next to the composer, and stays there when the keyboard opens.
   return (
-    <FlatList
+    <FlashList<ThreadItem>
       inverted
       accessibilityLabel={copy.list}
       data={[...ready.items].reverse()}
       keyExtractor={(item) => item.key}
+      getItemType={messageType}
       keyboardShouldPersistTaps="handled"
-      contentContainerClassName="px-4 pb-2 pt-2"
+      contentContainerStyle={{ paddingHorizontal: spacing[4], paddingTop: spacing[2], paddingBottom: spacing[2] }}
       renderItem={({ item }) => (
         <Message
           item={item}
