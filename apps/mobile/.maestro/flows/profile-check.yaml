@@ -64,12 +64,10 @@ env:
       REASON: ""
       EVENT_ID: ""
       PHONES: ""
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: home
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: home
 - extendedWaitUntil:
     notVisible:
       id: profile-check-strip

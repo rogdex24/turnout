@@ -26,6 +26,15 @@ describe("Maestro flows", () => {
       expect(text).not.toMatch(/^\s*- back\s*$/m);
     });
 
+    // On iOS a system gesture took the tap on Back more than once and the screen stayed open, so every Back goes through the subflow
+    // that taps again when the screen before it does not come.
+    if (file !== "subflows/back-to.yaml") {
+      test(`${file} taps Back through subflows/back-to.yaml`, async () => {
+        const text = await Bun.file(`${root}/${file}`).text();
+        expect(text).not.toMatch(/^\s*id: back\s*$/m);
+      });
+    }
+
     // The iOS simulator asks before it opens a custom-scheme link and waits for an answer, so every link goes through the subflow
     // that answers it.
     if (file !== "subflows/open-link.yaml") {

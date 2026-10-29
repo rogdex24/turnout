@@ -1,0 +1,15 @@
+# Taps the screen's own Back button and waits for the screen with the id SCREEN. Run with runFlow and SCREEN.
+appId: com.turnout.app.e2e
+name: back to
+---
+# On iOS a system gesture took the tap on Back more than once, in loop-group and in loop-join, and the screen stayed open. The tap
+# goes again when the screen before it does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: back
+      - extendedWaitUntil:
+          visible:
+            id: ${SCREEN}
+          timeout: 10000

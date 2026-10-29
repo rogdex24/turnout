@@ -37,12 +37,10 @@ name: start plan
     visible:
       id: show
     timeout: 10000
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: home
-    timeout: 10000
+- runFlow:
+    file: back-to.yaml
+    env:
+      SCREEN: home
 # The plan is on Home's plan bar and on the Plans tab, and a row there opens it.
 - assertVisible:
     id: plan-bar

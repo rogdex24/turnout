@@ -101,9 +101,7 @@ env:
 - assertVisible:
     id: report-call-112
 - assertVisible: "About one of their messages."
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: thread
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: thread

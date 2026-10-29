@@ -69,12 +69,10 @@ env:
       id: settings-blocked
     timeout: 10000
 - assertVisible: "Blocked people"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: you
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
 
 # Notifications: where the phone's permission stands.
 - scrollUntilVisible:
@@ -89,12 +87,10 @@ env:
     timeout: 10000
 - assertVisible:
     id: notifications-status
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: you
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
 
 # How matching works.
 - scrollUntilVisible:
@@ -108,12 +104,10 @@ env:
       id: settings-how-matching
     timeout: 10000
 - assertVisible: "How matching works"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: you
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
 
 # Privacy notice: the version, the WhatsApp (Meta) line and the banned-only phone hash line.
 - scrollUntilVisible:
@@ -132,12 +126,10 @@ env:
     element:
       text: ".*WhatsApp, a service of Meta.*"
 - assertVisible: ".*If you are banned, we keep a one-way scrambled form of your phone number.*"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: you
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
 
 # Grievance officer: the e2e server has no details set, so the page says so.
 - scrollUntilVisible:
@@ -155,9 +147,7 @@ env:
       id: grievance-not-set
     timeout: 15000
 - assertVisible: "Details not set"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: you
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you

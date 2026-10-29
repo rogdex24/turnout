@@ -66,12 +66,10 @@ env:
     id: plan-leave
 
 # The Plans tab says the same thing.
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: plans
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: plans
 - assertVisible: ".*Finding your group.*"
 
 # Ends the plan, so the flows after this one start with nothing waiting.

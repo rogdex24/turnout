@@ -58,11 +58,11 @@ env:
     id: go-not-now
 - assertNotVisible:
     id: go-sheet
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible: "Shows coming up"
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: home
+- assertVisible: "Shows coming up"
 
 # A handle in review shows the strip, and the list still works.
 - runFlow:
