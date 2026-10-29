@@ -56,8 +56,8 @@ env:
 - assertVisible:
     id: thread-input
 
-# Nothing said yet.
-- assertVisible: "Say hello to your group"
+# Nothing said yet. On iOS the empty state is one element named "<title>. <body>", so the title is matched as the start of the name.
+- assertVisible: "Say hello to your group.*"
 
 # Another member writes. The screen polls every 5 seconds while it is open, so the line shows up without a pull.
 - runFlow:
@@ -75,7 +75,7 @@ env:
 - extendedWaitUntil:
     visible: ".*Table by the window.*"
     timeout: 20000
-- assertNotVisible: "Say hello to your group"
+- assertNotVisible: "Say hello to your group.*"
 
 # A line is plain text: the address in it is not a link, so there is nothing to tap that leaves the app.
 - assertVisible: ".*menu.example.com.*"
