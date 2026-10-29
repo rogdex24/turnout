@@ -1,0 +1,76 @@
+# The handle check as a person lives it: a handle in review, the operator turning it down with a reason, the person sending a new one
+# from the strip, and the operator accepting it so the strip goes. Asha has a handle in review when the server starts. Written for CI;
+# it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: profile-check
+tags:
+  - plans
+env:
+  MEMBER: "+12025550102"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- assertVisible:
+    id: profile-check-strip
+- assertVisible: "We're checking your profile. Usually within a day. You can add a ticket in the meantime."
+
+# Turned down: the strip says why, in plain words, and offers Change handle. Home asks for the profile once a minute while it is in review.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: handle
+      PHONE: ${MEMBER}
+      DECISION: reject
+      REASON: private_or_empty
+      EVENT_ID: ""
+      PHONES: ""
+- extendedWaitUntil:
+    visible: ".*That account is private or has nothing on it yet.*"
+    timeout: 80000
+- assertVisible: "Change handle"
+
+# Change handle opens the Settings page with the field; the new handle goes back to checking in place.
+- tapOn: "Change handle"
+- extendedWaitUntil:
+    visible:
+      id: settings-social
+    timeout: 10000
+- tapOn:
+    id: social-handle
+- inputText: "@asha.example"
+- hideKeyboard
+- tapOn:
+    id: social-save
+- extendedWaitUntil:
+    visible:
+      id: social-saved
+    timeout: 15000
+
+# Accepted: the strip is gone from Home.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: handle
+      PHONE: ${MEMBER}
+      DECISION: approve
+      REASON: ""
+      EVENT_ID: ""
+      PHONES: ""
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible:
+      id: profile-check-strip
+    timeout: 80000

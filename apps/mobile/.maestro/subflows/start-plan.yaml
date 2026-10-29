@@ -1,0 +1,55 @@
+# Signed in as PHONE, makes a plan for SHOW_ID the way a person does: the show from a link, Go with a group, Next, and then "I'll do
+# it later" on the ticket page. Ends on the plan's own page, with the ticket still to add. Run with runFlow and PHONE, SHOW_ID,
+# SERVER_URL and TEST_TOKEN.
+appId: com.turnout.app.e2e
+name: start plan
+---
+- runFlow:
+    file: sign-in-seed.yaml
+    env:
+      PHONE: ${PHONE}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- openLink: turnout-e2e://show/${SHOW_ID}
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- tapOn:
+    id: show-go
+- extendedWaitUntil:
+    visible:
+      id: go-sheet
+    timeout: 10000
+- tapOn:
+    id: go-next
+- extendedWaitUntil:
+    visible:
+      id: ticket
+    timeout: 15000
+- tapOn:
+    id: ticket-later
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+# The plan is on Home's plan bar and on the Plans tab, and a row there opens it.
+- assertVisible:
+    id: plan-bar
+- tapOn: "Plans"
+- extendedWaitUntil:
+    visible:
+      id: plans
+    timeout: 10000
+- tapOn:
+    id: "plan-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: plan
+    timeout: 10000

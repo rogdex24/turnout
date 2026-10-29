@@ -1,4 +1,4 @@
-import type { MutationKey, QueryClient } from "@tanstack/react-query";
+import type { MutationKey, MutationObserverOptions, QueryClient } from "@tanstack/react-query";
 import { getRandomBytes } from "expo-crypto";
 import type { REPLAYABLE_MUTATION_KEYS } from "./persister";
 
@@ -32,6 +32,7 @@ export function registerReplayable<T>(
   queryClient: QueryClient,
   name: ReplayableName,
   send: (variables: Replayable<T>) => Promise<unknown>,
+  retry: MutationObserverOptions["retry"] = 3,
 ) {
-  queryClient.setMutationDefaults(mutationKey(name), { mutationFn: send, networkMode: "online", retry: 3 });
+  queryClient.setMutationDefaults(mutationKey(name), { mutationFn: send, networkMode: "online", retry });
 }

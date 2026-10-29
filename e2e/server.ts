@@ -6,6 +6,7 @@ import path from "node:path";
 import { startAdmin } from "../src/admin/start.js";
 import { resolveVenueId } from "../src/catalog/venue.js";
 import { migrate } from "../src/migrate.js";
+import { appLinksFromEnv } from "../src/web/appLinks.js";
 import { siteResponse } from "../src/web/index.js";
 import { buildMapAssets } from "../src/web/map/assets.js";
 
@@ -13,6 +14,8 @@ import { buildMapAssets } from "../src/web/map/assets.js";
 export const NOW = new Date("2026-10-10T06:00:00Z");
 /** Where fixture covers live; the browser tests answer these requests themselves, so nothing leaves the machine. */
 export const IMAGE_HOST = "https://img.example.test";
+/** The go host the fixture site links "Go with a group" to. */
+export const GO_HOST = "go.example.test";
 /** The point the tests report as the reader's location. */
 export const ORIGIN = { latitude: 17.4126, longitude: 78.4482 };
 
@@ -108,7 +111,9 @@ if (import.meta.main) {
   seed(file);
   await buildMapAssets();
   const db = new Database(file, { readonly: true, strict: true });
-  const server = Bun.serve({ port: Number(process.env.E2E_PORT), fetch: (request) => siteResponse(db, request, () => NOW) });
+  // A go host and a contact address, so the event page shows its "Go with a group" link and the fallback page its testing line.
+  const options = { appLinks: appLinksFromEnv({ APP_LINKS_HOST: GO_HOST }), supportEmail: "support@example.test" };
+  const server = Bun.serve({ port: Number(process.env.E2E_PORT), fetch: (request) => siteResponse(db, request, () => NOW, options) });
   // The admin console on the same file, for the theme and screenshot specs.
   const admin = startAdmin({ dbPath: file, port: Number(process.env.E2E_ADMIN_PORT), env: {} });
   const stop = () => {

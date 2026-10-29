@@ -1,0 +1,87 @@
+# The loop for a person on their own: Go with a group on a show, the ticket page left for later, the plan on Home and on the Plans
+# tab, and then the plan moving as the operator answers: ticket sent, ticket accepted, finding a group. Dev's plan is ended at the
+# end so the next flow starts clean. The ticket file itself is sent by the operator route, because the system picker is not
+# reachable from here; the upload is covered by the component tests. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: loop-join
+tags:
+  - plans
+env:
+  MEMBER: "+12025550105"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# A new plan needs its ticket, and says so with one button.
+- assertVisible: "Seed comedy night"
+- assertVisible: ".*Add your ticket.*"
+- assertVisible:
+    id: plan-add-ticket
+- assertVisible:
+    id: plan-steps
+
+# The ticket reaches the operator, and the plan says it is being checked. The plan page asks the server once a minute.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: send
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      PHONES: ""
+      DECISION: ""
+      REASON: ""
+- extendedWaitUntil:
+    visible: ".*Checking your ticket.*"
+    timeout: 80000
+- assertNotVisible:
+    id: plan-add-ticket
+
+# The ticket is accepted. With nobody else waiting there is no group yet, and the page says when groups are set.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: ticket
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      DECISION: approve
+      PHONES: ""
+      REASON: ""
+- extendedWaitUntil:
+    visible: ".*Finding your group.*"
+    timeout: 80000
+- assertVisible: ".*No group yet.*"
+- assertVisible: ".*Groups are set by.*"
+- assertVisible:
+    id: plan-leave
+
+# The Plans tab says the same thing.
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible:
+      id: plans
+    timeout: 10000
+- assertVisible: ".*Finding your group.*"
+
+# Ends the plan, so the flows after this one start with nothing waiting.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: withdraw
+      PHONE: ${MEMBER}
+      EVENT_ID: ${SHOW_ID}
+      PHONES: ""
+      DECISION: ""
+      REASON: ""

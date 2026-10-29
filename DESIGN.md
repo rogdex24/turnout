@@ -895,6 +895,19 @@ in `card-meta`. A 36 px round close button (an X on **surface-glass**, e1, with 
 
 **Organiser block**: `organiser-avatar`, name in `control`, trust line in `meta`.
 
+**Go with a group** (event page `/e/<id>`, secondary to everything else): below the actions, a `button` secondary "Go with a group"
+with the Users glyph, and under it, `spacing.2` (8) down, one `lede` line: "Meet 3 to 5 others with tickets at a cafe nearby, an
+hour before." It links to `https://go.<host>/e/<id>/go?src=web`, so a phone with the app opens the app and any other browser
+lands on the fallback page below. The block renders only on an event that group rules accept now (see `groupEligibility`) and
+only when the go host is set; an ineligible event, a free show or a started one shows nothing in its place. "View source" stays
+the one primary button.
+
+**Go fallback page** (`/e/<id>/go`): the event page's own chrome and width, with no script. Top to bottom: the "Back to the
+event" link, the title in `heading`, one sentence in body ("Go with a group is in the Turnout app."), and one status. Once the
+app is public: a `button` primary "Get it on Google Play" linking out (no App Store badge, there is no iOS app). Before that: a
+card (radius `card`, **surface**, 1 px **line**, e1, `spacing.4` padding) reading "The app is in testing on Android." with a
+`link` "Contact us" below it, `spacing.2` (8) apart. An unknown event is the site's Not found page.
+
 **Rating** (specified, not shipped): 5 stars at 14 px, **ink** filled, **line** empty, value
 "4.6" and count "(212)" in `meta`, credit "via <source>". Renders only when a real rating
 with count ≥ 5 exists. See "Images, organisers and ratings".

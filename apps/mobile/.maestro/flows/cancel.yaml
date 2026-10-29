@@ -1,0 +1,56 @@
+# Leaving a plan: the sheet says what leaving does, Stay keeps the plan, Leave plan ends it and the page says so with a way to find
+# another show. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: cancel
+tags:
+  - plans
+env:
+  MEMBER: "+12025550106"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/start-plan.yaml
+    env:
+      PHONE: ${MEMBER}
+      SHOW_ID: ${SHOW_ID}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# The sheet, and Stay: the plan is as it was.
+- tapOn:
+    id: plan-leave
+- extendedWaitUntil:
+    visible:
+      id: cancel-sheet
+    timeout: 10000
+- assertVisible: "Leave this plan?"
+- assertVisible: ".*Your BookMyShow ticket isn't affected.*"
+- tapOn:
+    id: cancel-stay
+- assertNotVisible:
+    id: cancel-sheet
+- assertVisible:
+    id: plan-add-ticket
+
+# Leave plan: the plan ends, and the page offers the next show instead of an empty screen.
+- tapOn:
+    id: plan-leave
+- extendedWaitUntil:
+    visible:
+      id: cancel-sheet
+    timeout: 10000
+- tapOn:
+    id: cancel-confirm
+- extendedWaitUntil:
+    visible: ".*You left this plan.*"
+    timeout: 15000
+- assertNotVisible:
+    id: plan-add-ticket
+- assertVisible:
+    id: plan-find-show
+- tapOn:
+    id: plan-find-show
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000

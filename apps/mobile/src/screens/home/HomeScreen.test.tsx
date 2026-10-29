@@ -5,7 +5,9 @@ import { areasBody, eventPage, SHOWS } from "@/api/showFixtures";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { common } from "@/copy/common";
 import { home } from "@/copy/home";
+import { plans } from "@/copy/plans";
 import { profileCheck } from "@/copy/profileCheck";
+import { PLANS } from "@/model/planFixtures";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
 import { HomeScreen } from "./HomeScreen";
@@ -21,19 +23,25 @@ afterEach(async () => {
 async function open(routes: Record<string, RouteReply | RouteReply[]> = {}, me: MeResponse = meFixture({ handle: { state: "approved" } })) {
   const onOpenShow = jest.fn();
   const onChangeHandle = jest.fn();
+  const onOpenPlan = jest.fn();
   const app = await createTestApp({
     me,
     welcomeSeen: true,
-    routes: { "GET /api/events": json(200, eventPage(SHOWS)), "GET /tools/list_areas": json(200, areasBody()), ...routes },
+    routes: {
+      "GET /api/events": json(200, eventPage(SHOWS)),
+      "GET /tools/list_areas": json(200, areasBody()),
+      "GET /plans": json(200, { plans: [] }),
+      ...routes,
+    },
   });
   app.queryClient.setQueryData(queryKeys.me(), me);
   await render(
     <AppProviders deps={app.deps}>
-      <HomeScreen onOpenShow={onOpenShow} onChangeHandle={onChangeHandle} />
+      <HomeScreen onOpenShow={onOpenShow} onOpenPlan={onOpenPlan} onChangeHandle={onChangeHandle} />
     </AppProviders>,
   );
   await settle();
-  return { ...app, onOpenShow, onChangeHandle };
+  return { ...app, onOpenShow, onOpenPlan, onChangeHandle };
 }
 
 const eventCalls = (app: { transport: { callsTo: (key: string) => { url: string }[] } }) =>
@@ -162,6 +170,35 @@ describe("HomeScreen", () => {
       await open({}, meFixture({ handle: { state: "rejected", rejectReason: null } }));
       expect(await screen.findByTestId("show-card-monsoon-theory")).toBeOnTheScreen();
       expect(screen.getByText(profileCheck.rejected.unknown)).toBeOnTheScreen();
+    });
+  });
+
+  describe("plan bar", () => {
+    // The bar reads the plans, which are asked for only in a build with groups on.
+    beforeEach(() => {
+      process.env.EXPO_PUBLIC_GROUPS_ENABLED = "1";
+    });
+    afterEach(() => {
+      delete process.env.EXPO_PUBLIC_GROUPS_ENABLED;
+    });
+
+    it("has no bar when there is no plan that can move", async () => {
+      await open({ "GET /plans": json(200, { plans: [PLANS.withdrawn, PLANS.done] }) });
+      await screen.findByTestId("show-card-monsoon-theory");
+      expect(screen.queryByTestId("plan-bar")).toBeNull();
+    });
+
+    it("docks the active plan and opens it on tap", async () => {
+      const app = await open({ "GET /plans": json(200, { plans: [PLANS.finding_group] }) });
+      const bar = await screen.findByTestId("plan-bar");
+      expect(bar).toHaveAccessibleName(home.planBar.label("The Monsoon Theory", "Fri 8:00 PM", plans.status.finding_group));
+      await fireEvent.press(bar);
+      expect(app.onOpenPlan).toHaveBeenCalledWith(PLANS.finding_group.id);
+    });
+
+    it("puts a plan that needs the person ahead of one that is only waiting", async () => {
+      await open({ "GET /plans": json(200, { plans: [PLANS.finding_group, PLANS.needs_ticket] }) });
+      expect(await screen.findByText(plans.status.needs_ticket)).toBeOnTheScreen();
     });
   });
 });

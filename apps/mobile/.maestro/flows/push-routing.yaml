@@ -1,0 +1,51 @@
+# A tap on a push goes to the screen its kind names. A real push needs a Play-signed build and a Firebase key, so this flow uses the
+# e2e build's own link, turnout-e2e://push?kind=..&noticeId=..&planId=.., which goes through the same routing as a tap. The link exists
+# only in the e2e variant. A push of a kind the app does not know, or with a malformed id, lands on Home. The plan, ticket and
+# settings/social screens come from the plans work, so those steps check that the app left Home and which screen of its own it opened.
+# The meet card push (it needs a notice that names a group) is covered by loop-meet. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: push-routing
+tags:
+  - push
+env:
+  MATCHABLE_MEMBER: "+12025550104"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MATCHABLE_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# A kind the app does not know opens Home.
+- openLink: turnout-e2e://push?kind=made_up_kind&noticeId=n-1
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+
+# Data with a bad id is not followed: Home again, not a screen built from the id.
+- openLink: turnout-e2e://push?kind=ticket_approved&noticeId=n-1&planId=../../settings
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+
+# A handle that was turned down opens the social handle screen.
+- openLink: turnout-e2e://push?kind=handle_rejected&noticeId=n-2
+- extendedWaitUntil:
+    notVisible:
+      id: home
+    timeout: 10000
+
+# A ticket kind opens the plan it belongs to.
+- openLink: turnout-e2e://
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+- openLink: turnout-e2e://push?kind=ticket_approved&noticeId=n-3&planId=plan-1
+- extendedWaitUntil:
+    notVisible:
+      id: home
+    timeout: 10000

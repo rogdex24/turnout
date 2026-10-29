@@ -726,3 +726,84 @@ patch name makes `bun install` fail loudly if the version moves under it.
   entitlement, the simulator keychain answered expo-secure-store with -34018 and the app opened on the start-failed screen.
   `ci/build-ios.sh` now signs to run locally (`CODE_SIGN_IDENTITY=-`, no team) and logs the entitlements. The native cache key
   gains `signed` so the unsigned cached build is not repacked again.
+
+## 2026-10-28: M3 app (A11, A12, A13, A29), where the build differs from the plan or fills a gap
+
+No package was added. The server API and the contract schemas are used as they are.
+
+Plan page and Plans tab (A13)
+
+1. **No member name, photo or cafe is drawn on the plan page at any time.** The page shows counts and times from `groupFacts`
+   (the others in the group, the reveal time, the size). Names live on the meet card (A15). `PlanScreen.test.tsx` checks that no
+   member name is on the page before T-3h, and `loop-group.yaml` checks it on a device.
+2. **"No group yet" uses the show's `lookingCount`.** The contract has no `waitingCount`, so the finding card reads `lookingCount`
+   from GET /shows/:publicId and leaves the number out when it is unknown.
+3. **The reveal numeral is the others in the group** (`othersCount(size)`), with "plus you" after it. The size-3 note comes from
+   `belowPlan` and is hidden when `belowPlan` is null. The reveal time falls back to `revealFor(show.startsAt)` before the group
+   query answers.
+4. **The "How matching works" row is left out** because its destination does not exist yet. The Group chat row and the Ticket row
+   are information only; the thread is A19's.
+5. **The thumb and the Home bar use the category "other"**, since a plan carries no category.
+6. **Open meet card pushes `/groups/[groupId]/meet`**, A15's route. The plan page reads the meet card's group query from
+   `api/groups.ts` (the merge kept that one). Both `plans` and `group` are on disk, so offline the page shows the last group.
+7. **Cancel is a transparent modal with the Sheet inside**, like Go. A 409 `plan_closed` refetches the plan and closes the sheet.
+8. **The "group confirmed" moment is played once per plan**, tracked in prefs (`confirmedPlayed`).
+9. **The Plans tab badge counts plans that need the person** (add a ticket, send another ticket, open the meet card). The Home
+   bar prefers such a plan over one that is only waiting. `GET /plans` feeds the bar.
+
+Go, ticket and handle (A11, A12, A29)
+
+10. **The Go sheet is a transparent modal route** (`show/[publicId]/go.tsx`) with the Sheet inside, so the show stays behind the
+    scrim. `Sheet` actions gained `loading` and `testID`. "Go explained" and "ticket asked" are prefs, so the first-time line and
+    the notification ask show once.
+11. **The ticket page has a Send step after picking**, so a person sees the screenshot before it goes. A PDF is allowed through
+    the document picker only for `screenshot_or_pdf` (what the server accepts); BookMyShow is a screenshot. The reject-reason copy is
+    original.
+12. **The notification pre-ask only asks for permission.** Registering the token is A14's.
+13. **The handle strip is announced on iOS only** (`AccessibilityInfo.announceForAccessibility`); Android reads the live region.
+    `Field` gained an `inputRef` prop so Change handle can focus the field. Settings, Instagram or LinkedIn is Board B4.1.
+14. **`router.test.tsx` scripts `GET /plans` by default**, because Home now reads it for the bar.
+
+Maestro and the e2e server
+
+15. **The seven flows (`loop-join`, `ticket-rejected`, `loop-group`, `loop-no-group`, `group-shrinks`, `cancel`, `profile-check`)
+    have not run on a device.** No emulator or simulator is available where they were written, so they are checked only for valid
+    YAML, for the ids and words in the app's own tests, and for the server calls they make (below).
+16. **An operator sidecar, `e2e/mobile-operator.ts`, starts with `e2e/mobile-server.ts`** on the port after it. A flow cannot open
+    the admin app or sign in as the other members of a show, so the sidecar answers handles and tickets, sends a ticket for a member,
+    fills a show with members who have accepted tickets (then runs one grouping pass, since the server runs with `--no-ticker`),
+    and makes a member leave. It uses the server's own functions, the same `x-staging-test-token`, and the server's clock.
+    `test/mobileServer.test.ts` drives it against a real server: ticket sent, turned down, accepted, a group of four, the clock
+    moved past T-24h, and a leaver after the lock leaving three.
+17. **Ticket upload through the system picker is not covered by Maestro.** The sidecar sends the ticket; the upload path is
+    covered by the component tests.
+18. **The e2e build turns groups on** (`EXPO_PUBLIC_GROUPS_ENABLED=1` in `ci/env.sh` and the `e2e` profile). `browse.yaml` now
+    opens the Go sheet and closes it with Not now where it used to expect Coming soon.
+19. **The plan flows wait up to 80 seconds** for a change the operator made, because the plan page and Home ask once a minute.
+    The last two flows move the server's clock, so `config.yaml` runs them last.
+
+Why. Each keeps what the plan promises (no names before T-3h, no guilt copy, no step that is not needed) and fills the gaps the
+contract and the server left, without a new package or a paid service.
+
+## 2026-10-28: M3 app, A14 to A16 (push, meet card, web link)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The push routing hook is in `src/providers`,** not `src/app`, because `routes-are-entry` forbids route files from holding logic. The route files stay thin.
+2. **An e2e-only link, `turnout-e2e://push?kind=..&noticeId=..&planId=..`,** stands in for a tap on a push, because a real push needs a Play-signed build and a Firebase key. The link filter lets it through in the e2e variant only; any other build goes Home.
+3. **The thread and morning-after kinds open the plan** (Home when there is no plan). Those screens are M4. The meet card kinds open `/groups/<groupId>/meet`.
+4. **The push permission is asked only after the person has a plan.** A12 can call `registerDevice` with `mayAsk` when it lands.
+5. **iOS skips registration** (GET /config says push is off) and `enableRemoteNotifications` is false for iOS in `app.config.ts`.
+6. **No notification icon asset is in the repo.** The owner adds a 96x96 white-on-transparent icon.
+7. **The persisted query prefixes include `["group"]`,** so the meet card opens offline with the last cafe and members.
+8. **The venue pin comes from the show, not the group.** GET /groups/:id has the cafe's pin but not the venue's, so the card finds the plan that holds the group in GET /plans, then reads the public show for the venue. That is kept on disk as `["group", id, "context"]` and also supplies the plan id for Leave. Suggested for the server: add the venue's `lat` and `lng` to the revealed group answer, which removes two requests.
+9. **The phone's clock decides** when "I'm here" is on (T-90m to T+60m) and when the location watch runs. The server clock test hook does not move the phone, so `loop-meet.yaml` says the phone's clock has to be aligned.
+10. **The check-in is retried only after a bad connection or a busy server.** A refusal (409 outside the window) does not change on a second try, so `registerReplayable` takes a retry rule and the check-in passes `retryCheckin`.
+11. **No cafe photo,** because the API has none. The Report and group chat cards of the design are left out: they are M4.
+12. **The static map is not to scale.** It is two token-coloured pins on a plain card, for builds with no map. `showsRealMap`: the e2e variant never has the map; iOS draws Apple Maps and needs no key; Android needs `GOOGLE_MAPS_ANDROID_API_KEY` (`extra.hasMapsKey` is true when it is set).
+13. **Safety has two rows:** Call 112 and Leave this plan. Leave opens `/plans/<planId>/cancel`, which `app-m3-plans` builds.
+14. **A16: the website reads `APP_LINKS_HOST` and `PLAY_STORE_URL`.** With no host there is no "Go with a group" link. Until the Play URL is set the fallback page shows "The app is in testing on Android" with a contact link, and the Play badge is a text button. `/e/<id>/go` is served by the site itself. `SiteOptions.supportEmail` feeds "Contact us".
+15. **`router.test.tsx` scripts GET /config and GET /plans by default,** because the signed-in layout now reads both.
+16. **`loop-meet.yaml` is tagged `needs-group-seed` and excluded in `config.yaml`,** because the seed has no plan and group rows for the `meet_card_live` member yet. Neither Maestro flow has run on a device.
+
+Evidence. `src/model/walk.test.ts`, `meetWindow.test.ts`, `meetCard.test.ts`, `src/api/groups.test.ts`, `notifications.test.ts`, `src/providers/useMeetLocation.test.tsx`, `useNotificationRouting.test.tsx`, `src/screens/meet/*.test.tsx`, `test/appLinks.test.ts`, and the Playwright cases in `e2e/`.

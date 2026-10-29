@@ -12,6 +12,7 @@ import path from "node:path";
 import { SEED_PHONES, seedStaging, UNDELIVERABLE_PHONE } from "../scripts/seed-staging.js";
 import { diskStore } from "../src/utils/objectStore.js";
 import { openDb } from "../src/utils/openDb.js";
+import { startOperator } from "./mobile-operator.js";
 import { seed } from "./server.js";
 
 /** `--no-ticker` keeps the background upkeep off, so the flows decide when time moves (`POST /__test/clock`). */
@@ -45,15 +46,14 @@ async function seedApp(file: string, dir: string): Promise<void> {
 
 /**
  * A free port below the OS's ephemeral range (49152 and up), for the reason given in e2e/run.ts: a port picked from that range can be
- * handed out again to another listener before `serve` binds it.
+ * handed out again to another listener before `serve` binds it. The next port is free too, for the operator's routes.
  */
 function freePort(): number {
   for (;;) {
+    const port = 20_000 + Math.floor(Math.random() * 20_000);
     try {
-      const probe = Bun.serve({ port: 20_000 + Math.floor(Math.random() * 20_000), fetch: () => new Response("") });
-      const { port } = probe;
-      probe.stop(true);
-      return port!; // a Bun.serve with a numeric port always has one
+      for (const candidate of [port, port + 1]) Bun.serve({ port: candidate, fetch: () => new Response("") }).stop(true);
+      return port;
     } catch {
       // taken: try another
     }
@@ -61,7 +61,15 @@ function freePort(): number {
 }
 
 /** `testToken` goes in the `x-staging-test-token` header of the `/__test/*` routes. It is new for each run and not written anywhere. */
-export type MobileServer = { url: string; port: number; dbPath: string; testToken: string; stop: () => Promise<void> };
+export type MobileServer = {
+  url: string;
+  port: number;
+  /** The operator's side of the flows (e2e/mobile-operator.ts), on the port after the server's. */
+  operatorUrl: string;
+  dbPath: string;
+  testToken: string;
+  stop: () => Promise<void>;
+};
 
 /** Seeds a temp database, starts `serve` on it and resolves once `/api/events` answers. */
 export async function startMobileServer(options: { port?: number; timeoutMs?: number } = {}): Promise<MobileServer> {
@@ -81,7 +89,9 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
     env: { ...process.env, ...serveEnv(dir, testToken) },
     stdio: ["ignore", "inherit", "inherit"],
   });
+  let operator: ReturnType<typeof startOperator> | undefined;
   const stop = async () => {
+    operator?.stop();
     child.kill();
     await child.exited;
     fs.rmSync(dir, { recursive: true, force: true });
@@ -95,7 +105,23 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
       throw new Error(`serve exited with code ${child.exitCode} before it answered`);
     }
     try {
-      if ((await fetch(`${url}/api/events?limit=1`)).ok) return { url, port, dbPath, testToken, stop };
+      if ((await fetch(`${url}/api/events?limit=1`)).ok) {
+        operator = startOperator({
+          dbPath,
+          filesDir: path.join(dir, "files"),
+          token: testToken,
+          port: port + 1,
+          serverNow: async () => {
+            const response = await fetch(`${url}/api/app/v1/__test/clock`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-staging-test-token": testToken },
+              body: "{}",
+            });
+            return new Date(((await response.json()) as { now: string }).now);
+          },
+        });
+        return { url, port, operatorUrl: operator.url, dbPath, testToken, stop };
+      }
     } catch {
       // not listening yet
     }
@@ -108,6 +134,7 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
 if (import.meta.main) {
   const server = await startMobileServer({ port: process.env.MOBILE_SERVER_PORT ? Number(process.env.MOBILE_SERVER_PORT) : undefined });
   console.log(`mobile server on ${server.url}`);
+  console.log(`operator on ${server.operatorUrl}`);
   console.log(`STAGING_TEST_TOKEN=${server.testToken}`);
   const shutdown = async () => {
     await server.stop();

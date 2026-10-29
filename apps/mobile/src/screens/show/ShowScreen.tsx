@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Linking } from "react-native";
 import { groupsEnabled } from "@/api/features";
+import { memberShowQuery } from "@/api/plans";
 import { showDetailQuery } from "@/api/shows";
-import { isApiError } from "@/model/apiError";
+import { errorKind, isApiError } from "@/model/apiError";
 import { safeWebUrl } from "@/model/externalLink";
 import { useApi } from "@/providers/hooks";
 import { type ShowDetailState, ShowView } from "./ShowView";
@@ -22,12 +23,15 @@ function openInBrowser(url: string) {
 }
 
 /**
- * One show on live data. The count of people looking for a group comes from the plans server (M3) and is not there yet, so it is
- * null and the line is left out. "Go with a group" opens "Coming soon in this build" until `EXPO_PUBLIC_GROUPS_ENABLED` is set.
+ * One show on live data. The count of people looking for a group comes from the plans server (GET /shows/:publicId) and is asked for
+ * only when groups are on in this build; until it answers, or if it fails, it is null and the line is left out. "Go with a group"
+ * opens "Coming soon in this build" until `EXPO_PUBLIC_GROUPS_ENABLED` is set, then the go sheet.
  */
 export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenProps) {
   const api = useApi();
   const query = useQuery(showDetailQuery(api, publicId));
+  const groups = groupsEnabled();
+  const member = useQuery({ ...memberShowQuery(api, publicId), enabled: groups });
 
   let detail: ShowDetailState;
   if (query.data) detail = { status: "ready", show: query.data };
@@ -42,8 +46,8 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
   return (
     <ShowView
       detail={detail}
-      lookingCount={null}
-      groupsEnabled={groupsEnabled()}
+      lookingCount={member.data?.lookingCount ?? null}
+      groupsEnabled={groups}
       onBack={onBack}
       onRetry={() => void query.refetch()}
       onSeeShows={onSeeShows}
@@ -51,10 +55,4 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
       onGo={onGo}
     />
   );
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }
