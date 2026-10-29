@@ -15,12 +15,16 @@ name: start plan
     env:
       LINK: turnout-e2e://show/${SHOW_ID}
       SCREEN: show
-- tapOn:
-    id: show-go
-- extendedWaitUntil:
-    visible:
-      id: go-sheet
-    timeout: 10000
+# Once on iOS the tap came while the link was still opening the show, and no sheet came. The tap goes again when the sheet does not.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: show-go
+      - extendedWaitUntil:
+          visible:
+            id: go-sheet
+          timeout: 10000
 - tapOn:
     id: go-next
 - extendedWaitUntil:

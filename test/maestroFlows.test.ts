@@ -53,6 +53,14 @@ describe("Maestro flows", () => {
     expect(retry).toBeLessThan(text.indexOf("welcome-skip"));
   });
 
+  // Once on iOS the tap on "Go with a group" came while the link was still opening the show, and the sheet never came.
+  test("starting a plan retries the tap on Go with a group", async () => {
+    const text = await Bun.file(`${root}/subflows/start-plan.yaml`).text();
+    const retry = text.indexOf("- retry:");
+    expect(retry).toBeGreaterThan(-1);
+    expect(retry).toBeLessThan(text.indexOf("id: show-go"));
+  });
+
   // Once on iOS the simulator closed its "Open in" prompt and the app never got the link. A link that should open a screen of its
   // own goes through open-link-to.yaml, which opens it again when the screen does not come.
   test("a link and a wait for its own screen go through open-link-to.yaml", async () => {
