@@ -102,9 +102,14 @@ None of these can be done or checked without a host, an account or a console.
    unless a spend cap is set). The mobile app has `@sentry/react-native`; the server has none by design, so server errors
    stay in the process log as a class name (`SENTRY_DSN` in `docs/deploy.md` is "later"). Scrub check: send one test error
    and confirm the event holds no phone, handle or name.
-2. **Dependency bump.** Move each dependency to the newest version that is at least two weeks old (`minimumReleaseAge` in
-   `bunfig.toml` enforces 14 days; `docs/plans/mobile-stack.md` lists the ones that did not qualify). Start with `jose` and
-   `expo-server-sdk` on the server, then the app. Run `bun run check` after each group, and commit on its own.
+2. **Dependency bump.** Done on 2026-10-29 for every version at least two weeks old (`minimumReleaseAge` in `bunfig.toml`
+   enforces 14 days). `jose` 6.2.12 and `expo-server-sdk` 7.2.0 were already the newest. The server moved to
+   `libphonenumber-js` 1.13.15, `lucide-react` 1.57.0, `maplibre-gl` 6.14.0 and `radix-ui` 1.8.1, and the tools to
+   `@playwright/test` 1.64.1, `@types/bun` 1.4.3, `dependency-cruiser` 18.6.0, `lefthook` 2.2.2 and `shadcn` 4.21.5. Not
+   moved, with the reason: `react` and `react-dom` stay at 19.3.0 and `@sentry/react-native` and `@shopify/flash-list` at
+   the Expo SDK's versions, because `expo-doctor` checks them against `expo/bundledNativeModules.json`; `typescript` 7 is a
+   major version and waits for its own change. Repeat on the release commit with `bun outdated` in the root and in
+   `apps/mobile`.
 3. **Budget alerts.** A monthly budget with alerts on the host account, the Meta WhatsApp account, Google Cloud (Maps and
    FCM), Expo and the object bucket if used. The server's own WhatsApp spend alerts (500, 1,000, 1,500 INR; `test/auth.test.ts`
    "500, 1000 and 1500 INR each alert once a month") reach the operator only through `OPERATOR_ALERT_WEBHOOK_URL`, so set it.
