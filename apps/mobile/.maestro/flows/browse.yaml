@@ -26,11 +26,11 @@ env:
     id: profile-check-strip
 
 # An area narrows the list and All areas goes back to every show. Every seeded show is at Seed Hall, which has no named area, so
-# Gachibowli shows the empty state.
+# Gachibowli shows the empty state. iOS reads the empty state's title and body as one label, so the text match is a pattern.
 - tapOn:
     id: area-gachibowli
 - extendedWaitUntil:
-    visible: "No shows here yet"
+    visible: ".*No shows here yet.*"
     timeout: 10000
 - tapOn:
     id: area-all

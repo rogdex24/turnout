@@ -97,6 +97,18 @@ describe("EmptyState and ErrorState", () => {
     expect(onPress).toHaveBeenCalled();
   });
 
+  it("keeps the action outside the grouped text so VoiceOver can reach it", async () => {
+    await render(
+      <EmptyState icon={CalendarCheck} title="No plans yet" body="Join a show." action={{ title: "Browse shows", onPress: jest.fn() }} />,
+    );
+    expect(screen.getByLabelText("No plans yet. Join a show.")).toBeTruthy();
+    let parent = screen.getByRole("button", { name: "Browse shows" }).parent;
+    while (parent) {
+      expect(parent.props.accessible).not.toBe(true);
+      parent = parent.parent;
+    }
+  });
+
   it("offers a retry and reads as an alert", async () => {
     const onRetry = jest.fn();
     await render(<ErrorState kind="offline" onRetry={onRetry} />);
