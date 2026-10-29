@@ -98,10 +98,18 @@ describe("Maestro flows", () => {
     }
   });
 
-  // Flows change the seeded plans and groups, so a second pass on the same server checks different data.
-  test("the device job runs the flows once", async () => {
+  // Flows change the seeded plans and groups, so a second pass on the same server checks different data. After a device drop on
+  // Android the run goes on from the flow that dropped, with a config that lists only that flow and the ones after it.
+  test("the device job runs the flows once, going on after a device drop", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();
-    expect(text).toMatch(/^maestro test .*"\$here"$/m);
+    const flows = text.slice(text.indexOf('echo "::group::flows"'), text.indexOf('echo "::group::visual capture"'));
+    const runs = [...flows.matchAll(/maestro test (.*)$/gm)].map((m) => m[1] ?? "");
+    expect(runs).toHaveLength(2);
+    expect(runs[0]).not.toContain("--config");
+    expect(runs[1]).toContain('--config "$resume_config"');
+    expect(flows).toMatch(/\[ "\$platform" != android \] \|\| \[ -z "\$failed" \] \|\| ! dropped "\$failed"; then exit 1; fi/);
+    // The resume list starts at the failed flow, so the flows before it never run twice.
+    expect(flows).toContain('sed -n "/^$failed\\$/,\\$p"');
     expect(text).not.toMatch(/^(\w+) \|\| \1$/m);
   });
 
@@ -109,8 +117,9 @@ describe("Maestro flows", () => {
   // story again on its own; it never runs a flow from flows/.
   test("the visual capture runs only the story flows it writes, again only one story at a time", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();
-    const runs = [...text.matchAll(/^\s*maestro test (.*)$/gm)].map((m) => m[1] ?? "");
-    expect(runs).toHaveLength(4);
+    const capture = text.slice(text.indexOf('echo "::group::visual capture"'));
+    const runs = [...capture.matchAll(/^\s*maestro test (.*)$/gm)].map((m) => m[1] ?? "");
+    expect(runs).toHaveLength(3);
     expect(runs.filter((run) => run.includes('"$batch" < /dev/null'))).toHaveLength(2);
     expect(runs.filter((run) => run.includes('"$batch/$folder.yaml"'))).toHaveLength(1);
     const story = await Bun.file(`${root}/visual/capture-story.yaml`).text();
