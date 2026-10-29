@@ -66,12 +66,16 @@ env:
 
 # Before the names open nobody is named on the plan, the Plans tab or Home.
 - assertNotVisible: ".*(Esha|Farid|Gita).*"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: plans
-    timeout: 10000
+# Once on iOS a system gesture took the tap on Back and the plan stayed open. The tap goes again when the list does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: back
+      - extendedWaitUntil:
+          visible:
+            id: plans
+          timeout: 10000
 - assertVisible: ".*Group confirmed.*"
 - assertNotVisible: ".*(Esha|Farid|Gita).*"
 
