@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { typography } from "@turnout/design-tokens";
 import { NativeTabs } from "expo-router/native-tabs";
+import { groupsEnabled } from "@/api/features";
 import { plansListQuery } from "@/api/plans";
 import { nav } from "@/copy/nav";
 import { badgeCount } from "@/model/plan";
@@ -16,7 +17,7 @@ import { useColors } from "@/ui/theme";
 export default function TabsLayout() {
   const colors = useColors();
   const api = useApi();
-  const waiting = badgeCount(useQuery(plansListQuery(api)).data?.plans ?? []);
+  const waiting = badgeCount(useQuery({ ...plansListQuery(api), enabled: groupsEnabled() }).data?.plans ?? []);
   return (
     <NativeTabs
       backgroundColor={colors.surface}

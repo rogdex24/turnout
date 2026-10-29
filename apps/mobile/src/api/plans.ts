@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
   type CreatePlanRequest,
   type Plan,
@@ -21,9 +22,14 @@ export function fetchPlan(api: ApiClient, planId: string): Promise<Plan> {
   return api.request({ path: `/plans/${encodeURIComponent(planId)}`, schema: planResponseSchema });
 }
 
-export const planDetailQuery = (api: ApiClient, planId: string) => ({
+/**
+ * One plan. Until its own answer is in, the copy in the plan list stands in for it: the list is kept on the phone, so a plan seen in
+ * the list opens offline even if its page was never opened.
+ */
+export const planDetailQuery = (api: ApiClient, planId: string, queryClient?: QueryClient) => ({
   queryKey: queryKeys.planDetail(planId),
   queryFn: () => fetchPlan(api, planId),
+  placeholderData: () => queryClient?.getQueryData<PlanListResponse>(queryKeys.plansList())?.plans.find((p) => p.id === planId),
 });
 
 /** POST /plans. A 409 `plan_exists` carries the plan already made for this show; the caller carries on with it. */

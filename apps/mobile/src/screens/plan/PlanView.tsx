@@ -120,7 +120,7 @@ function stateCard(props: PlanViewProps): { card: ReactNode; dock: Dock | null }
         card: (
           <>
             <Title>{copy.confirmed.title}</Title>
-            <Body>{open ? copy.confirmed.bodyAfter : when ? copy.confirmed.body(when) : copy.confirmed.bodyAfter}</Body>
+            <Body>{when ? copy.confirmed.body(when) : copy.confirmed.bodyAfter}</Body>
             {facts ? <RevealCount others={facts.others} revealAt={when} /> : null}
             {facts?.belowPlan ? <Note icon={Info}>{copy.confirmed.smaller(facts.size)}</Note> : null}
             {facts?.meetAt ? <Body>{copy.confirmed.meetAround(istClock(facts.meetAt, new Date(now)))}</Body> : null}
@@ -225,7 +225,10 @@ function ticketSub(plan: Plan): string | undefined {
 
 function chatSub(plan: Plan, facts: GroupFacts | null, now: number): string | undefined {
   if (plan.state === "done") return copy.rows.chatClosed;
-  if (plan.state === "group_confirmed" && facts) return copy.rows.chatOpens(istClock(facts.revealAt, new Date(now)));
+  // Once the names open the chat is open too, even if the plan has not yet moved on the server.
+  if (plan.state === "group_confirmed" && facts && !isRevealed(new Date(now), facts.revealAt)) {
+    return copy.rows.chatOpens(istClock(facts.revealAt, new Date(now)));
+  }
   return undefined;
 }
 
