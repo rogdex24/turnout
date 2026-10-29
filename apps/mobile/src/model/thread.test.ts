@@ -80,4 +80,40 @@ describe("threadItems", () => {
     ]);
     expect(items[1]?.firstName).toBe("You");
   });
+
+  describe("an own entry the list already holds", () => {
+    const yours = (id: string, over: Partial<Message> = {}) =>
+      message(id, { memberRef: "m-you", firstName: "Ananya", isYou: true, ...over });
+    const entry = (status: "sending" | "queued" | "failed") => ({
+      clientId: "abc12345",
+      body: "On my way",
+      sentAt: "2026-11-07T10:32:00.000Z",
+      status,
+    });
+
+    it.each(["sending", "queued", "failed"] as const)(
+      "hides a %s entry once the person's message with that text is in the list",
+      (status) => {
+        const items = threadItems([yours("01", { body: "On my way", createdAt: "2026-11-07T10:32:01.000Z" })], [entry(status)], "You");
+        expect(items.map((item) => [item.key, item.status])).toEqual([["01", "sent"]]);
+      },
+    );
+
+    it("keeps the entry when the stored message with that text is older than the send, so the same words sent twice show twice", () => {
+      const items = threadItems([yours("01", { body: "On my way", createdAt: "2026-11-07T10:31:00.000Z" })], [entry("sending")], "You");
+      expect(items.map((item) => item.status)).toEqual(["sent", "sending"]);
+    });
+
+    it("keeps the entry when the same text came from someone else, or the person wrote different words", () => {
+      const items = threadItems(
+        [
+          message("01", { body: "On my way", createdAt: "2026-11-07T10:33:00.000Z" }),
+          yours("02", { body: "Running late", createdAt: "2026-11-07T10:33:00.000Z" }),
+        ],
+        [entry("failed")],
+        "You",
+      );
+      expect(items.map((item) => item.status)).toEqual(["sent", "sent", "failed"]);
+    });
+  });
 });

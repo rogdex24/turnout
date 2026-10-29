@@ -19,6 +19,8 @@ export interface ReportPerson {
   memberRef: string;
   firstName: string;
   photoUrl: string | null;
+  /** Keeps the photo in the image memory cache only, under a key that outlives the signed link. */
+  memoryCacheKey: string;
 }
 
 export type ReportViewState =
@@ -48,7 +50,8 @@ export interface ReportViewProps {
   onBack: () => void;
   onRetry: () => void;
   onCall: () => void;
-  onSubmit: (submission: ReportSubmission) => void;
+  /** Answers with a line to show when the report cannot be sent, null when it went. */
+  onSubmit: (submission: ReportSubmission) => string | null;
   onDone: () => void;
 }
 
@@ -89,11 +92,12 @@ function Form({
   aboutMessage: boolean;
   sending: boolean;
   failed: boolean;
-  onSubmit: (submission: ReportSubmission) => void;
+  onSubmit: (submission: ReportSubmission) => string | null;
 }) {
   const [memberRef, setMemberRef] = useState<string | null>(initialMemberRef);
   const [reasonId, setReasonId] = useState<string>(copy.reasons[0].id);
   const [details, setDetails] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
   const reason = copy.reasons.find((entry) => entry.id === reasonId) ?? copy.reasons[0];
   return (
     <>
@@ -124,7 +128,7 @@ function Form({
                   importantForAccessibility="no-hide-descendants"
                   className={picked ? "rounded-field border-2 border-ink p-0.5" : "rounded-field border-2 border-transparent p-0.5"}
                 >
-                  <PersonAvatar name={person.firstName} photoUrl={person.photoUrl} size="sm" />
+                  <PersonAvatar name={person.firstName} photoUrl={person.photoUrl} size="sm" memoryCacheKey={person.memoryCacheKey} />
                 </View>
                 <Text
                   variant="meta"
@@ -181,7 +185,10 @@ function Form({
           label={copy.details.label}
           placeholder={copy.details.placeholder}
           value={details}
-          onChangeText={setDetails}
+          onChangeText={(text) => {
+            setDetails(text);
+            setProblem(null);
+          }}
           multiline
           numberOfLines={4}
           maxLength={DETAILS_MAX_CHARS}
@@ -193,7 +200,11 @@ function Form({
         </Text>
       </ScrollView>
       <SafeAreaView edges={["bottom"]} className="border-t border-line bg-bg px-4 pt-3">
-        {failed ? (
+        {problem ? (
+          <Text variant="meta" className="mb-2.5 text-center text-muted" accessibilityLiveRegion="polite" testID="report-invalid">
+            {problem}
+          </Text>
+        ) : failed ? (
           <Text variant="meta" className="mb-2.5 text-center text-muted" accessibilityLiveRegion="polite" testID="report-failed">
             {copy.failed}
           </Text>
@@ -202,7 +213,7 @@ function Form({
           title={copy.send}
           disabled={memberRef === null}
           loading={sending}
-          onPress={() => memberRef !== null && onSubmit({ memberRef, reasonLabel: reason.label, details })}
+          onPress={() => memberRef !== null && setProblem(onSubmit({ memberRef, reasonLabel: reason.label, details }))}
           testID="report-send"
         />
         <View className="h-3" />

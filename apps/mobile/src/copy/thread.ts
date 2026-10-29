@@ -28,12 +28,16 @@ export const thread = {
     sending: "Sending",
     queued: "You're offline. We'll send this when you're back online.",
     failed: "Didn't send. Tap to try again.",
+    /** The server's final no: trying again would get the same answer, so there is no tap. */
+    refused: "Couldn't send this message.",
   },
   retryHint: "Sends the message again",
   composer: {
     label: "Message",
     placeholder: "Message",
     send: "Send",
+    /** A message the contract refuses (empty, over the limit, or HTML), shown under the box with the words kept. */
+    invalid: (max: number) => `That can't be sent. Use plain text, up to ${max.toLocaleString("en-IN")} characters, and no HTML.`,
   },
   quick: {
     label: "Quick messages",

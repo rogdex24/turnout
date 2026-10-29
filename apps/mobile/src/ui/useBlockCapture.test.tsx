@@ -2,12 +2,20 @@ import { render } from "@testing-library/react-native";
 import { useEffect as mockUseEffect } from "react";
 import { useBlockCapture } from "./useBlockCapture";
 
-const mockPrevent = jest.fn(() => Promise.resolve());
-const mockAllow = jest.fn(() => Promise.resolve());
+/** The keys that are blocking capture now. Like expo-screen-capture, capture is blocked while any key is held. */
+const mockHeld = new Set<string>();
+const mockPrevent = jest.fn((key: string | undefined) => {
+  mockHeld.add(key ?? "default");
+  return Promise.resolve();
+});
+const mockAllow = jest.fn((key: string | undefined) => {
+  mockHeld.delete(key ?? "default");
+  return Promise.resolve();
+});
 
 jest.mock("expo-screen-capture", () => ({
-  preventScreenCaptureAsync: () => mockPrevent(),
-  allowScreenCaptureAsync: () => mockAllow(),
+  preventScreenCaptureAsync: (key?: string) => mockPrevent(key),
+  allowScreenCaptureAsync: (key?: string) => mockAllow(key),
 }));
 
 // The screen is focused while it is mounted, which is all this hook needs from the router.
@@ -26,6 +34,7 @@ const original = process.env.EXPO_PUBLIC_ALLOW_CAPTURE;
 
 afterEach(() => {
   jest.clearAllMocks();
+  mockHeld.clear();
   if (original === undefined) delete process.env.EXPO_PUBLIC_ALLOW_CAPTURE;
   else process.env.EXPO_PUBLIC_ALLOW_CAPTURE = original;
 });
@@ -38,6 +47,19 @@ describe("useBlockCapture", () => {
     expect(mockAllow).not.toHaveBeenCalled();
     await view.unmount();
     expect(mockAllow).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps capture blocked under a screen when a screen pushed over it is closed", async () => {
+    delete process.env.EXPO_PUBLIC_ALLOW_CAPTURE;
+    const after = await render(<Screen />);
+    expect(mockHeld.size).toBe(1);
+    // The Report form opens over After, and closes again.
+    const report = await render(<Screen />);
+    expect(mockHeld.size).toBe(2);
+    await report.unmount();
+    expect(mockHeld.size).toBe(1);
+    await after.unmount();
+    expect(mockHeld.size).toBe(0);
   });
 
   it("leaves capture alone in the e2e build, so Maestro can take screenshots", async () => {

@@ -1,5 +1,5 @@
 import { act, configure, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import type { Message } from "@turnout/contract/app/thread";
+import { MESSAGE_MAX_CHARS, type Message } from "@turnout/contract/app/thread";
 import { groupBeforeRevealFixture, groupFixture, SHOW_STARTS_AT } from "@/api/groupFixtures";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { thread as copy } from "@/copy/thread";
@@ -106,6 +106,15 @@ describe("ThreadScreen", () => {
     expect(app.onClosed).toHaveBeenCalledTimes(1);
   });
 
+  it("stays readable, under a plain title, when the server has no group but still has the messages", async () => {
+    const app = await openThread({ "GET /groups/g1": json(404, { error: "not_found" }) });
+    expect(await screen.findByText("Hello everyone")).toBeOnTheScreen();
+    expect(screen.queryByText(copy.closed.title)).toBeNull();
+    expect(screen.getByTestId("thread-title")).toHaveTextContent(copy.fallbackTitle);
+    expect(screen.getByTestId("thread-composer")).toBeOnTheScreen();
+    expect(app.transport.callsTo("GET /groups/g1/messages")).toHaveLength(1);
+  });
+
   it("does not turn a link into a link", async () => {
     await openThread({ "GET /groups/g1/messages": open_([message(1, "priya", "See https://example.com now")]) });
     const text = await screen.findByText("See https://example.com now");
@@ -162,20 +171,80 @@ describe("ThreadScreen", () => {
       await waitFor(() => expect(posts(app)).toHaveLength(1));
     });
 
-    it("says a refused message did not go, and sends it again with the same client id", async () => {
-      const sent = message(3, "you", "Anyone near the door?");
-      const app = await openThread({ "POST /groups/g1/messages": json(422, { error: "validation" }) });
+    it("says a message the server refused for good did not go, with nothing to tap", async () => {
+      const app = await openThread({ "POST /groups/g1/messages": json(403, { error: "forbidden" }) });
       await screen.findByText("Hello everyone");
       await fireEvent.changeText(screen.getByTestId("thread-input"), "Anyone near the door?");
       await fireEvent.press(screen.getByTestId("thread-send"));
-      expect(await screen.findByText(copy.status.failed)).toBeOnTheScreen();
-      app.transport.set("POST /groups/g1/messages", json(201, sent));
-      const failed = screen.getByLabelText(new RegExp(copy.status.failed));
-      expect(failed.props.accessibilityRole).toBe("button");
-      await fireEvent.press(failed);
-      await waitFor(() => expect(posts(app)).toHaveLength(2));
-      expect(bodyOf(posts(app)[1]).clientId).toBe(bodyOf(posts(app)[0]).clientId);
-      await waitFor(() => expect(screen.queryByText(copy.status.failed)).toBeNull());
+      expect(await screen.findByText(copy.status.refused)).toBeOnTheScreen();
+      const item = screen.getByLabelText(new RegExp(copy.status.refused));
+      expect(item.props.accessibilityRole).toBe("text");
+      expect(item.props.onPress).toBeUndefined();
+      expect(screen.queryByText(copy.status.failed)).toBeNull();
+      expect(posts(app)).toHaveLength(1);
+    });
+
+    it("says a message that did not go through did not go, and sends it again with the same client id", async () => {
+      clock.mockRestore();
+      jest.useFakeTimers({ now: OPEN });
+      try {
+        const sent = message(3, "you", "Anyone near the door?");
+        const app = await openThread({ "POST /groups/g1/messages": json(500, { error: "server" }) });
+        await screen.findByText("Hello everyone");
+        await fireEvent.changeText(screen.getByTestId("thread-input"), "Anyone near the door?");
+        await fireEvent.press(screen.getByTestId("thread-send"));
+        // A busy server is tried three more times, with a wait between, before the message counts as not sent.
+        await act(async () => jest.advanceTimersByTimeAsync(30_000));
+        expect(await screen.findByText(copy.status.failed)).toBeOnTheScreen();
+        const tries = posts(app).length;
+        expect(tries).toBe(4);
+        app.transport.set("POST /groups/g1/messages", json(201, sent));
+        const failed = screen.getByLabelText(new RegExp(copy.status.failed));
+        expect(failed.props.accessibilityRole).toBe("button");
+        await fireEvent.press(failed);
+        await waitFor(() => expect(posts(app)).toHaveLength(tries + 1));
+        expect(bodyOf(posts(app)[tries]).clientId).toBe(bodyOf(posts(app)[0]).clientId);
+        await waitFor(() => expect(screen.queryByText(copy.status.failed)).toBeNull());
+      } finally {
+        jest.useRealTimers();
+        clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);
+      }
+    });
+
+    it("checks the message against the contract first, keeps the words, and says why", async () => {
+      const app = await openThread();
+      await screen.findByText("Hello everyone");
+      await fireEvent.changeText(screen.getByTestId("thread-input"), "<b>hi</b>");
+      await fireEvent.press(screen.getByTestId("thread-send"));
+      expect(await screen.findByTestId("thread-invalid")).toHaveTextContent(copy.composer.invalid(MESSAGE_MAX_CHARS));
+      expect(posts(app)).toHaveLength(0);
+      expect(screen.getByTestId("thread-input").props.value).toBe("<b>hi</b>");
+      expect(screen.getByTestId("thread-input").props.maxLength).toBe(MESSAGE_MAX_CHARS);
+      await fireEvent.changeText(screen.getByTestId("thread-input"), "hi");
+      expect(screen.queryByTestId("thread-invalid")).toBeNull();
+    });
+
+    it("hides the person's own entry once the list holds their message with the same text", async () => {
+      clock.mockRestore();
+      jest.useFakeTimers({ now: OPEN });
+      try {
+        const sent = { ...message(3, "you", "Table by the window"), createdAt: new Date(OPEN + 1000).toISOString() };
+        await openThread({
+          "GET /groups/g1/messages": [open_([HELLO, MINE]), open_([HELLO, MINE, sent])],
+          // The answer to the send never arrives, so only the list can take the entry's place.
+          "POST /groups/g1/messages": () => new Promise<never>(() => undefined),
+        });
+        await screen.findByText("Hello everyone");
+        await fireEvent.changeText(screen.getByTestId("thread-input"), "Table by the window");
+        await fireEvent.press(screen.getByTestId("thread-send"));
+        expect(await screen.findByText(copy.status.sending)).toBeOnTheScreen();
+        await act(async () => jest.advanceTimersByTimeAsync(POLL_EVERY_MS + 100));
+        await waitFor(() => expect(screen.queryByText(copy.status.sending)).toBeNull());
+        expect(screen.getAllByText("Table by the window")).toHaveLength(1);
+      } finally {
+        jest.useRealTimers();
+        clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);
+      }
     });
   });
 
@@ -236,6 +305,26 @@ describe("ThreadScreen", () => {
         expect(screen.getByText(copy.readOnly)).toBeOnTheScreen();
         await act(async () => jest.advanceTimersByTimeAsync(POLL_EVERY_MS * 3));
         expect(app.transport.callsTo("GET /groups/g1/messages")).toHaveLength(2);
+      } finally {
+        jest.useRealTimers();
+        clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);
+      }
+    });
+
+    it("keeps the messages it holds, read only, when the server has neither the group nor the chat any more", async () => {
+      clock.mockRestore();
+      jest.useFakeTimers({ now: OPEN });
+      try {
+        await openThread({
+          "GET /groups/g1": json(404, { error: "not_found" }),
+          "GET /groups/g1/messages": [open_([HELLO]), json(404, { error: "not_found" })],
+        });
+        await screen.findByText("Hello everyone");
+        await act(async () => jest.advanceTimersByTimeAsync(POLL_EVERY_MS + 100));
+        await waitFor(() => expect(screen.queryByTestId("thread-composer")).toBeNull());
+        expect(screen.getByText("Hello everyone")).toBeOnTheScreen();
+        expect(screen.getByText(copy.readOnly)).toBeOnTheScreen();
+        expect(screen.queryByText(copy.closed.title)).toBeNull();
       } finally {
         jest.useRealTimers();
         clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);

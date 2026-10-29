@@ -56,7 +56,8 @@ export interface PendingMessage {
   body: string;
   /** When the person sent it, as an instant. */
   sentAt: string;
-  status: "sending" | "queued" | "failed";
+  /** `failed` can be tried again; `refused` is the server's final no (the chat closed, the text was refused), so it cannot. */
+  status: "sending" | "queued" | "failed" | "refused";
 }
 
 export type ItemStatus = "sent" | PendingMessage["status"];
@@ -82,13 +83,20 @@ const RUN_GAP_MS = 5 * 60_000;
 
 type Draft = Omit<ThreadItem, "startsRun"> & { sentAt: string };
 
+/** The server's copy of a pending entry: the person's own message, the same text (the send trims it), made at or after the send began. */
+const isEntryStored = (entry: PendingMessage, message: Message): boolean =>
+  message.isYou && message.body === entry.body && Date.parse(message.createdAt) >= Date.parse(entry.sentAt);
+
 const sender = (item: Draft) => (item.isYou ? "you" : item.memberRef);
 
 /**
  * The thread as the screen draws it, oldest first: the server's messages, then the person's own that have not landed yet. A message
- * leaves `pending` when the server has stored it and the thread has been read again, so it is not drawn twice.
+ * leaves `pending` when the server has stored it and the thread has been read again, so it is not drawn twice. Between those two
+ * moments (and for a send whose answer was lost, which reads as failed) an entry is also left out when the list already holds the
+ * person's message with the same text from the send or later.
  */
 export function threadItems(messages: readonly Message[], pending: readonly PendingMessage[], youName: string): ThreadItem[] {
+  const unseen = pending.filter((entry) => !messages.some((message) => isEntryStored(entry, message)));
   const drafts: Draft[] = [
     ...messages.map(
       (message): Draft => ({
@@ -103,7 +111,7 @@ export function threadItems(messages: readonly Message[], pending: readonly Pend
         sentAt: message.createdAt,
       }),
     ),
-    ...pending.map(
+    ...unseen.map(
       (entry): Draft => ({
         key: `pending-${entry.clientId}`,
         memberRef: null,

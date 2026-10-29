@@ -166,7 +166,7 @@ export function MeetScreen({
       onReport={onReport}
       onLeave={plan ? () => onLeave(plan.planId) : null}
       onClosed={onClosed}
-      onOpenAfter={group.data?.state === "done" ? onOpenAfter : null}
+      onOpenAfter={group.isSuccess && group.data.state === "done" ? onOpenAfter : null}
     />
   );
 }

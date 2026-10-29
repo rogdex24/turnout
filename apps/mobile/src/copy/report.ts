@@ -23,6 +23,8 @@ export const report = {
   message: "About one of their messages.",
   send: "Send report",
   failed: "That didn't go through. Try again.",
+  /** What the contract refuses (empty, or over the limit), shown with the form kept as it is. */
+  invalid: (max: number) => `That's too long to send. Keep it under ${max.toLocaleString("en-IN")} characters.`,
   loading: "Loading",
   sent: {
     title: "We have your report",

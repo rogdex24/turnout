@@ -14,6 +14,7 @@ const people: ReportPerson[] = MEMBERS.filter((member) => !member.isYou).map(({ 
   memberRef,
   firstName,
   photoUrl,
+  memoryCacheKey: `g1:${memberRef}`,
 }));
 
 const base: ReportViewProps = {
@@ -24,7 +25,7 @@ const base: ReportViewProps = {
   onBack: noop,
   onRetry: noop,
   onCall: noop,
-  onSubmit: noop,
+  onSubmit: () => null,
   onDone: noop,
 };
 

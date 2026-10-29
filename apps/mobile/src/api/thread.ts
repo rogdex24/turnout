@@ -1,13 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { type Message, type MessageListResponse, messageListResponseSchema, messageSchema } from "@turnout/contract/app/thread";
+import {
+  MESSAGE_PAGE,
+  type Message,
+  type MessageListResponse,
+  messageListResponseSchema,
+  messageSchema,
+} from "@turnout/contract/app/thread";
 import { mergeMessages, type ThreadData } from "@/model/thread";
 import type { ApiClient } from "./client";
 import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
 import { retryTransient } from "./retry";
 
-/** The server's page size (src/social/thread.ts). A full page means there may be more. */
-const PAGE = 100;
 /** A thread of 2,000 messages is more than a group writes in a day; the loop stops there rather than run for ever. */
 const MAX_PAGES = 20;
 
@@ -30,7 +34,7 @@ export async function fetchThread(api: ApiClient, groupId: string, held: ThreadD
     const answer = await fetchMessages(api, groupId, messages.at(-1)?.id);
     messages = mergeMessages(messages, answer.messages);
     thread = answer.thread;
-    if (answer.messages.length < PAGE) break;
+    if (answer.messages.length < MESSAGE_PAGE) break;
   }
   return { messages, thread, complete: true };
 }

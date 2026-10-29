@@ -1,3 +1,4 @@
+import { MESSAGE_MAX_CHARS } from "@turnout/contract/app/thread";
 import { CalendarX, CaretLeft, ChatCircle, Flag, Hourglass, Lock, PaperPlaneRight } from "phosphor-react-native";
 import { useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
@@ -44,8 +45,8 @@ export interface ThreadViewProps {
   offline: boolean;
   onBack: () => void;
   onRetry: () => void;
-  /** Sends a message. The text is trimmed by the server, and the view never sends an empty one. */
-  onSend: (body: string) => void;
+  /** Sends a message. The text is trimmed by the server, and the view never sends an empty one. Answers with a line to show when the message cannot be sent, null when it went. */
+  onSend: (body: string) => string | null;
   /** Sends a message that did not go, again. */
   onResend: (clientId: string) => void;
   /** Opens the report form for someone else's message. */
@@ -59,6 +60,7 @@ function statusLine(item: ThreadItem): string | null {
   if (item.status === "sending") return copy.status.sending;
   if (item.status === "queued") return copy.status.queued;
   if (item.status === "failed") return copy.status.failed;
+  if (item.status === "refused") return copy.status.refused;
   return null;
 }
 
@@ -129,14 +131,16 @@ function Message({
   );
 }
 
-function Composer({ onSend, onQuick }: { onSend: (body: string) => void; onQuick: (text: string) => void }) {
+function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null; onQuick: (text: string) => void }) {
   const colors = useColors();
   const [draft, setDraft] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
   const ready = draft.trim().length > 0;
   const send = () => {
     if (!ready) return;
-    onSend(draft);
-    setDraft("");
+    const refused = onSend(draft);
+    setProblem(refused);
+    if (refused === null) setDraft("");
   };
   return (
     <View className="border-t border-line bg-bg pb-2 pt-2" testID="thread-composer">
@@ -160,9 +164,12 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => void; onQuick
           selectionColor={colors.ink}
           cursorColor={colors.ink}
           value={draft}
-          onChangeText={setDraft}
+          onChangeText={(text) => {
+            setDraft(text);
+            setProblem(null);
+          }}
           multiline
-          maxLength={1000}
+          maxLength={MESSAGE_MAX_CHARS}
           allowFontScaling
           dataDetectorTypes="none"
           returnKeyType="default"
@@ -179,6 +186,11 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => void; onQuick
           testID="thread-send"
         />
       </View>
+      {problem ? (
+        <Text variant="meta" className="mt-1.5 px-4 text-muted" accessibilityLiveRegion="polite" testID="thread-invalid">
+          {problem}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -284,7 +296,7 @@ export function ThreadView(props: ThreadViewProps) {
                 <Note icon={Lock}>{copy.readOnly}</Note>
               </View>
             ) : (
-              <Composer onSend={props.onSend} onQuick={props.onSend} />
+              <Composer onSend={props.onSend} onQuick={(text) => void props.onSend(text)} />
             )}
           </>
         ) : null}

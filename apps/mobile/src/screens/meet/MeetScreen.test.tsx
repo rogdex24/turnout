@@ -121,6 +121,30 @@ describe("MeetScreen", () => {
     expect(onOpenAfter).toHaveBeenCalled();
   });
 
+  it("stops offering the after-the-show screen when the latest read of the group failed, and offers it again when one works", async () => {
+    clock.mockRestore();
+    const closed = Date.parse(SHOW_STARTS_AT) + 25 * 3_600_000;
+    jest.useFakeTimers({ now: closed });
+    try {
+      const { onOpenAfter, ...app } = await open({
+        "GET /groups/g1": [json(200, doneGroupFixture()), json(403, { error: "forbidden" })],
+      });
+      expect(await screen.findByText(after.open)).toBeOnTheScreen();
+      // The next read fails, leaving the copy the phone holds: it may be stale, so it is not enough to offer the screen.
+      await act(async () => jest.advanceTimersByTimeAsync(30_000 + 100));
+      await waitFor(() => expect(screen.queryByText(after.open)).toBeNull());
+      expect(screen.getByText(copy.closed.title)).toBeOnTheScreen();
+      expect(app.transport.callsTo("GET /groups/g1").length).toBeGreaterThan(1);
+      app.transport.set("GET /groups/g1", json(200, doneGroupFixture()));
+      await act(async () => jest.advanceTimersByTimeAsync(30_000 + 100));
+      expect(await screen.findByText(after.open)).toBeOnTheScreen();
+      expect(onOpenAfter).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+      clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);
+    }
+  });
+
   describe("I'm here", () => {
     it("is off before check-in opens and says when it will", async () => {
       clock.mockReturnValue(EARLY);

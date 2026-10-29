@@ -16,7 +16,7 @@ const base: ThreadViewProps = {
   offline: false,
   onBack: noop,
   onRetry: noop,
-  onSend: noop,
+  onSend: () => null,
   onResend: noop,
   onReport: noop,
   onClosed: noop,

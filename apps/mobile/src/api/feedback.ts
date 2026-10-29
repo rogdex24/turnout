@@ -7,6 +7,9 @@ import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
 import { retryTransient } from "./retry";
 
+/** How long the faces stay in memory once nothing on screen uses them. */
+export const AFTER_GC_MS = 5 * 60_000;
+
 /**
  * The group after the show. The same answer as the meet card, under its own key so it is not kept on disk: the faces of the people
  * a person went with stay in memory only, and are gone when the screen has been left for a few minutes.
@@ -14,6 +17,7 @@ import { retryTransient } from "./retry";
 export const afterQuery = (api: ApiClient, groupId: string) => ({
   queryKey: queryKeys.after(groupId),
   queryFn: () => fetchGroup(api, groupId),
+  gcTime: AFTER_GC_MS,
 });
 
 export interface DownvoteVariables {

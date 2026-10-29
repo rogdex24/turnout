@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { createReportRequestSchema } from "@turnout/contract/app/reports";
+import { createReportRequestSchema, REPORT_MAX_CHARS } from "@turnout/contract/app/reports";
 import { Linking } from "react-native";
-import { groupBeforeRevealFixture, groupFixture } from "@/api/groupFixtures";
+import { groupBeforeRevealFixture, groupFixture, memberFixture } from "@/api/groupFixtures";
+import { isPersistedKey, queryKeys } from "@/api/keys";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { report as copy } from "@/copy/report";
+import { DETAILS_MAX_CHARS } from "@/model/report";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
 import { ReportScreen } from "./ReportScreen";
@@ -34,6 +36,15 @@ async function openReport(params: { memberRef?: string; messageId?: string } = {
     </AppProviders>,
   );
   return { ...app, ...props };
+}
+
+type Json = { props: Record<string, unknown>; children: Json[] | null } | string | null;
+
+/** The props of every rendered node that has `prop` set. */
+function withProp(node: Json | Json[], prop: string): Record<string, unknown>[] {
+  if (node === null || typeof node === "string") return [];
+  if (Array.isArray(node)) return node.flatMap((child) => withProp(child, prop));
+  return [...(node.props[prop] === undefined ? [] : [node.props]), ...withProp(node.children ?? [], prop)];
 }
 
 const posts = (app: Awaited<ReturnType<typeof openReport>>) => app.transport.callsTo("POST /reports");
@@ -103,6 +114,21 @@ describe("ReportScreen", () => {
     expect(createReportRequestSchema.safeParse(body).success).toBe(true);
   });
 
+  it("checks the report against the contract first, keeps what was written, and says why", async () => {
+    const app = await openReport({ memberRef: "m-sana" });
+    await screen.findByTestId("report-send");
+    // A field's own limit stops typing, but not a paste the keyboard hands over whole.
+    const long = "x".repeat(REPORT_MAX_CHARS + 1);
+    await fireEvent.changeText(screen.getByTestId("report-details"), long);
+    await fireEvent.press(screen.getByTestId("report-send"));
+    expect(await screen.findByTestId("report-invalid")).toHaveTextContent(copy.invalid(REPORT_MAX_CHARS));
+    expect(posts(app)).toHaveLength(0);
+    expect(screen.getByTestId("report-details").props.value).toBe(long);
+    expect(screen.getByTestId("report-details").props.maxLength).toBe(DETAILS_MAX_CHARS);
+    await fireEvent.changeText(screen.getByTestId("report-details"), "Shorter.");
+    expect(screen.queryByTestId("report-invalid")).toBeNull();
+  });
+
   it("sends the reason alone when there are no details", async () => {
     const app = await openReport({ memberRef: "m-priya" });
     await fireEvent.press(await screen.findByTestId("report-send"));
@@ -162,6 +188,26 @@ describe("ReportScreen", () => {
     await openReport({}, { "GET /groups/g1": json(403, { error: "forbidden" }) });
     expect(await screen.findByRole("alert")).toBeOnTheScreen();
     expect(screen.getByTestId("report-call-112")).toBeOnTheScreen();
+  });
+
+  it("reads the people from the memory-only query, and keeps their photos out of the disk image cache", async () => {
+    const photo = "https://photos.example/sana.jpg?sig=1";
+    const group = groupFixture({
+      members: [
+        memberFixture({ memberRef: "m-sana", firstName: "Sana", photoUrl: photo }),
+        memberFixture({ memberRef: "m-you", isYou: true }),
+      ],
+    });
+    const app = await openReport({ memberRef: "m-sana" }, { "GET /groups/g1": json(200, group) });
+    const tile = await screen.findByTestId("report-person-m-sana");
+    expect(app.queryClient.getQueryData(queryKeys.after("g1"))).toBeDefined();
+    expect(app.queryClient.getQueryData(queryKeys.group("g1"))).toBeUndefined();
+    expect(isPersistedKey(queryKeys.after("g1"))).toBe(false);
+    expect(tile).toBeOnTheScreen();
+    const images = withProp(screen.toJSON(), "cachePolicy");
+    expect(images).toHaveLength(1);
+    expect(images[0]?.cachePolicy).toBe("memory");
+    expect(images[0]?.source).toEqual([{ uri: photo, cacheKey: "g1:m-sana" }]);
   });
 
   it("has no one to report before the group is shown", async () => {
