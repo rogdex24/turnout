@@ -9,6 +9,7 @@ import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
 import type { SecretStore } from "../api/secureStorage";
+import { createLocalWipe, type LocalWipe } from "../api/signOut";
 import { createStubWhatsAppOtp, type WhatsAppOtp } from "../api/whatsappOtp";
 import { createLocalFlags, type LocalFlags } from "./localFlags";
 
@@ -23,6 +24,8 @@ export interface AppDeps {
   buster: string;
   prefs: KeyValueStore;
   localFlags: LocalFlags;
+  /** The local half of sign-out. Deletion asks it to forget the welcome cards too. */
+  wipe: LocalWipe;
   whatsappOtp: WhatsAppOtp;
   appVersion: string;
 }
@@ -39,9 +42,13 @@ export interface DepParts {
   whatsappOtp?: WhatsAppOtp;
   queryClient?: QueryClient;
   now?: () => number;
+  /** Empties the image cache at sign-out. Tests leave it out. */
+  clearImages?: () => Promise<void>;
+  /** Stops Sentry and PostHog at sign-out. Tests leave it out. */
+  stopTelemetry?: () => void;
 }
 
-/** The one wiring of session, client, cache and local flags. The sign-out hook empties the cache and the notice, so the next person on the phone starts clean. */
+/** The one wiring of session, client, cache and local flags. The sign-out hook wipes the phone (cache, small facts, images, usage-data choice), so the next person on it starts clean. */
 export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
   const { secure, prefs, cacheStore, origin, transport = fetchTransport, appVersion } = parts;
   const connectivity = createConnectivity();
@@ -65,11 +72,15 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
   api = createApiClient({ origin, session, connectivity, transport });
 
   const persister = createCachePersister(cacheStore, { buster: () => cacheBuster(appVersion, session.getState().userId) });
-  session.onSignedOut(() => {
-    queryClient.clear();
-    persister.removeClient();
-    localFlags.forgetNotice();
+  const wipe = createLocalWipe({
+    prefs,
+    queryClient,
+    persister,
+    flags: localFlags,
+    clearImages: parts.clearImages ?? (async () => {}),
+    stopTelemetry: parts.stopTelemetry ?? (() => {}),
   });
+  session.onSignedOut(() => wipe.run());
   registerCheckin(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
@@ -83,6 +94,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     buster: cacheBuster(appVersion, session.getState().userId),
     prefs,
     localFlags,
+    wipe,
     whatsappOtp: parts.whatsappOtp ?? createStubWhatsAppOtp(),
     appVersion,
   };
