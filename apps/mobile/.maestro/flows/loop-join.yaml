@@ -64,6 +64,12 @@ env:
     timeout: 80000
 - assertVisible: ".*No group yet.*"
 - assertVisible: ".*Groups are set by.*"
+# At the real type sizes this is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: plan-leave
+    direction: DOWN
+    centerElement: true
 - assertVisible:
     id: plan-leave
 
