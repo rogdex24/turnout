@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { ALERT_TIMEOUT_MS, createAlerts, recordingAlerts } from "../src/app-api/alerts.js";
 import { housekeeping, sweepFiles, sweepRows } from "../src/app-api/housekeeping.js";
+import { addNotice } from "../src/social/notices.js";
 import { PHONES, testApp } from "./appHelpers.js";
+import { cleanPng } from "./fixtures/tickets/index.js";
+import { makePlan, memberSession } from "./helpers/appFixture.js";
+import { seedShow } from "./helpers/socialFixture.js";
 
 const count = (db: import("bun:sqlite").Database, table: string): number =>
   (db.query(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n;
@@ -54,13 +58,26 @@ describe("housekeeping", () => {
     expect(await t.app.store.list("")).toHaveLength(0);
   });
 
-  test("the file sweep leaves objects outside photos/ alone", async () => {
+  test("the file sweep leaves objects outside photos/ and tickets/ alone", async () => {
     const t = await testApp();
     await t.app.store.put("photos/orphan.jpg", new Uint8Array([1]), "image/jpeg");
-    await t.app.store.put("tickets/p1/t.png", new Uint8Array([1]), "image/png");
+    await t.app.store.put("exports/p1/t.png", new Uint8Array([1]), "image/png");
     t.clock.advance(2 * 60 * 60 * 1000);
     expect(await sweepFiles(t.app, t.clock())).toEqual(["photos/orphan.jpg"]);
-    expect((await t.app.store.list("")).map((entry) => entry.key)).toEqual(["tickets/p1/t.png"]);
+    expect((await t.app.store.list("")).map((entry) => entry.key)).toEqual(["exports/p1/t.png"]);
+  });
+
+  test("the file sweep removes a ticket file no row owns and keeps one a ticket row points at", async () => {
+    const t = await testApp();
+    seedShow(t.db, { id: "show-a" });
+    const a = await memberSession(t, 0);
+    const plan = await makePlan(t, a, "show-a");
+    await t.call("PUT", `/plans/${plan.id}/ticket`, { token: a.token, rawBody: cleanPng() });
+    const owned = (t.db.query("SELECT object_key FROM ticket_proof").get() as { object_key: string }).object_key;
+    await t.app.store.put("tickets/orphan.jpg", new Uint8Array([1]), "image/jpeg");
+    t.clock.advance(2 * 60 * 60 * 1000);
+    expect(await sweepFiles(t.app, t.clock())).toEqual(["tickets/orphan.jpg"]);
+    expect((await t.app.store.list("tickets/")).map((entry) => entry.key)).toEqual([owned]);
   });
 
   test("a pass that fails does not use up the day: the next tick tries again, and a good pass then marks it done", async () => {
@@ -89,6 +106,73 @@ describe("housekeeping", () => {
     expect(t.db.query("SELECT 1 FROM rate_bucket WHERE bucket_key = 'old'").get()).toBeNull();
     expect(t.logs.some((entry) => entry.route === "housekeeping" && entry.error === "Error")).toBe(true);
     expect(JSON.stringify(t.logs)).not.toContain("store down");
+  });
+});
+
+describe("the retention sweeps for the M3 tables", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  test("notices and their push deliveries go after 30 days, newer ones stay", async () => {
+    const t = await testApp();
+    const a = await memberSession(t, 0);
+    const old = addNotice(t.db, {
+      memberId: a.memberId,
+      kind: "ticket_approved",
+      planId: null,
+      groupId: null,
+      dedupeKey: "old",
+      now: t.clock(),
+    });
+    t.db
+      .query(
+        "INSERT INTO device (id, member_id, session_id, expo_token, platform, created_at, last_seen_at) VALUES ('d1', ?, NULL, 'ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]', 'android', ?, ?)",
+      )
+      .run(a.memberId, t.clock().toISOString(), t.clock().toISOString());
+    t.db
+      .query(
+        "INSERT INTO push_delivery (id, notice_id, device_id, expo_ticket_id, status, created_at) VALUES ('p1', ?, 'd1', 't1', 'delivered', ?)",
+      )
+      .run(old, t.clock().toISOString());
+    t.clock.advance(29 * DAY);
+    sweepRows(t.db, t.clock(), 7);
+    expect([count(t.db, "notice"), count(t.db, "push_delivery")]).toEqual([1, 1]);
+    t.clock.advance(2 * DAY);
+    const fresh = addNotice(t.db, {
+      memberId: a.memberId,
+      kind: "head_over",
+      planId: null,
+      groupId: null,
+      dedupeKey: "new",
+      now: t.clock(),
+    });
+    sweepRows(t.db, t.clock(), 7);
+    expect([count(t.db, "notice"), count(t.db, "push_delivery")]).toEqual([1, 0]);
+    expect((t.db.query("SELECT id FROM notice").get() as { id: string }).id).toBe(fresh as string);
+  });
+
+  test("sent alerts go after 30 days and operator actions after a year", async () => {
+    const t = await testApp();
+    t.db.query("INSERT INTO alert_sent (alert_key, sent_at) VALUES ('k', ?)").run(t.clock().toISOString());
+    t.db
+      .query(
+        "INSERT INTO operator_action (id, action, subject_type, subject_id, created_at) VALUES ('o1', 'approve_ticket', 'ticket', 'x', ?)",
+      )
+      .run(t.clock().toISOString());
+    t.clock.advance(31 * DAY);
+    sweepRows(t.db, t.clock(), 7);
+    expect([count(t.db, "alert_sent"), count(t.db, "operator_action")]).toEqual([0, 1]);
+    t.clock.advance(335 * DAY);
+    sweepRows(t.db, t.clock(), 7);
+    expect(count(t.db, "operator_action")).toBe(0);
+  });
+
+  test("housekeeping applies the notice retention from the tunables", async () => {
+    const t = await testApp();
+    const a = await memberSession(t, 0);
+    addNotice(t.db, { memberId: a.memberId, kind: "head_over", planId: null, groupId: null, dedupeKey: "old", now: t.clock() });
+    t.clock.advance(t.app.config.tunables.noticeRetentionDays * DAY + 1000);
+    await housekeeping(t.app);
+    expect(count(t.db, "notice")).toBe(0);
   });
 });
 

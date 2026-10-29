@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import { recordPepper } from "../social/bans.js";
 import { adjustableClock, type Clock, systemClock } from "../utils/clock.js";
 import type { FetchLike } from "../utils/http.js";
 import { diskStore, memoryStore, type ObjectStore, s3Store } from "../utils/objectStore.js";
@@ -6,14 +7,16 @@ import { createAlerts } from "./alerts.js";
 import type { AppContext, LogEntry, Route } from "./context.js";
 import { type AppConfig, ConfigError, loadAppConfig } from "./env.js";
 import { signedLinker } from "./fileLinks.js";
-import { housekeeping } from "./housekeeping.js";
 import { createRouter, handleRequest, type Router } from "./http.js";
 import { appRoutes } from "./routes/index.js";
+import { expoPushSender } from "./vendors/expoPush.js";
 import { fakeOtpSender, type OtpSender } from "./vendors/otpSender.js";
+import { fakePushSender, type PushSender } from "./vendors/push.js";
 import { whatsappOtpSender } from "./vendors/whatsappOtp.js";
 
 export type { AppContext } from "./context.js";
 export { ConfigError } from "./env.js";
+export { runTickerPass, startTicker } from "./ticker.js";
 
 /** Where the app API lives. `cli.ts` sends every path under it here and everything else to the site. */
 export const APP_PREFIX = "/api/app/";
@@ -26,6 +29,8 @@ export interface AppContextOptions {
   fetch?: FetchLike;
   /** Replaces the sender the settings pick (tests pass a fake they can read). */
   sender?: OtpSender;
+  /** Replaces the push sender the settings pick (tests pass a fake they can read). */
+  push?: PushSender;
   store?: ObjectStore;
   /** `serve` sets it: a missing TURNOUT_ENV is refused instead of meaning development. */
   requireEnv?: boolean;
@@ -36,8 +41,6 @@ export interface AppContextOptions {
 function defaultLog(entry: LogEntry): void {
   console.log(JSON.stringify(entry));
 }
-
-const TICK_MS = 60 * 1000;
 
 function fakeSender(config: AppConfig): OtpSender {
   const sender = fakeOtpSender();
@@ -66,12 +69,18 @@ export async function createAppContext(options: AppContextOptions): Promise<AppC
   if (config.env === "production" && (sender as { fake?: boolean }).fake === true) {
     throw new ConfigError("a sender that sends nothing is not allowed in production");
   }
+  const push = options.push ?? (config.pushSender === "expo" ? expoPushSender(config.expoAccessToken) : fakePushSender());
+  if (config.env === "production" && (push as { fake?: boolean }).fake === true) {
+    throw new ConfigError("a push sender that sends nothing is not allowed in production");
+  }
+  recordPepper(options.db, config.banPepper, now());
   const context: AppContext = {
     db: options.db,
     now,
     config,
     store,
     sender,
+    push,
     alerts: createAlerts({ now, fetch, webhookUrl: config.alertWebhookUrl }),
     fetch,
     log: options.log ?? (config.env === "test" ? () => {} : defaultLog),
@@ -79,20 +88,6 @@ export async function createAppContext(options: AppContextOptions): Promise<AppC
     adjustClock: adjust,
   };
   return context;
-}
-
-/** Background upkeep for the app API (the sweep and the spend alerts), once a minute. `serve --no-ticker` skips it. Returns a function that stops it. */
-export function startTicker(app: AppContext): () => void {
-  let running = false;
-  const timer = setInterval(() => {
-    if (running) return;
-    running = true;
-    housekeeping(app).finally(() => {
-      running = false;
-    });
-  }, TICK_MS);
-  timer.unref();
-  return () => clearInterval(timer);
 }
 
 const routers = new WeakMap<AppContext, Router>();

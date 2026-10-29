@@ -1,12 +1,12 @@
 import { ClipboardText, WhatsappLogo } from "phosphor-react-native";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { signin } from "@/copy/signin";
 import { OTP } from "@/model/otpFlow";
 import { BackBar } from "@/ui/BackBar";
 import { CodeEntry } from "@/ui/CodeEntry";
 import { Button } from "@/ui/primitives/Button";
 import { Note } from "@/ui/primitives/Note";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
 

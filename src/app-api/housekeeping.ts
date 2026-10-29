@@ -1,6 +1,8 @@
 import type { Database } from "bun:sqlite";
 import { addDays } from "../social/dates.js";
 import { allPhotoKeys } from "../social/profiles.js";
+import { deleteExpiredMessages } from "../social/thread.js";
+import { allTicketKeys } from "../social/tickets.js";
 import { sweepOrphans } from "../utils/objectStore.js";
 import { checkOtpSpend, OTP_SENDS_KEY } from "./alerts.js";
 import type { AppContext } from "./context.js";
@@ -9,16 +11,21 @@ import { windowFor } from "./rateLimit.js";
 /** The send counters stay about two months so the spend alert can add up a whole month. */
 const SEND_COUNTER_DAYS = 62;
 const SWEEP_MARKER_KEY = "sweep:files";
-/** The only prefixes the sweep looks at. M3 adds `tickets/` here together with the ticket keys in `referencedFileKeys`. */
-const SWEPT_PREFIXES = ["photos/"] as const;
+/** The only prefixes the sweep looks at. */
+const SWEPT_PREFIXES = ["photos/", "tickets/"] as const;
 
-/** Every file key a row points at. M3 adds the ticket files here. */
+/** Every file key a row points at. */
 function referencedFileKeys(db: Database): Set<string> {
-  return allPhotoKeys(db);
+  return new Set([...allPhotoKeys(db), ...allTicketKeys(db)]);
 }
 
+/** The audit trail of operator actions is kept a year. */
+const OPERATOR_ACTION_DAYS = 365;
+/** A sent alert only has to outlast the thing it was about, which is over within a day of the show. */
+const ALERT_SENT_DAYS = 30;
+
 /** Rows that have done their job: old challenges, sessions long past their use, and counters whose window is over. */
-export function sweepRows(db: Database, now: Date, revokedRetentionDays: number): void {
+export function sweepRows(db: Database, now: Date, revokedRetentionDays: number, noticeRetentionDays = 30): void {
   const epoch = Math.floor(now.getTime() / 1000);
   db.query("DELETE FROM otp_challenge WHERE expires_at < ?").run(addDays(now, -1).toISOString());
   const cutoff = addDays(now, -revokedRetentionDays).toISOString();
@@ -28,6 +35,19 @@ export function sweepRows(db: Database, now: Date, revokedRetentionDays: number)
     OTP_SENDS_KEY,
     epoch - SEND_COUNTER_DAYS * 24 * 60 * 60,
   );
+  const noticeCutoff = addDays(now, -noticeRetentionDays).toISOString();
+  db.transaction(() => {
+    db.query("DELETE FROM push_delivery WHERE created_at < ?").run(noticeCutoff);
+    db.query("DELETE FROM push_delivery WHERE notice_id IN (SELECT id FROM notice WHERE created_at < ?)").run(noticeCutoff);
+    db.query("DELETE FROM notice WHERE created_at < ?").run(noticeCutoff);
+  })();
+  db.query("DELETE FROM alert_sent WHERE sent_at < ?").run(addDays(now, -ALERT_SENT_DAYS).toISOString());
+  db.query("DELETE FROM operator_action WHERE created_at < ?").run(addDays(now, -OPERATOR_ACTION_DAYS).toISOString());
+}
+
+/** A closed report is kept `retentionDays` after it closed (a year), then deleted. An open one is never touched. Returns how many went. */
+export function purgeClosedReports(db: Database, now: Date, retentionDays: number): number {
+  return db.query("DELETE FROM report WHERE status = 'closed' AND closed_at < ?").run(addDays(now, -retentionDays).toISOString()).changes;
 }
 
 /**
@@ -49,7 +69,9 @@ export async function sweepFiles(app: AppContext, now: Date): Promise<string[]> 
 export async function housekeeping(app: AppContext): Promise<void> {
   const now = app.now();
   const steps: (() => unknown)[] = [
-    () => sweepRows(app.db, now, app.config.tunables.session.revokedRetentionDays),
+    () => sweepRows(app.db, now, app.config.tunables.session.revokedRetentionDays, app.config.tunables.noticeRetentionDays),
+    () => deleteExpiredMessages(app.db, now, app.config.tunables),
+    () => purgeClosedReports(app.db, now, app.config.tunables.report.retentionDays),
     () => checkOtpSpend(app.db, now, app.alerts, app.config.tunables),
     () => sweepFiles(app, now),
   ];

@@ -32,4 +32,22 @@ export function ulid(time: Date = new Date()): string {
   return timePart + lastRandom.map((n) => ALPHABET[n]).join("");
 }
 
+/**
+ * A ULID for `time` that sorts after `floor`, for a writer that must never go below an id already stored (a reader that paged up to
+ * `floor` would otherwise skip it). Usually `ulid(time)`; when that is not above `floor`, the id just above `floor`.
+ */
+export function ulidAfter(floor: string, time: Date = new Date()): string {
+  const fresh = ulid(time);
+  if (fresh > floor) return fresh;
+  const digits = [...floor].map((c) => ALPHABET.indexOf(c));
+  let i = digits.length - 1;
+  while (i >= 0 && digits[i] === 31) {
+    digits[i] = 0;
+    i -= 1;
+  }
+  if (i < 0) throw new Error("no ULID sorts after the largest one");
+  digits[i] = (digits[i] ?? 0) + 1;
+  return digits.map((n) => ALPHABET[n]).join("");
+}
+
 export const isUlid = (value: string): boolean => ULID.test(value);

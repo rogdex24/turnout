@@ -1,9 +1,9 @@
 import { KeyboardAvoidingView, Platform, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { signin } from "@/copy/signin";
 import { BackBar } from "@/ui/BackBar";
 import { Button } from "@/ui/primitives/Button";
 import { Field } from "@/ui/primitives/Field";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 
 export interface PhoneViewProps {

@@ -18,6 +18,8 @@ export interface EventCard {
   venueLat: number | null;
   venueLng: number | null;
   venueGeocodeState: string | null;
+  /** The operator's confirmed start (`start_override`), which the group rule prefers to `startsAt`. Null when there is none. */
+  overrideStartsAt: string | null;
   categories: string;
   category: Category;
   isFree: number;

@@ -14,6 +14,7 @@ const EVENT_SELECT = `SELECT id, source_event_id AS sourceEventId,
               (SELECT v.lat FROM venue v WHERE v.id = listable_event.venue_id) AS venueLat,
               (SELECT v.lng FROM venue v WHERE v.id = listable_event.venue_id) AS venueLng,
               (SELECT v.geocode_state FROM venue v WHERE v.id = listable_event.venue_id) AS venueGeocodeState,
+              (SELECT o.starts_at FROM start_override o WHERE o.event_id = listable_event.id) AS overrideStartsAt,
               categories, category, is_free AS isFree, price_min AS priceMin, source, source_url AS sourceUrl,
               description
        FROM listable_event`;

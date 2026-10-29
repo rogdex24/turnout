@@ -1,4 +1,7 @@
 import type { Database } from "bun:sqlite";
+import { NOTICE_KINDS } from "@turnout/contract/app/notices";
+import { PLAN_REASONS, PLAN_STATES } from "@turnout/contract/app/plans";
+import { TICKET_REJECT_REASONS } from "@turnout/contract/ticket";
 
 export const MEMBER_STATUSES = ["active", "suspended", "stopped", "banned", "deleted"] as const;
 export const OTP_PURPOSES = ["sign_in", "delete_account"] as const;
@@ -6,8 +9,283 @@ export const OTP_PURPOSES = ["sign_in", "delete_account"] as const;
 export const DELIVERY_STATUSES = ["pending", "sent", "delivered", "read", "failed", "undeliverable", "reviewer"] as const;
 export const HANDLE_ROW_STATUSES = ["pending", "approved", "rejected"] as const;
 export const CONSENT_PURPOSES = ["service"] as const;
+export const GROUP_ROW_STATES = ["confirmed", "locked", "live", "done", "called_off", "dissolved"] as const;
+export const TICKET_STATUSES = ["pending", "approved", "rejected"] as const;
+export const NOTICE_PUSH_STATES = ["pending", "sending", "sent", "stale", "no_device", "not_sent"] as const;
+export const PUSH_DELIVERY_STATUSES = ["ticketed", "delivered", "failed", "device_gone"] as const;
+export const DEVICE_PLATFORMS = ["android", "ios"] as const;
+export const REPORT_STATUSES = ["open", "closed"] as const;
+export const REPORT_OUTCOMES = ["upheld", "dismissed"] as const;
+export const BAN_REASONS = ["report_upheld", "downvote_stop", "operator"] as const;
 
 const list = (values: readonly string[]) => values.map((v) => `'${v}'`).join(", ");
+
+const M4_SQL = `-- M4: thread, feedback, reports and the ban list.
+-- Ids are ULIDs, so id order is time order and GET /groups/:groupId/messages?after= pages on it. postMessage gives each new message an id
+-- above the group's newest, so a message stored late never lands behind a cursor a reader already holds. member_ref is the sender's name
+-- inside the group, copied here so the row still reads after the membership row is gone.
+CREATE TABLE IF NOT EXISTS message (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  member_ref TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 1000),
+  created_at TEXT NOT NULL,
+  UNIQUE (member_id, client_id)
+);
+CREATE INDEX IF NOT EXISTS idx_message_group ON message(group_id, id);
+
+-- When a member last read the thread, so a new message after ten minutes away is the one that sends a notice.
+CREATE TABLE IF NOT EXISTS thread_presence (
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  seen_at TEXT NOT NULL,
+  PRIMARY KEY (group_id, member_id)
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS downvote (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  voter_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  target_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  UNIQUE (group_id, voter_id, target_id),
+  CHECK (voter_id != target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_downvote_target ON downvote(target_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_downvote_voter ON downvote(voter_id);
+
+-- A pair who both checked in at a show where nobody was downvoted or reported. member_a sorts before member_b.
+CREATE TABLE IF NOT EXISTS met_edge (
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  member_a TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  member_b TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (group_id, member_a, member_b),
+  CHECK (member_a < member_b)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS idx_met_edge_b ON met_edge(member_b);
+
+-- One row once a group's feedback window has closed, so met edges and the stop rule run once however many ticks see it.
+CREATE TABLE IF NOT EXISTS feedback_close (
+  group_id TEXT PRIMARY KEY REFERENCES show_group(id),
+  closed_at TEXT NOT NULL
+);
+
+-- The people stay in this table after a deletion (the member row is a tombstone), so the report still names them by id only.
+CREATE TABLE IF NOT EXISTS report (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  reporter_id TEXT NOT NULL REFERENCES member(id),
+  subject_id TEXT NOT NULL REFERENCES member(id),
+  message_id TEXT REFERENCES message(id) ON DELETE SET NULL,
+  body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 2000),
+  client_id TEXT NOT NULL,
+  reporter_gender TEXT CHECK (reporter_gender IS NULL OR reporter_gender IN ('woman', 'man', 'non_binary')),
+  subject_gender TEXT CHECK (subject_gender IS NULL OR subject_gender IN ('woman', 'man', 'non_binary')),
+  -- What the subject's account was before the report suspended it, so a dismissal puts it back.
+  subject_status_before TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN (${list(REPORT_STATUSES)})),
+  outcome TEXT CHECK (outcome IS NULL OR outcome IN (${list(REPORT_OUTCOMES)})),
+  created_at TEXT NOT NULL,
+  due_at TEXT NOT NULL,
+  contacted_reporter_at TEXT,
+  closed_at TEXT,
+  close_note TEXT,
+  UNIQUE (reporter_id, client_id),
+  CHECK (reporter_id != subject_id),
+  CHECK ((status = 'closed') = (outcome IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_report_status ON report(status, due_at);
+CREATE INDEX IF NOT EXISTS idx_report_subject ON report(subject_id, status);
+CREATE INDEX IF NOT EXISTS idx_report_group ON report(group_id, status);
+
+-- No user id: a keyed hash of the phone number only, for banned and stopped people.
+CREATE TABLE IF NOT EXISTS ban_list (
+  phone_hash TEXT PRIMARY KEY,
+  reason TEXT NOT NULL CHECK (reason IN (${list(BAN_REASONS)})),
+  created_at TEXT NOT NULL
+) WITHOUT ROWID;
+
+-- One row: a keyed fingerprint of BAN_PEPPER, written when the app starts, so the admin can tell it was given the same value.
+CREATE TABLE IF NOT EXISTS ban_pepper_check (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  fingerprint TEXT NOT NULL,
+  written_at TEXT NOT NULL
+);
+`;
+
+const M3_SQL = `-- M3: plans, tickets, groups, notices. A plan keeps snapshots of the show, so a later catalog change never moves a member's plan.
+CREATE TABLE IF NOT EXISTS start_override (
+  event_id TEXT PRIMARY KEY REFERENCES event(id),
+  starts_at TEXT NOT NULL,
+  set_by TEXT NOT NULL,
+  set_at TEXT NOT NULL
+);
+
+-- No personal data: who is in a group is group_member.
+CREATE TABLE IF NOT EXISTS show_group (
+  id TEXT PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES event(id),
+  starts_at TEXT NOT NULL,
+  group_type TEXT NOT NULL CHECK (group_type IN ('open', 'women_only')),
+  state TEXT NOT NULL DEFAULT 'confirmed' CHECK (state IN (${list(GROUP_ROW_STATES)})),
+  cafe_name TEXT,
+  cafe_address TEXT,
+  cafe_lat REAL,
+  cafe_lng REAL,
+  meet_at TEXT,
+  created_at TEXT NOT NULL,
+  locked_at TEXT,
+  live_at TEXT,
+  ended_at TEXT,
+  updated_at TEXT NOT NULL,
+  CHECK ((cafe_lat IS NULL) = (cafe_lng IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_show_group_event ON show_group(event_id, state);
+CREATE INDEX IF NOT EXISTS idx_show_group_state ON show_group(state, starts_at);
+
+CREATE TABLE IF NOT EXISTS plan (
+  id TEXT PRIMARY KEY,
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  event_id TEXT NOT NULL REFERENCES event(id),
+  -- The event's dedupe group, or the event id when it has none: one live plan per member per run of the same show.
+  dedupe_key TEXT NOT NULL,
+  group_type TEXT NOT NULL CHECK (group_type IN ('open', 'women_only')),
+  state TEXT NOT NULL DEFAULT 'needs_ticket' CHECK (state IN (${list(PLAN_STATES)})),
+  reason TEXT CHECK (reason IS NULL OR reason IN (${list(PLAN_REASONS)})),
+  show_title TEXT NOT NULL,
+  show_starts_at TEXT NOT NULL,
+  venue_name TEXT NOT NULL,
+  venue_lat REAL,
+  venue_lng REAL,
+  group_id TEXT REFERENCES show_group(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  -- Only a plan that ended without a show carries a reason.
+  CHECK ((state IN ('no_group', 'withdrawn')) = (reason IS NOT NULL))
+);
+-- At most one live plan per member and dedupe group.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_plan_live ON plan(member_id, dedupe_key) WHERE state NOT IN ('no_group', 'withdrawn', 'done');
+CREATE INDEX IF NOT EXISTS idx_plan_event_state ON plan(event_id, state);
+CREATE INDEX IF NOT EXISTS idx_plan_member ON plan(member_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_plan_group ON plan(group_id);
+
+-- Plan rows are deleted before their ticket rows by cascade; the file itself is deleted by code (never left behind): see tickets.ts.
+CREATE TABLE IF NOT EXISTS ticket_proof (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
+  -- Null once the file is deleted, with sha256.
+  object_key TEXT,
+  mime TEXT NOT NULL,
+  bytes INTEGER NOT NULL CHECK (bytes > 0),
+  sha256 TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (${list(TICKET_STATUSES)})),
+  reject_reason TEXT CHECK (reject_reason IS NULL OR reject_reason IN (${list(TICKET_REJECT_REASONS)})),
+  uploaded_at TEXT NOT NULL,
+  reviewed_at TEXT,
+  reviewed_by TEXT,
+  file_deleted_at TEXT,
+  CHECK (status = 'rejected' OR reject_reason IS NULL),
+  CHECK (status != 'rejected' OR reject_reason IS NOT NULL),
+  CHECK (file_deleted_at IS NULL OR (object_key IS NULL AND sha256 IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_proof_plan ON ticket_proof(plan_id, uploaded_at);
+CREATE INDEX IF NOT EXISTS idx_ticket_proof_sha ON ticket_proof(sha256) WHERE sha256 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ticket_proof_status ON ticket_proof(status, uploaded_at);
+
+CREATE TABLE IF NOT EXISTS group_member (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL REFERENCES show_group(id),
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  plan_id TEXT NOT NULL REFERENCES plan(id) ON DELETE CASCADE,
+  -- Opaque and unique inside the group: the only name another member's app ever sees.
+  member_ref TEXT NOT NULL,
+  joined_at TEXT NOT NULL,
+  left_at TEXT,
+  checked_in_at TEXT,
+  UNIQUE (group_id, member_ref)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_group_member_current ON group_member(group_id, member_id) WHERE left_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_group_member_member ON group_member(member_id);
+CREATE INDEX IF NOT EXISTS idx_group_member_plan ON group_member(plan_id);
+
+CREATE TABLE IF NOT EXISTS device (
+  id TEXT PRIMARY KEY,
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  -- The session that registered it, so sign-out can remove it. Moves to the new session on a refresh.
+  session_id TEXT REFERENCES auth_session(id) ON DELETE SET NULL,
+  expo_token TEXT NOT NULL UNIQUE,
+  platform TEXT NOT NULL CHECK (platform IN (${list(DEVICE_PLATFORMS)})),
+  created_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  disabled_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_device_member ON device(member_id);
+CREATE INDEX IF NOT EXISTS idx_device_session ON device(session_id);
+
+-- Ids are ULIDs, so id order is time order and GET /notices?after= pages on it.
+CREATE TABLE IF NOT EXISTS notice (
+  id TEXT PRIMARY KEY,
+  member_id TEXT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN (${list(NOTICE_KINDS)})),
+  plan_id TEXT REFERENCES plan(id) ON DELETE CASCADE,
+  group_id TEXT REFERENCES show_group(id) ON DELETE SET NULL,
+  -- Inserted in the same transaction as the change it reports; a second insert for the same milestone is ignored.
+  dedupe_key TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  read_at TEXT,
+  -- After this instant the notice is listed but no longer pushed.
+  stale_after TEXT NOT NULL,
+  push_state TEXT NOT NULL DEFAULT 'pending' CHECK (push_state IN (${list(NOTICE_PUSH_STATES)})),
+  claimed_at TEXT,
+  pushed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_notice_member ON notice(member_id, id);
+CREATE INDEX IF NOT EXISTS idx_notice_push ON notice(push_state, created_at);
+-- The thread notice throttle asks for a plan's recent notices of one kind.
+CREATE INDEX IF NOT EXISTS idx_notice_plan_kind ON notice(plan_id, kind, created_at);
+
+CREATE TABLE IF NOT EXISTS push_delivery (
+  id TEXT PRIMARY KEY,
+  notice_id TEXT NOT NULL REFERENCES notice(id) ON DELETE CASCADE,
+  device_id TEXT NOT NULL REFERENCES device(id) ON DELETE CASCADE,
+  expo_ticket_id TEXT,
+  status TEXT NOT NULL CHECK (status IN (${list(PUSH_DELIVERY_STATUSES)})),
+  error_code TEXT,
+  created_at TEXT NOT NULL,
+  receipt_checked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_push_delivery_notice ON push_delivery(notice_id);
+CREATE INDEX IF NOT EXISTS idx_push_delivery_receipt ON push_delivery(status, created_at);
+
+-- Every write the operator makes. subject_id is a member, plan, group, event or notice id; detail holds codes, never free text about a person.
+CREATE TABLE IF NOT EXISTS operator_action (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  subject_type TEXT NOT NULL,
+  subject_id TEXT NOT NULL,
+  detail TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_operator_action_subject ON operator_action(subject_type, subject_id);
+CREATE INDEX IF NOT EXISTS idx_operator_action_created ON operator_action(created_at);
+
+-- One row: which process runs the ticker now and when it last finished a pass.
+CREATE TABLE IF NOT EXISTS scheduler_lease (
+  name TEXT PRIMARY KEY,
+  holder TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  last_tick_at TEXT
+);
+
+-- An operator alert that has been sent, so a milestone alerts once however many ticks see it.
+CREATE TABLE IF NOT EXISTS alert_sent (
+  alert_key TEXT PRIMARY KEY,
+  sent_at TEXT NOT NULL
+);
+`;
 
 /**
  * The people tables. All times are ISO UTC text. Foreign keys are enforced (openDb turns them on), so a row can
@@ -23,6 +301,9 @@ CREATE TABLE IF NOT EXISTS member (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   deleted_at TEXT,
+  -- When an operator last reinstated the member. The stop rule counts only downvotes given after it. Kept here, not read from
+  -- operator_action, because those rows are purged after a year and the baseline must not go with them.
+  stop_baseline_at TEXT,
   -- Only a tombstone has no phone.
   CHECK (status = 'deleted' OR phone_e164 IS NOT NULL)
 );
@@ -110,8 +391,33 @@ CREATE TABLE IF NOT EXISTS rate_bucket (
   PRIMARY KEY (bucket_key, window_start)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS idx_rate_bucket_window ON rate_bucket(window_start);
+${M3_SQL}
+${M4_SQL}`;
+
+/**
+ * The catalog side of "a show a group can be made for": `listable_event` with the operator's start time applied and the venue's
+ * point beside it. It holds no group rule. Category, price, free, a confirmed start, a placed venue and the closing time are
+ * tunables, and `isEligible` (which `getEligibleShow` runs over each row) is the one place that reads them, so the view cannot
+ * drift from the tunables or from the web list's `groupEligibleClauses`. The venue is joined on the left so the view never
+ * drops a show for a rule of its own.
+ */
+function eligibleShowSql(): string {
+  return `
+DROP VIEW IF EXISTS eligible_show;
+CREATE VIEW eligible_show AS
+SELECT e.*,
+  v.lat AS venue_lat,
+  v.lng AS venue_lng,
+  v.geocode_state AS venue_geocode_state,
+  o.starts_at AS override_starts_at,
+  COALESCE(o.starts_at, e.starts_at) AS effective_starts_at
+FROM listable_event e
+LEFT JOIN venue v ON v.id = e.venue_id
+LEFT JOIN start_override o ON o.event_id = e.id;
 `;
+}
 
 export function migrate(db: Database): void {
   db.exec(SCHEMA_SQL);
+  db.exec(eligibleShowSql());
 }

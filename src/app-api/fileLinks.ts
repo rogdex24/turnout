@@ -5,9 +5,9 @@ import { isValidKey } from "../utils/objectStore.js";
 /** Where signed file links point. The files route in the app API serves them. */
 export const FILE_LINK_PATH = "/api/app/v1/files/";
 
-/** What gets signed: the key and the expiry, so changing either one breaks the link. */
+/** What gets signed: the key and the expiry, so changing either one breaks the link. Tagged "app" so it is never the same as an admin link's signature. */
 function signature(secret: string, key: string, expiresAtSeconds: number): string {
-  return createHmac("sha256", secret).update(`${key}\n${expiresAtSeconds}`).digest("base64url");
+  return createHmac("sha256", secret).update(`app\n${key}\n${expiresAtSeconds}`).digest("base64url");
 }
 
 /** A short-lived link to one stored file. `ttlSeconds` counts from `now`. */

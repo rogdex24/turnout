@@ -10,7 +10,8 @@
 /** "sv-SE" formats as ISO, so this yields YYYY-MM-DD directly. */
 const IST_YMD = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Kolkata" });
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+export const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Current calendar date in Asia/Kolkata as YYYY-MM-DD. */
 export function istCalendarDate(now: Date): string {

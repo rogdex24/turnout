@@ -19,6 +19,7 @@ other people in a group.
 | `member.phone_e164` | Phone number, E.164 | The sign-in identity and where the code is sent | The member, the operator. Never a co-member | Until deletion; nulled on the tombstone |
 | `member.status` | `active`, `suspended`, `stopped`, `banned` or `deleted` | Decides whether the person can sign in and be grouped | The member (their own state), the operator | Until deletion |
 | `member.status_reason` | Short operator reason code | Audit of why a status changed | The operator | Until deletion |
+| `member.stop_baseline_at` | When an operator last reinstated the member | The stop rule counts downvotes from here, and it must outlast the year the action log is kept | Operator | Until deletion; nulled on the tombstone |
 | `member.phone_verified_at` | When a code last proved the phone | Matching needs a verified phone | The member, the operator | Until deletion |
 | `member.created_at` | Row creation time | Audit | Operator | Until deletion |
 | `member.updated_at` | Last change | Audit | Operator | Until deletion |
@@ -103,10 +104,278 @@ other people in a group.
 | `rate_bucket.window_seconds` | Length of the window | Tells the sweep when the row is dead | Server | One window; the `otp:sends` counter rows are kept 62 days for the monthly spend alert |
 | `rate_bucket.count` | Requests in the window | The limit check | Server | One window |
 
+### `plan`
+
+A member's plan to go to one show. It keeps snapshots of the show, so a catalog change never moves it.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `plan.id` | Plan id (ULID) | Names the plan in the app and the admin | The member, operator | Until deletion |
+| `plan.member_id` | Owner | Links the plan to a member | Server; never in a response about someone else | Until deletion |
+| `plan.event_id` | The show (the catalog event id, which is also its public id) | Which show the plan is for | The member, operator | Until deletion |
+| `plan.dedupe_key` | The event's dedupe group, or the event id when it has none | One live plan per person per run of the same show | Server | Until deletion |
+| `plan.group_type` | `open` or `women_only` | Which kind of group the person wants | The member, operator | Until deletion |
+| `plan.state` | Where the plan is in its life | Drives every screen and every ticker step | The member, operator | Until deletion |
+| `plan.reason` | Why a plan ended without a show | The app tells the person kindly what happened | The member, operator | Until deletion |
+| `plan.show_title` | Show title at the time of the plan | Shows the plan after the catalog row changes | The member, operator; co-members see it in the group | Until deletion |
+| `plan.show_starts_at` | Show start (ISO UTC) at the time of the plan | Every time rule counts from it | The member, operator, co-members | Until deletion |
+| `plan.venue_name` | Venue name at the time of the plan | The meet card and the fallback meeting place | The member, operator, co-members | Until deletion |
+| `plan.venue_lat` | Venue latitude (the venue, not a person) | The venue entrance is the fallback meeting place | The member, operator, co-members from T-3h | Until deletion |
+| `plan.venue_lng` | Venue longitude | Same | Same | Until deletion |
+| `plan.group_id` | The group the member is placed in | Links the plan to its group | The member, operator | Until deletion |
+| `plan.created_at` | Row creation | Audit and daily limit | Operator | Until deletion |
+| `plan.updated_at` | Last change | Audit | Operator | Until deletion |
+
+### `ticket_proof`
+
+The ticket a member sends to show they are going. The file is deleted at the latest 24 hours after the show starts; then the key and hash go too.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ticket_proof.id` | Ticket row id (ULID) | Names the upload | Operator | Until the plan is deleted |
+| `ticket_proof.plan_id` | The plan it was sent for | Links the upload to a plan | Server, operator | Until the plan is deleted |
+| `ticket_proof.object_key` | Key of the file in the object store | The operator opens it through a short link | Server, operator. Never in an app response | Until the file is deleted (at most 24 h after the show starts), then null |
+| `ticket_proof.mime` | File type (JPEG, PNG, HEIC or PDF) | Decides how the operator opens it | Operator | Until the plan is deleted |
+| `ticket_proof.bytes` | File size | Limit check and audit | Operator | Until the plan is deleted |
+| `ticket_proof.sha256` | Hash of the stored file | Flags the same ticket sent by two people for one show | Operator | Until the file is deleted, then null |
+| `ticket_proof.status` | `pending`, `approved` or `rejected` | Only an approved ticket lets the person be grouped | The member, operator | Until the plan is deleted |
+| `ticket_proof.reject_reason` | One of a fixed list of reasons | The app tells the person what to fix | The member, operator | Until the plan is deleted |
+| `ticket_proof.uploaded_at` | When the file arrived | Review order and the 24 h rule for rejected files | Operator | Until the plan is deleted |
+| `ticket_proof.reviewed_at` | When the operator decided | Audit and the 24 h rule for rejected files | Operator | Until the plan is deleted |
+| `ticket_proof.reviewed_by` | Operator label | Audit | Operator | Until the plan is deleted |
+| `ticket_proof.file_deleted_at` | When the file was removed | Proves the retention rule ran | Operator | Until the plan is deleted |
+
+### `show_group`
+
+A group for one show. It holds no personal data; who is in it is `group_member`.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `show_group.id` | Group id (ULID) | Names the group in the app and the admin | Members, operator | Until the show's data is swept |
+| `show_group.event_id` | The show | Which show the group goes to | Members, operator | Same |
+| `show_group.starts_at` | Show start (ISO UTC) | Every time rule counts from it | Members, operator | Same |
+| `show_group.group_type` | `open` or `women_only` | Open and women-only groups never mix | Members, operator | Same |
+| `show_group.state` | `confirmed`, `locked`, `live`, `done`, `called_off` or `dissolved` | Drives who can see whom and when | Members (mapped), operator | Same |
+| `show_group.cafe_name` | Name of the meeting cafe | Where the group meets, shown from T-3h | Members from T-3h, operator | Same |
+| `show_group.cafe_address` | Address of the cafe | Same | Same | Same |
+| `show_group.cafe_lat` | Latitude of the cafe (a place, not a person) | The app computes the distance on the device | Same | Same |
+| `show_group.cafe_lng` | Longitude of the cafe | Same | Same | Same |
+| `show_group.meet_at` | When the group meets | Shown on the meet card from T-3h | Same | Same |
+| `show_group.created_at` | Row creation | Audit | Operator | Same |
+| `show_group.locked_at` | When the group locked (T-24h) | Audit | Operator | Same |
+| `show_group.live_at` | When the meet card went live (T-3h) | Audit | Operator | Same |
+| `show_group.ended_at` | When the group dissolved, was called off or finished | Audit | Operator | Same |
+| `show_group.updated_at` | Last change | Audit | Operator | Same |
+
+### `group_member`
+
+Who is in a group, and who has left it.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `group_member.id` | Row id (ULID) | Primary key | Server | Until the member is deleted |
+| `group_member.group_id` | The group | Links the person to a group | Server | Until the member is deleted |
+| `group_member.member_id` | The person | Links the group to a member | Server; never in a response about someone else | Until the member is deleted |
+| `group_member.plan_id` | The person's plan | Links the place to a plan | Server | Until the member is deleted |
+| `group_member.member_ref` | A random name for the person that is only good inside this group | Co-members are named by it, never by the member id | Members of the group from T-3h | Until the member is deleted |
+| `group_member.joined_at` | When the person was placed | Audit | Operator | Until the member is deleted |
+| `group_member.left_at` | When the person left or was removed | A left person disappears from the group | Operator | Until the member is deleted |
+| `group_member.checked_in_at` | When the person tapped "I'm here" | Shows the group who has arrived. No coordinates are sent or kept | Members of the group, operator | Until the member is deleted |
+
+### `device`
+
+A phone that can get push notices.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `device.id` | Device id (ULID) | Names the device when the app removes it | The member | Until sign-out, deletion or `DeviceNotRegistered` |
+| `device.member_id` | Owner | Where a push goes | Server | Same |
+| `device.session_id` | The sign-in that registered it | Sign-out removes the device | Server | Same |
+| `device.expo_token` | The Expo push token | The address Expo sends a push to | Server, Expo | Same |
+| `device.platform` | `android` or `ios` | Only platforms in `PUSH_PLATFORMS` are sent to | Server | Same |
+| `device.created_at` | When it was registered | Audit | Server | Same |
+| `device.last_seen_at` | When the app last registered it | Drops stale tokens | Server | Same |
+| `device.disabled_at` | When Expo said the token is gone | Stops sends to it | Server | Same |
+
+### `notice`
+
+An in-app notice. The push, if any, carries only the kind and two ids.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `notice.id` | Notice id (ULID) | The app pages on it | The member | 30 days |
+| `notice.member_id` | Who it is for | Lists the person's notices | The member | 30 days |
+| `notice.kind` | What happened, from a fixed list | The app picks the screen and the text from it | The member | 30 days |
+| `notice.plan_id` | The plan it is about | The app opens the plan | The member | 30 days |
+| `notice.group_id` | The group it is about | Loss notices name the group and the kind only | The member | 30 days |
+| `notice.dedupe_key` | One key per milestone | The same milestone never makes a second notice | Server | 30 days |
+| `notice.created_at` | When it was made | Ordering and the stale rule | The member | 30 days |
+| `notice.read_at` | When the app marked it read | Unread badge | The member | 30 days |
+| `notice.stale_after` | When a push for it stops being useful | Past it the notice is listed but not pushed | Server | 30 days |
+| `notice.push_state` | `pending`, `sending`, `sent`, `stale`, `no_device` or `not_sent` | Sends each push once | Server, operator | 30 days |
+| `notice.claimed_at` | When a ticker pass took the notice to send it | Stops a second pass sending it again while the first is still at it | Server | 30 days |
+| `notice.pushed_at` | When the push was handed to Expo | Audit | Server | 30 days |
+
+### `push_delivery`
+
+One push to one device: the Expo ticket and, later, its receipt.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `push_delivery.id` | Row id (ULID) | Primary key | Server | 30 days |
+| `push_delivery.notice_id` | The notice sent | Links the push to a notice | Server | 30 days |
+| `push_delivery.device_id` | The device sent to | Links the push to a device | Server | 30 days |
+| `push_delivery.expo_ticket_id` | Expo's ticket id | Asks Expo for the receipt about 15 minutes later | Server, Expo | 30 days |
+| `push_delivery.status` | `ticketed`, `delivered`, `failed` or `device_gone` | Tracks the send | Server, operator | 30 days |
+| `push_delivery.error_code` | Expo's error code | Failed notices in the admin | Operator | 30 days |
+| `push_delivery.created_at` | When the push was sent | Waits for the receipt delay | Server | 30 days |
+| `push_delivery.receipt_checked_at` | When the receipt was read | Reads each receipt once | Server | 30 days |
+
+### `start_override`
+
+A start time the operator confirmed, which wins over the source's and turns a date-only show into a timed one.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `start_override.event_id` | The show | Which show the time is for | Operator, and the show's start time everywhere | Kept |
+| `start_override.starts_at` | The confirmed start (ISO UTC) | Groups and the T-24h and T-3h rules count from it | Everyone who sees the show | Kept |
+| `start_override.set_by` | Operator label | Audit | Operator | Kept |
+| `start_override.set_at` | When it was set | Audit | Operator | Kept |
+
+### `operator_action`
+
+Every write the operator makes. `detail` holds codes and ids, never free text about a person.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `operator_action.id` | Row id (ULID) | Primary key | Operator | 1 year |
+| `operator_action.action` | What was done, for example `handle_approved` | Audit | Operator | 1 year |
+| `operator_action.subject_type` | What kind of thing it was done to | Audit | Operator | 1 year |
+| `operator_action.subject_id` | The id of that thing; for a member it is the tombstone id after the account ends | Audit | Operator | 1 year |
+| `operator_action.detail` | A small JSON object of codes | Audit | Operator | 1 year |
+| `operator_action.created_at` | When | Audit | Operator | 1 year |
+
+### `scheduler_lease`
+
+Which process runs the ticker.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `scheduler_lease.name` | Lease name (`ticker`) | One lease per job | Server, `/health` | Overwritten each tick |
+| `scheduler_lease.holder` | Process that holds it | Only one process ticks | Server | Overwritten each tick |
+| `scheduler_lease.expires_at` | When the lease lapses | Another process can take over after it | Server, `/health` | Overwritten each tick |
+| `scheduler_lease.last_tick_at` | When a pass last finished | `/health` shows the age | Server, `/health` | Overwritten each tick |
+
+### `alert_sent`
+
+An operator alert already sent, so each fires once. The key holds a member id, so it never goes into the message.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `alert_sent.alert_key` | What the alert was about, for example `handle_due:<member id>:<show id>:<time the handle was submitted>` | Stops a repeat | Server | 30 days |
+| `alert_sent.sent_at` | When the send call returned. A row is written only then, so an alert that was lost is sent again | Audit and the sweep | Server | 30 days |
+
+### `message`
+
+A thread message. Nobody outside the group reads it, and it is never written to a log.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `message.id` | Message id (ULID) | Orders the thread and pages `?after=` (always above the group's newest id when stored) | Members of the group | 30 days after the show, longer while a report on the group is open |
+| `message.group_id` | The group | The thread belongs to one group | Server | Same |
+| `message.member_id` | The sender | Lets the sender's own messages be marked and deleted with the account | Server; never in a response about someone else | Same, or until the sender is deleted |
+| `message.member_ref` | The sender's name inside the group | Co-members see the sender by it | Members of the group | Same |
+| `message.client_id` | Random id made by the app | A retried send stores once | The sender | Same |
+| `message.body` | The text, 1 to 1,000 characters | The message | Members of the group, operator while a report is open | Same |
+| `message.created_at` | When it was stored | Order and the 30 day rule | Members of the group | Same |
+
+### `thread_presence`
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `thread_presence.group_id` | The group | One row per member per group | Server | Until the show's data is swept or the member is deleted |
+| `thread_presence.member_id` | The member | Same | Server | Same |
+| `thread_presence.seen_at` | When the member last read the thread | A new message sends a notice only after ten minutes away | Server | Same |
+
+### `downvote`
+
+Private. The person downvoted never sees it, and neither does anyone else in the group.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `downvote.id` | Row id (ULID) | Primary key | Server | Until either person is deleted |
+| `downvote.group_id` | The show's group | One vote per pair per show, and the stop rule counts shows | Server | Same |
+| `downvote.voter_id` | Who said "I didn't feel comfortable" | The pair is never grouped again; the voter's blocked list | Server; the voter sees only a first name and show | Same |
+| `downvote.target_id` | Who was downvoted | The stop rule counts voters and shows | Server, operator | Same |
+| `downvote.created_at` | When | The stop rule counts from the last reinstate | Server, operator | Same |
+
+### `met_edge`
+
+Written when feedback closes. Not shown in v1.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `met_edge.group_id` | The group | One row per pair per show | Server | Until either person is deleted |
+| `met_edge.member_a` | The lower member id of the pair | Keeps one row per pair | Server | Same |
+| `met_edge.member_b` | The higher member id of the pair | Same | Server | Same |
+| `met_edge.created_at` | When feedback closed | Audit | Server | Same |
+
+### `feedback_close`
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `feedback_close.group_id` | The group | Met edges and the stop rule run once per group | Server | Until the show's data is swept |
+| `feedback_close.closed_at` | When feedback closed | Audit | Server | Same |
+
+### `report`
+
+A report about a co-member. The operator reviews it within 24 hours.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `report.id` | Report id (ULID) | Names the report in the alert and the admin | Operator | 1 year after it is closed |
+| `report.group_id` | The group | Where the two met | Operator | Same |
+| `report.reporter_id` | Who reported | The operator may need to contact them. Stays as an id after the account is deleted | Operator | Same |
+| `report.subject_id` | Who was reported | The account is suspended at once. Stays as an id after the account is deleted | Operator | Same |
+| `report.message_id` | The message the report is about, if any | Lets the operator read it in context | Operator | Same, emptied when the message is deleted |
+| `report.body` | What the reporter wrote | The operator reads it | Operator | Same |
+| `report.client_id` | Random id made by the app | A retried report stores once | Server | Same |
+| `report.reporter_gender` | The reporter's gender when they reported | A report from a woman about a man is never closed without contacting her | Operator | Same |
+| `report.subject_gender` | The subject's gender when reported | Same | Operator | Same |
+| `report.subject_status_before` | The subject's account status before the report | A dismissal puts it back | Server | Same |
+| `report.status` | `open` or `closed` | The queue | Operator | Same |
+| `report.outcome` | `upheld` or `dismissed` | Upheld bans the subject, dismissed reinstates | Operator | Same |
+| `report.created_at` | When it was made | Audit | Operator | Same |
+| `report.due_at` | Created plus 24 hours | The queue is ordered by it and the alerts count from it | Operator | Same |
+| `report.contacted_reporter_at` | When the operator contacted the reporter | The woman-about-man rule | Operator | Same |
+| `report.closed_at` | When it was closed | The 1 year rule | Operator | Same |
+| `report.close_note` | A short note from the operator | Audit | Operator | Same |
+
+### `ban_list`
+
+Keyed hash only. It holds no user id, and the phone cannot be read back from it.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ban_list.phone_hash` | HMAC-SHA256 of the E.164 number with `BAN_PEPPER` | Refuses a banned number at sign-in and stops a stopped person making a second account | Server | Until the operator lifts it |
+| `ban_list.reason` | `report_upheld`, `downvote_stop` or `operator` | Only the first and last refuse a sign-in | Operator | Same |
+| `ban_list.created_at` | When it was written | Audit | Operator | Same |
+
+### `ban_pepper_check`
+
+One row. It holds a keyed fingerprint of the ban pepper, not the pepper, and no person.
+
+| Column | What | Why | Who sees it | How long |
+| --- | --- | --- | --- | --- |
+| `ban_pepper_check.id` | Always 1 | One row | Server | Kept |
+| `ban_pepper_check.fingerprint` | HMAC-SHA256 of a fixed text with `BAN_PEPPER` | The admin compares its own pepper to this, so a ban made there matches the app's hashes | Server, operator | Overwritten at each app start |
+| `ban_pepper_check.written_at` | When the app last wrote it | Audit | Server | Same |
+
 ## Object store
 
 | Prefix | What | Who sees it | How long |
 | --- | --- | --- | --- |
+| `tickets/<plan id>/<ulid>.<ext>` | A ticket the member sent: an image re-encoded to a 2,000 px long edge without metadata, or a PDF that passed the checks. No app route returns it; the operator opens it through a signed link and PDFs download as attachments | The operator only | 24 h after the show starts at the latest, 24 h after an unanswered rejection, at once on withdrawal or deletion |
 | `photos/<opaque id>.jpg` | The member's profile photo, re-encoded to a 1080 px JPEG without EXIF. The key is a random id, never the member id, so a link to it names no one | See `profile.photo_key` | Until deletion or replacement |
 
 ## Third parties
@@ -114,3 +383,4 @@ other people in a group.
 | Party | What they get | Why |
 | --- | --- | --- |
 | Meta (WhatsApp Cloud API) | The phone number and the sign-in code | To deliver the code. The app's privacy notice says so |
+| Expo (push service) and Google FCM behind it | The device's push token and a generic title and body with the notice kind and two ids. No name, cafe, show title or reason | To wake the app. Only sent to platforms in `PUSH_PLATFORMS` |

@@ -1,10 +1,10 @@
 import type { ConfigResponse } from "@turnout/contract/app/config";
 import { NOTICE_PARAGRAPHS } from "@turnout/contract/app/notice";
 import { ActivityIndicator, ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { common } from "@/copy/common";
 import { notice } from "@/copy/notice";
 import { Button } from "@/ui/primitives/Button";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
 import { useColors } from "@/ui/theme";

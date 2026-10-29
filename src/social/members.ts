@@ -23,25 +23,25 @@ export function getMemberByPhone(db: Database, phone: string): MemberRow | null 
 }
 
 /**
- * True when this number belongs to a banned member. Until the ban list lands (M4) a ban is `member.status = 'banned'`; the list will
- * add numbers of people who deleted their account after a ban, and this is the one place that changes.
+ * True when the member row for this number has status `banned`. Nothing sets that status now: a ban erases the account (status
+ * `deleted`, no phone) and writes the ban list, which sign-in reads through `isPhoneRefused` in `bans.ts`. This only checks the row,
+ * for a status that an older database or a later change might still hold; it does not read the ban list.
  */
 export function isPhoneBanned(db: Database, phone: string): boolean {
   return db.query("SELECT 1 FROM member WHERE phone_e164 = ? AND status = 'banned'").get(phone) !== null;
 }
 
-/** A new active member with an empty profile row. The caller has just proved the phone with a code. */
-export function createMember(db: Database, phone: string, now: Date): MemberRow {
+/**
+ * A new member with an empty profile row. The caller has just proved the phone with a code. `stopped` makes the account start as
+ * `stopped` (the number is on the ban list for `downvote_stop`), so it can sign in and browse but is never put in a group.
+ */
+export function createMember(db: Database, phone: string, now: Date, stopped = false): MemberRow {
   const at = now.toISOString();
   const id = ulid(now);
   db.transaction(() => {
-    db.query("INSERT INTO member (id, phone_e164, status, phone_verified_at, created_at, updated_at) VALUES (?, ?, 'active', ?, ?, ?)").run(
-      id,
-      phone,
-      at,
-      at,
-      at,
-    );
+    db.query(
+      "INSERT INTO member (id, phone_e164, status, status_reason, phone_verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).run(id, phone, stopped ? "stopped" : "active", stopped ? "downvote_stop" : null, at, at, at);
     db.query("INSERT INTO profile (member_id, group_pref, created_at, updated_at) VALUES (?, 'open', ?, ?)").run(id, at, at);
   })();
   return getMember(db, id) as MemberRow;

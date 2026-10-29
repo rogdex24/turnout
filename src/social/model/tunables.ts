@@ -1,3 +1,5 @@
+import type { NoticeKind } from "@turnout/contract/app/notices";
+
 /**
  * Every number the product rules and the rate limits turn on, in one place. Defaults match the plan (section 2);
  * a test or an operator can pass `tunables({ ... })` overrides. Pure data: no I/O.
@@ -24,10 +26,28 @@ export interface Tunables {
   /** The morning-after notice goes out at this hour (IST) the day after the show. */
   morningAfterHourIst: number;
   feedbackWindowHours: number;
+  /** The stop rule: downvotes from this many different people at this many different shows stop a member being grouped. */
+  stopRule: { voters: number; shows: number };
+  thread: {
+    /** A new message sends a notice only to a member who has not read the thread for this many minutes. */
+    awayMinutes: number;
+    /** At most one `thread_message` notice per plan in this many minutes. */
+    noticeEveryMinutes: number;
+  };
+  report: {
+    /** The operator reviews a report within this many hours of it being made. */
+    dueHours: number;
+    /** The operator is alerted again this many hours before a report is due, and every hour once it is overdue. */
+    reAlertLeadHours: number;
+    /** A closed report is deleted after this many days. */
+    retentionDays: number;
+  };
   otp: {
     /** Digits in the code. */
     digits: number;
     expiresMinutes: number;
+    /** The code that confirms deleting an account lives this long. */
+    deleteCodeExpiresMinutes: number;
     maxAttempts: number;
     /** Wrong codes the store-review number may send in an IST day. Past this, its verifies are refused until the day ends, right code or not. */
     reviewerFailCapPerDay: number;
@@ -48,6 +68,39 @@ export interface Tunables {
     /** A refresh token traded in this recently, whose replacement is still unused, is a retry and not a replay. */
     refreshGraceSeconds: number;
   };
+  /** Minutes around a show's start, and hours around the lock, for each milestone. All counted from the show's start unless said. */
+  plan: {
+    /** The meet card goes live and co-members are revealed this many hours before the start (T-3h). */
+    revealHoursBefore: number;
+    /** The group meets this many minutes before the start. */
+    meetMinutesBefore: number;
+    /** The thread turns read-only this many hours after the start. */
+    threadCloseHoursAfterStart: number;
+    /** Messages are deleted, and can no longer be read or reported, this many days after the start (unless a report on the group is open). */
+    messageRetentionDaysAfterStart: number;
+    /** The "head over" notice goes out this many minutes before the start, and check-in opens then. */
+    headOverMinutes: number;
+    /** Check-in stays open this many minutes after the start. */
+    checkInCloseMinutes: number;
+    /** An unanswered rejected ticket file is deleted this many hours after the rejection. */
+    rejectedTicketDeleteHours: number;
+    /** Ticket files are deleted this many hours after the show starts, at the latest. */
+    ticketDeleteHoursAfterStart: number;
+    /** The operator is alerted when a pending handle belongs to a plan whose lock is this close. */
+    handleAlertHours: number;
+    /** Alert the operator about a missing cafe this many hours before the start (the second one, after the lock). */
+    cafeAlertHoursBefore: number;
+  };
+  ticker: {
+    intervalSeconds: number;
+    leaseSeconds: number;
+    /** Expo push receipts are read this many minutes after the send. */
+    receiptDelayMinutes: number;
+  };
+  /** A notice older than this many minutes is listed but no longer pushed. */
+  noticeStaleMinutes: Readonly<Record<NoticeKind, number>>;
+  /** `notice` and `push_delivery` rows are deleted after this many days. */
+  noticeRetentionDays: number;
   fileLinkMinutes: number;
   /** A profile photo with more pixels than this is refused before it is decoded. */
   photoMaxPixels: number;
@@ -56,6 +109,10 @@ export interface Tunables {
     otpPerPhoneDay: RateRule;
     otpPerIpMinute: RateRule;
     otpPerIpDay: RateRule;
+    /** Every ticket upload counts, good or bad, taken before the body is read, so a flood of bad files costs almost nothing. */
+    ticketAttemptPerMemberHour: RateRule;
+    /** A device registers once when the app opens, so this only stops a loop. */
+    deviceRegisterPerMemberHour: RateRule;
     ticketUploadPerPlanHour: RateRule;
     ticketUploadPerMemberDay: RateRule;
     reportPerDay: RateRule;
@@ -74,9 +131,13 @@ export const DEFAULT_TUNABLES: Tunables = {
   genderCaps: { 4: 3, 5: 3, 6: 4 },
   morningAfterHourIst: 10,
   feedbackWindowHours: 72,
+  stopRule: { voters: 3, shows: 3 },
+  thread: { awayMinutes: 10, noticeEveryMinutes: 5 },
+  report: { dueHours: 24, reAlertLeadHours: 4, retentionDays: 365 },
   otp: {
     digits: 6,
     expiresMinutes: 10,
+    deleteCodeExpiresMinutes: 5,
     maxAttempts: 5,
     reviewerFailCapPerDay: 20,
     notRequestedBlockHours: 24,
@@ -85,6 +146,34 @@ export const DEFAULT_TUNABLES: Tunables = {
     spendAlertsInr: [500, 1000, 1500],
   },
   session: { accessMinutes: 15, refreshDays: 30, revokedRetentionDays: 7, refreshGraceSeconds: 30 },
+  plan: {
+    revealHoursBefore: 3,
+    meetMinutesBefore: 60,
+    threadCloseHoursAfterStart: 24,
+    messageRetentionDaysAfterStart: 30,
+    headOverMinutes: 90,
+    checkInCloseMinutes: 60,
+    rejectedTicketDeleteHours: 24,
+    ticketDeleteHoursAfterStart: 24,
+    handleAlertHours: 12,
+    cafeAlertHoursBefore: 6,
+  },
+  ticker: { intervalSeconds: 30, leaseSeconds: 60, receiptDelayMinutes: 15 },
+  noticeStaleMinutes: {
+    ticket_approved: 6 * 60,
+    ticket_rejected: 6 * 60,
+    handle_rejected: 24 * 60,
+    group_confirmed: 2 * 60,
+    group_changed: 2 * 60,
+    group_smaller: 2 * 60,
+    group_called_off: 2 * 60,
+    no_group: 6 * 60,
+    meet_card_live: 60,
+    head_over: 20,
+    thread_message: 30,
+    morning_after: 12 * 60,
+  },
+  noticeRetentionDays: 30,
   fileLinkMinutes: 5,
   photoMaxPixels: 40_000_000,
   rate: {
@@ -92,6 +181,8 @@ export const DEFAULT_TUNABLES: Tunables = {
     otpPerPhoneDay: { limit: 10, window: "ist_day" },
     otpPerIpMinute: { limit: 5, window: { seconds: 60 } },
     otpPerIpDay: { limit: 30, window: "ist_day" },
+    ticketAttemptPerMemberHour: { limit: 60, window: { seconds: 60 * 60 } },
+    deviceRegisterPerMemberHour: { limit: 20, window: { seconds: 60 * 60 } },
     ticketUploadPerPlanHour: { limit: 5, window: { seconds: 60 * 60 } },
     ticketUploadPerMemberDay: { limit: 20, window: "ist_day" },
     reportPerDay: { limit: 5, window: "ist_day" },
@@ -109,8 +200,14 @@ export function tunables(overrides: DeepPartial<Tunables> = {}): Tunables {
     ...base,
     ...(overrides as Partial<Tunables>),
     groupSize: { ...base.groupSize, ...overrides.groupSize },
+    stopRule: { ...base.stopRule, ...overrides.stopRule },
+    thread: { ...base.thread, ...overrides.thread },
+    report: { ...base.report, ...overrides.report },
     otp: { ...base.otp, ...(overrides.otp as Partial<Tunables["otp"]>) },
     session: { ...base.session, ...overrides.session },
+    plan: { ...base.plan, ...overrides.plan },
+    ticker: { ...base.ticker, ...overrides.ticker },
+    noticeStaleMinutes: { ...base.noticeStaleMinutes, ...(overrides.noticeStaleMinutes as Partial<Tunables["noticeStaleMinutes"]>) },
     rate: { ...base.rate, ...(overrides.rate as Partial<Tunables["rate"]>) },
   };
 }

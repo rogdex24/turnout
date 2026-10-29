@@ -264,7 +264,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/mobile/build/e2e-ios.tgz
-          key: ios-e2e-xcode${{ env.XCODE_VERSION }}-${{ steps.fingerprint.outputs.hash }}
+          key: ios-e2e-signed-xcode${{ env.XCODE_VERSION }}-${{ steps.fingerprint.outputs.hash }}
       - name: Build the e2e simulator app
         if: steps.native.outputs.cache-hit != 'true'
         run: apps/mobile/ci/build-ios.sh

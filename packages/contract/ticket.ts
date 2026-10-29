@@ -14,6 +14,11 @@ export const TICKET_STATES = ["pending", "approved", "rejected"] as const;
 export const ticketStateSchema = z.enum(TICKET_STATES);
 export type TicketState = z.infer<typeof ticketStateSchema>;
 
+/** Why the operator turned a ticket down. The app shows plain copy for each. */
+export const TICKET_REJECT_REASONS = ["unreadable", "wrong_show", "wrong_date", "not_a_ticket", "duplicate"] as const;
+export const ticketRejectReasonSchema = z.enum(TICKET_REJECT_REASONS);
+export type TicketRejectReason = z.infer<typeof ticketRejectReasonSchema>;
+
 /** The error code for a PDF sent for a BookMyShow show (400 `screenshot_required`). */
 export const SCREENSHOT_REQUIRED_ERROR = "screenshot_required";
 

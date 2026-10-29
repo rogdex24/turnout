@@ -1,6 +1,5 @@
 import type { Gender } from "@turnout/contract/profile";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { profile } from "@/copy/profile";
 import { type ProfileDraft, womenOnlyAvailable } from "@/model/profileForm";
 import { BackBar } from "@/ui/BackBar";
@@ -8,6 +7,7 @@ import { PersonAvatar } from "@/ui/PersonAvatar";
 import { Button } from "@/ui/primitives/Button";
 import { Chip } from "@/ui/primitives/Chip";
 import { Field } from "@/ui/primitives/Field";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
 import { useColors } from "@/ui/theme";

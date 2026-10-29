@@ -1,7 +1,7 @@
 import { CalendarCheck } from "phosphor-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { plans } from "@/copy/plans";
 import { EmptyState } from "@/ui/EmptyState";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 
 /** The Plans tab. M2 has no plans to show; the list lands with the Go with a group flow in M3. */

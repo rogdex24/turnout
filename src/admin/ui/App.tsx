@@ -1,4 +1,4 @@
-import { CalendarDays, Database, History, VolumeX } from "lucide-react";
+import { Ban, BellOff, CalendarDays, Database, Flag, History, IdCard, Ticket, UserCog, Users, VolumeX } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import {
   Sidebar,
@@ -14,11 +14,18 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "./components/theme-toggle";
+import { AccountPage, AccountsPage } from "./pages/accounts";
+import { BansPage } from "./pages/bans";
 import { EventsPage } from "./pages/events";
+import { HandlesPage } from "./pages/handles";
 import { MutesPage } from "./pages/mutes";
+import { NoticesPage } from "./pages/notices";
+import { ReportsPage } from "./pages/reports";
 import { RunDetailPage } from "./pages/run-detail";
 import { RunsPage } from "./pages/runs";
+import { ShowsPage } from "./pages/shows";
 import { SourcesPage } from "./pages/sources";
+import { TicketsPage } from "./pages/tickets";
 import { Link, navigate, useLocation } from "./router";
 
 const NAV = [
@@ -26,12 +33,21 @@ const NAV = [
   { to: "/sources", label: "Sources", icon: Database },
   { to: "/events", label: "Events", icon: CalendarDays },
   { to: "/mutes", label: "Mutes", icon: VolumeX },
+  { to: "/tickets", label: "Tickets", icon: Ticket },
+  { to: "/handles", label: "Handles", icon: IdCard },
+  { to: "/shows", label: "Shows", icon: Users },
+  { to: "/reports", label: "Reports", icon: Flag },
+  { to: "/accounts", label: "Accounts", icon: UserCog },
+  { to: "/bans", label: "Ban list", icon: Ban },
+  { to: "/notices", label: "Failed notices", icon: BellOff },
 ];
 
 function Page({ path }: { path: string }): ReactNode {
   const run = /^\/runs\/([^/]+)$/.exec(path);
   // group 1 is mandatory in the pattern
   if (run) return <RunDetailPage key={run[1]} id={decodeURIComponent(run[1]!)} />;
+  const account = /^\/accounts\/([^/]+)$/.exec(path);
+  if (account) return <AccountPage key={account[1]} id={decodeURIComponent(account[1]!)} />;
   switch (path.replace(/\/+$/, "")) {
     case "/runs":
       return <RunsPage />;
@@ -41,6 +57,20 @@ function Page({ path }: { path: string }): ReactNode {
       return <EventsPage />;
     case "/mutes":
       return <MutesPage />;
+    case "/tickets":
+      return <TicketsPage />;
+    case "/handles":
+      return <HandlesPage />;
+    case "/shows":
+      return <ShowsPage />;
+    case "/reports":
+      return <ReportsPage />;
+    case "/accounts":
+      return <AccountsPage />;
+    case "/bans":
+      return <BansPage />;
+    case "/notices":
+      return <NoticesPage />;
     default:
       return <p className="text-muted-foreground text-sm">No such page. Pick one from the sidebar.</p>;
   }

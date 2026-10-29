@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Modal, Pressable, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { common } from "@/copy/common";
 import { useReduceMotion } from "../reduceMotion";
 import { Button } from "./Button";
+import { SafeAreaView } from "./SafeAreaView";
 import { Text } from "./Text";
 
 export interface SheetAction {

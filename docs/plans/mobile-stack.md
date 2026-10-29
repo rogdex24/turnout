@@ -173,3 +173,6 @@ Checks on 2026-10-28:
   at launch (`ExpoFont` could not find a symbol in `ExpoModulesJSI`). `expo` now pins 58.0.21, which
   brings `expo-modules-core` 58.0.28 and `expo-modules-jsi` 58.0.21. `expo` left
   `expo.install.exclude`, so the check now flags it when it falls behind; only `jest-expo` stays.
+- `expo-modules-jsi` 58.0.21 fails to compile under Xcode 26.2 ("sending 'slot' risks causing data
+  races" in `JavaScriptObject.swift`). `patches/expo-modules-jsi@58.0.21.patch` wraps the captured
+  slot in the package's `UncheckedSendable`. Remove it when a fixed release ships.

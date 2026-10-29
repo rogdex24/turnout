@@ -1,13 +1,29 @@
 import path from "node:path";
 import { markSvg } from "../utils/brandMark.js";
 import { openDb } from "../utils/openDb.js";
+import { adminFilesFromEnv } from "./files.js";
 import { createRunStarter } from "./runs.js";
 import { type AdminContext, apiResponse, guard, resolveBind } from "./server.js";
 import { withThemeBoot } from "./themeBoot.js";
 import index from "./ui/index.html";
 
 /** Pages the client router handles; each serves the same HTML shell. */
-const PAGES = ["/", "/runs", "/runs/:id", "/sources", "/events", "/mutes"];
+const PAGES = [
+  "/",
+  "/runs",
+  "/runs/:id",
+  "/sources",
+  "/events",
+  "/mutes",
+  "/tickets",
+  "/shows",
+  "/handles",
+  "/reports",
+  "/accounts",
+  "/accounts/:id",
+  "/bans",
+  "/notices",
+];
 
 export interface AdminOptions {
   dbPath: string;
@@ -22,13 +38,15 @@ export function startAdmin({ dbPath, port, env }: AdminOptions) {
   const dataDir = path.dirname(path.resolve(dbPath));
 
   const read = openDb(dbPath, { readonly: true });
-  // The only connection that writes, and only to mute_rule. It waits out a sync's write transaction instead of failing.
+  // The only connection that writes: mute rules, and the operator's changes through social/operator.ts. It waits out a sync's write transaction instead of failing.
   const write = openDb(dbPath, { create: false });
 
   const context: AdminContext = {
     read,
     write,
     token: bind.token,
+    files: adminFilesFromEnv(env),
+    banPepper: env.BAN_PEPPER?.trim() || null,
     agentRunsDir: path.join(dataDir, "agent-runs"),
     startRun: createRunStarter({ db: read, dbPath: path.resolve(dbPath), logDir: path.join(dataDir, "admin-runs") }),
   };

@@ -1,7 +1,7 @@
 import { SignOut } from "phosphor-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { you } from "@/copy/you";
 import { Row } from "@/ui/primitives/Row";
+import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 
 export interface YouViewProps {

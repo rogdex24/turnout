@@ -53,3 +53,19 @@ export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 /** GET /me/photo and the answer to PUT /me/photo. */
 export const photoResponseSchema = z.object({ photo: fileLinkSchema });
 export type PhotoResponse = z.infer<typeof photoResponseSchema>;
+
+/** POST /me/delete-code takes no body. */
+export const deleteCodeRequestSchema = z.object({}).strict();
+
+/** POST /me/delete-code: the answer is the challenge to confirm with. The code goes to the member's own number. */
+export const deleteCodeResponseSchema = z.object({ challengeId: z.string(), expiresAt: z.string() });
+export type DeleteCodeResponse = z.infer<typeof deleteCodeResponseSchema>;
+
+/** DELETE /me. The answer is 204; the member is gone and every token stops working. */
+export const deleteAccountRequestSchema = z
+  .object({
+    challengeId: z.string().min(1).max(40),
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict();
+export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;
