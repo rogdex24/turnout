@@ -38,7 +38,7 @@ env:
     id: "show-card-.*"
 
 # A card opens its show: the ticket stub, the buy link and Go with a group. Go opens the Go with a group sheet, and Not now closes it.
-# The system back goes back to the list.
+# The show's own back button goes back to the list. Maestro's back command presses the Android system back and does nothing on iOS.
 - tapOn:
     id: "show-card-.*"
 - extendedWaitUntil:
@@ -58,8 +58,11 @@ env:
     id: go-not-now
 - assertNotVisible:
     id: go-sheet
-- back
-- assertVisible: "Shows coming up"
+- tapOn:
+    id: back
+- extendedWaitUntil:
+    visible: "Shows coming up"
+    timeout: 10000
 
 # A handle in review shows the strip, and the list still works.
 - runFlow:

@@ -19,6 +19,12 @@ describe("Maestro flows", () => {
       const header = text.split("\n---\n")[0] ?? "";
       for (const name of fromCommandLine) expect(header).not.toMatch(new RegExp(`^\\s+${name}:`, "m"));
     });
+
+    // Maestro's back presses the Android system back and does nothing on iOS, so a flow taps the screen's own back button.
+    test(`${file} does not use the Android-only back command`, async () => {
+      const text = await Bun.file(`${root}/${file}`).text();
+      expect(text).not.toMatch(/^\s*- back\s*$/m);
+    });
   }
 
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the
