@@ -2,7 +2,7 @@
 # The visual capture flow in visual/ is run by path, one story at a time (see visual/README.md).
 flows:
   - "flows/*.yaml"
-# loop-meet needs the seed's meet_card_live plan and group rows, which M3 adds. Remove this line when they are in.
+# loop-meet, thread and report need the seed's meet_card_live plan and group rows, which M3 adds. Remove this line when they are in.
 excludeTags:
   - needs-group-seed
 executionOrder:
@@ -22,3 +22,5 @@ executionOrder:
     - loop-group
     - loop-no-group
     - group-shrinks
+    - thread
+    - report

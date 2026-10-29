@@ -9,6 +9,7 @@
  *   POST /operator/send      { phone, eventId }                                            a plan with a ticket waiting for an answer
  *   POST /operator/crowd     { eventId, phones }                                           each phone gets an approved ticket, then one grouping pass
  *   POST /operator/withdraw  { phone, eventId }                                            the member's live plan ends as cancelled
+ *   POST /operator/say       { phone, eventId, text }                                      the member posts to their group's thread
  *
  * The time they act at is the server's own clock (`POST /__test/clock` moves it), so a leaver after the lock is a leaver after the lock.
  */
@@ -22,6 +23,7 @@ import { runGroupingPass, withdrawPlan } from "../src/social/groups.js";
 import { getMemberByPhone } from "../src/social/members.js";
 import { approveHandle, approveTicket, rejectHandle, rejectTicket } from "../src/social/operator.js";
 import { createPlan, type PlanRow } from "../src/social/plans.js";
+import { postMessage } from "../src/social/thread.js";
 import { addTicket } from "../src/social/tickets.js";
 import { diskStore } from "../src/utils/objectStore.js";
 import { openDb } from "../src/utils/openDb.js";
@@ -36,6 +38,7 @@ const bodies = {
   send: z.strictObject({ phone, eventId: z.string() }),
   crowd: z.strictObject({ eventId: z.string(), phones: z.array(phone).min(1).max(12) }),
   withdraw: z.strictObject({ phone, eventId: z.string() }),
+  say: z.strictObject({ phone, eventId: z.string(), text: z.string().trim().min(1).max(500) }),
 };
 
 /** Every route's body, with the fields a route does not take left out of its own check. */
@@ -45,6 +48,7 @@ type Body = {
   eventId: string;
   decision: z.infer<typeof decision>;
   reason?: string;
+  text: string;
 };
 
 export type Operator = { url: string; port: number; stop: () => void };
@@ -130,6 +134,14 @@ async function perform(
     // The ticker would do this within a minute; the flows run with it off.
     if (body.decision === "approve") runGroupingPass(db, body.eventId, now);
     return { ok: true, planState: result.plan.state };
+  }
+  if (name === "say") {
+    const id = memberId(db, body.phone);
+    const plan = livePlan(db, id, body.eventId, ["group_confirmed", "meet_card_live"]);
+    if (plan.group_id === null) return refuse(409, "the plan has no group yet");
+    // A fresh client id each time: the flow means every call to be a new message.
+    const posted = postMessage(db, plan.group_id, id, { body: body.text, clientId: crypto.randomUUID() }, now);
+    return posted.ok ? { ok: true, messageId: posted.message.id } : refuse(409, `the thread refused the message: ${posted.error}`);
   }
   if (name === "crowd") {
     for (const number of body.phones as string[]) {

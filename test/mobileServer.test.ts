@@ -161,6 +161,18 @@ test("the operator routes act for the operator and the other members, on the ser
     const shrunk = await state();
     expect(shrunk.group?.size).toBe(3);
     expect((await operator("withdraw", { phone: phone("0108"), eventId: show })).status).toBe(409);
+
+    // The thread opens at T-3h. Before that nobody can say anything; after, a member's line reaches the others, and a blank one is refused.
+    const groupId = (await state()).group as unknown as { id: string };
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "At the cafe" })).status).toBe(409);
+    await post(`${api}/__test/clock`, { advanceMs: 21 * 3600 * 1000, tick: true }, { "x-staging-test-token": other.testToken });
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "At the cafe" })).status).toBe(200);
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "  " })).status).toBe(400);
+    auth = { authorization: `Bearer ${await signIn(phone("0105"))}` };
+    const thread = (await (await fetch(`${api}/groups/${groupId.id}/messages`, { headers: auth })).json()) as {
+      messages: { body: string; isYou: boolean }[];
+    };
+    expect(thread.messages.map((m) => [m.body, m.isYou])).toEqual([["At the cafe", false]]);
   } finally {
     await other.stop();
   }

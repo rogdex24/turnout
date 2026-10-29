@@ -1,0 +1,84 @@
+# Reporting someone from the meet card. Signs in as the seeded member whose group is live, opens the card, and goes to the report form
+# through the Safety sheet. Call 112 is on the form before anything is picked, Send report waits for a person, and a sent report says
+# it was received and nothing about what happened to the person. The e2e build allows screenshots (EXPO_PUBLIC_ALLOW_CAPTURE=1); a
+# release build blocks them while the form is open, which is checked by hand.
+#
+# Needs, and has not been run against (the same as loop-meet): the seed's group rows for the meet_card_live member, with a second
+# member in the group (Esha by default). The offline queue is covered by the unit tests, since Maestro has no portable way to drop
+# the network on both platforms.
+# config.yaml leaves it out of the CI run (excludeTags) until the seed rows exist; run it by path.
+appId: com.turnout.app.e2e
+name: report
+tags:
+  - report
+  - needs-group-seed
+env:
+  SERVER_URL: http://localhost:3917
+  TEST_TOKEN: ""
+  MEMBER: "+12025550107"
+  PLAN_ID: plan-meet-live
+  SUBJECT: Esha
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- launchApp:
+    clearState: false
+- openLink: turnout-e2e://push?kind=meet_card_live&noticeId=n-meet&planId=${PLAN_ID}
+- extendedWaitUntil:
+    visible:
+      id: meet
+    timeout: 15000
+
+# The Safety sheet has Call 112 first, then Report someone.
+- tapOn:
+    id: meet-safety
+- assertVisible:
+    id: safety-call
+- assertVisible:
+    id: safety-report
+- tapOn:
+    id: safety-report
+- extendedWaitUntil:
+    visible:
+      id: report
+    timeout: 10000
+
+# Call 112 is on the form from the start, and the report cannot go until someone is picked.
+- assertVisible:
+    id: report-call-112
+- assertVisible: "Who is this about?"
+- assertVisible:
+    id: report-people
+- assertVisible:
+    id: report-send
+- tapOn:
+    id: report-send
+- assertVisible:
+    id: report-people
+
+# Pick the person and what happened, add a line, and send.
+- tapOn: ${SUBJECT}
+- tapOn: "Made me feel unsafe"
+- tapOn:
+    id: report-details
+- inputText: "Kept messaging me after I said no"
+- hideKeyboard
+- tapOn:
+    id: report-send
+
+# It says the report was received. It does not say what became of the person, and Call 112 stays.
+- extendedWaitUntil:
+    visible: "We have your report"
+    timeout: 20000
+- assertVisible:
+    id: report-call-112
+- assertNotVisible: ".*(suspended|removed|banned|blocked).*"
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: meet
+    timeout: 10000

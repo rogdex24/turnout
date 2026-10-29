@@ -1,7 +1,9 @@
 # One call to the operator routes. Run with runFlow and SERVER_URL, TEST_TOKEN, ROUTE and what the route needs
-# (PHONE, EVENT_ID, DECISION, REASON, PHONES). A value a route does not need is passed as an empty string.
+# (PHONE, EVENT_ID, DECISION, REASON, PHONES, and TEXT for say). A value a route does not need is passed as an empty string; TEXT may be left out.
 appId: com.turnout.app.e2e
 name: operator
+env:
+  TEXT: ""
 ---
 - runScript:
     file: ../scripts/operator.js
@@ -14,3 +16,4 @@ name: operator
       EVENT_ID: ${EVENT_ID}
       DECISION: ${DECISION}
       REASON: ${REASON}
+      TEXT: ${TEXT}

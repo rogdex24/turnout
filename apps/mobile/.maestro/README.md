@@ -21,7 +21,9 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs last |
 | `flows/push-routing.yaml` | A tap on a push opens the screen its kind names, through the e2e build's `turnout-e2e://push` link; an unknown kind or a bad id lands on Home |
 | `flows/loop-meet.yaml` | The meet card from the "Meet your group" push to "I'm here": the static map, the walk line from a set location, the Safety sheet and the check-in. Left out of the CI run until the seed has the group rows (tag `needs-group-seed`); needs a phone clock inside the check-in window (see its header) |
-| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code, sign in as a seeded member, make a plan the way a person does, and call an operator route |
+| `flows/thread.yaml` | The group chat from the meet card: another member's line arriving on the poll, a written line, a quick chip, no link in a line, and a long press offering Report. Same seed needs as loop-meet (tag `needs-group-seed`) |
+| `flows/report.yaml` | Report someone from the Safety sheet: Call 112 on the form, Send waiting for a person, a report sent and a line that says nothing about what became of them. Same seed needs as loop-meet (tag `needs-group-seed`) |
+| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code, sign in as a seeded member, make a plan the way a person does, and call an operator route (`say` makes another member write to the group chat) |
 | `visual/capture-story.yaml` | Opens one Storybook story and takes a screenshot (see `visual/README.md`) |
 | `scripts/expect-events.js` | Fails a flow when the seeded server does not answer |
 | `scripts/otp-code.js` | Reads the last sign-in code for a number from the server's test route (needs `TEST_TOKEN`) |

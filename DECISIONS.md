@@ -807,3 +807,23 @@ Where the build differs from the plan or fills a gap.
 16. **`loop-meet.yaml` is tagged `needs-group-seed` and excluded in `config.yaml`,** because the seed has no plan and group rows for the `meet_card_live` member yet. Neither Maestro flow has run on a device.
 
 Evidence. `src/model/walk.test.ts`, `meetWindow.test.ts`, `meetCard.test.ts`, `src/api/groups.test.ts`, `notifications.test.ts`, `src/providers/useMeetLocation.test.tsx`, `useNotificationRouting.test.tsx`, `src/screens/meet/*.test.tsx`, `test/appLinks.test.ts`, and the Playwright cases in `e2e/`.
+
+## 2026-10-29: M4 app, A19 and A21 (group chat, report)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The chat is kept on disk as its newest 50 messages,** with an `incomplete` flag. A phone that reopens from disk shows them at once and then loads the whole thread, because the cursor (the last message id) cannot be trusted to continue a trimmed list.
+2. **The cursor is the last message id.** The screen polls every 5 seconds only while it is focused, the thread is open, and the server has not answered 404. It stops on a read-only thread and when the app is in the background.
+3. **A person's own messages that have not arrived come from the mutation cache,** through `useMutationState`, not from a second list. Sending, queued (paused offline) and failed show under the line. The list is de-duplicated by `clientId`, and a sent message hides the earlier failed tries of the same one.
+4. **A send waits for the thread to reload instead of writing the POST result into it.** One path writes to the cache, so a poll that lands in between cannot show a message twice or out of order.
+5. **Report on a message opens a bottom sheet,** not the design's inline menu, so the target is large and works the same on both platforms.
+6. **`no_group` is learned from the server's 404.** A `no_group` plan has no group, so the app cannot tell from the plans list that a group was called off. A 404 with nothing held means the chat has closed; a 404 with messages held keeps them readable and read-only. The screen reads no plans for this.
+7. **No auto-linking.** A message is a plain `Text` with no data detectors, so an address in it is not tappable.
+8. **A report's text is the reason's label, then the details.** The body is `reportBody(reason, details)`, with the details capped at 1800 characters so the whole stays inside the contract's limit.
+9. **A report's `messageId` goes only with the person it came from.** If the person picks someone else on the form, the message is left out.
+10. **`useBlockCapture` is a hook with no arguments, called in the route file.** It blocks capture while the route is focused (`expo-screen-capture`) and does nothing when `EXPO_PUBLIC_ALLOW_CAPTURE` is 1 (the e2e build). `useHoldThreadPushes` takes `null` for a route with no group.
+11. **`thread_message` now opens the chat** (`/groups/<groupId>/thread`). `morning_after` still opens the plan.
+12. **The meet card has a Group chat row, and the Safety sheet has Report someone** after Call 112 and before Leave this plan.
+13. **The operator sidecar has a `say` route,** so a flow can make another member of a group write. `thread.yaml` and `report.yaml` are tagged `needs-group-seed` like `loop-meet.yaml` and have not run on a device.
+
+Evidence. `src/model/thread.test.ts`, `report.test.ts`, `src/api/persister.test.ts`, `src/screens/thread/ThreadScreen.test.tsx`, `src/screens/report/ReportScreen.test.tsx`, `src/screens/meet/*.test.tsx`, `src/ui/useBlockCapture.test.tsx`, `test/mobileServer.test.ts` (the `say` route).
