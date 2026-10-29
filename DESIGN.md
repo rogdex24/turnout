@@ -79,7 +79,7 @@ colors:
   app-primary-dark: "#ede8e1"
   app-on-primary: "#ede8e1"
   app-on-primary-dark: "#121212"
-  app-scrim: "#18181873"
+  app-scrim: "#181818a6"
   app-scrim-dark: "#00000099"
   app-on-photo: "#f3eee7"
   app-on-photo-dark: "#f3eee7"
@@ -1045,6 +1045,9 @@ and a single orange that only ever means something is live. The app follows the 
 - `app-pressed` (ink at 8%) and `app-skeleton` (the `app-surface-raised` tone) are not in the mockups; they are derived from
   its ink and raised surface.
 - Text on a poster or photo is `app-on-photo`; the placeholder poster tones are `app-poster-comedy`, `-music` and `-theatre`.
+  A real photo can be any colour, so the caption sits on `app-scrim` and the pair is held to 4.5 over a white photo, the
+  worst case. That is why the light scrim is 65% ink: at the 45% the first mockups use it fell to 2.53 over white. The
+  same scrim is the sheet backdrop and the round buttons on a photo.
 - The marquee band is dark in both themes; its text is `app-ink-dark`.
 
 Contrast, WCAG relative luminance. `test/mobileTokens.test.ts` computes every row from this file and fails on a regression.
@@ -1057,6 +1060,8 @@ Contrast, WCAG relative luminance. `test/mobileTokens.test.ts` computes every ro
 | `app-signal` on the soft chip over bg, surface | 5.14, 5.59 | 5.06, 4.63 | 4.5 (light target 5.1 on bg) |
 | `app-on-primary` on `app-primary` | 14.57 | 15.37 | 4.5 |
 | `app-on-photo` on the poster tones | 9.28 to 12.72 | same | 4.5 |
+| `app-on-photo` on `app-scrim` over a white photo | 4.76 | 4.97 | 4.5 |
+| `app-bg` on `app-ink` (the selected chip) | 14.57 | 15.37 | 4.5 |
 | marquee text on `app-marquee` | 14.57 | 14.28 | 4.5 |
 | `app-outline` on bg | 3.13 | 3.29 | 3 (SC 1.4.11) |
 | `app-signal` on bg (dot, ring) | 5.75 | 6.01 | 3 |
