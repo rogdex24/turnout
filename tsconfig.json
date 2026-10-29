@@ -18,6 +18,6 @@
       "@web/*": ["./src/web/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "bench/**/*.ts", "e2e/server.ts", "e2e/run.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "bench/**/*.ts", "e2e/server.ts", "e2e/run.ts", "scripts/load-smoke.ts"],
   "exclude": ["src/admin/ui"]
 }
