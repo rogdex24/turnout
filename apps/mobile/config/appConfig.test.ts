@@ -1,5 +1,9 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import type { ExpoConfig } from "expo/config";
 import appConfig from "../app.config";
+import { DATA_EXTRACTION_RULES, RULES_RESOURCE, withNoDataExtraction } from "./noDataExtraction";
 import type { Variant } from "./variants";
 
 const API = "https://api.turnout.example";
@@ -81,4 +85,27 @@ test("the permission texts say plainly what the app does with the photo and the 
   expect(location?.locationWhenInUsePermission).toContain("Your location stays on your phone.");
   expect(location?.isAndroidBackgroundLocationEnabled).toBe(false);
   expect(location?.isIosBackgroundLocationEnabled).toBe(false);
+});
+
+test("Android also excludes everything from a device-to-device transfer, in every variant", async () => {
+  for (const variant of VARIANTS) expect(configFor(variant).plugins).toContain(withNoDataExtraction);
+
+  // Run the two mods the plugin registers on a bare manifest and a scratch project folder.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "extraction-"));
+  const config = withNoDataExtraction({ name: "t", slug: "t" }) as ExpoConfig & {
+    mods: { android: Record<string, (c: object) => Promise<{ modResults: unknown }>> };
+  };
+  const manifestMod = config.mods.android.manifest;
+  const dangerousMod = config.mods.android.dangerous;
+  if (!manifestMod || !dangerousMod) throw new Error("The plugin registered no Android mods");
+  const manifest = { manifest: { $: {}, application: [{ $: {} }] } };
+  const out = (await manifestMod({ modResults: manifest, modRequest: { platform: "android" } })).modResults as typeof manifest;
+  expect(out.manifest.application[0]?.$).toEqual({ "android:dataExtractionRules": RULES_RESOURCE });
+  await dangerousMod({ modResults: {}, modRequest: { platform: "android", platformProjectRoot: root } });
+  const written = fs.readFileSync(path.join(root, "app/src/main/res/xml/data_extraction_rules.xml"), "utf8");
+  expect(written).toBe(DATA_EXTRACTION_RULES);
+  for (const section of ["cloud-backup", "device-transfer"]) {
+    const block = written.split(`<${section}>`)[1]?.split(`</${section}>`)[0] ?? "";
+    for (const domain of ["root", "file", "database", "sharedpref", "external"]) expect(block).toContain(`domain="${domain}"`);
+  }
 });

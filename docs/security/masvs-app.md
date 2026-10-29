@@ -27,10 +27,11 @@ in `app.config.ts` or CI and a test pins it. **Owner step** and **Accepted gap**
 
 Findings fixed while writing this file:
 
-1. The group chat route (`src/app/(app)/groups/[groupId]/thread.tsx`) did not block screen capture, although the plan and
-   DECISIONS say the chat does. It now calls `useBlockCapture()`. `src/ui/captureRoutes.test.ts` fails if the chat, the
+1. On the branch this review started from, the group chat route (`src/app/(app)/groups/[groupId]/thread.tsx`) did not block
+   screen capture. The M4 work fixed the route in parallel, so the merged code has one `useBlockCapture()` call there. `src/ui/captureRoutes.test.ts` fails if the chat, the
    report or the after route stops calling it.
-2. Android backup was left at the Expo default. `allowBackup` is now `false` in every variant (see STORAGE-1).
+2. Android backup was left at the Expo default. `allowBackup` is now `false` in every variant, and data extraction rules
+   also exclude the device-to-device transfer (see STORAGE-1).
 3. Release builds carried `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` and `SYSTEM_ALERT_WINDOW` from library and
    template defaults. They are blocked (see PLATFORM-1).
 
@@ -78,10 +79,13 @@ queries dropped, removeClient cancels a pending write, replayable mutations only
 `src/api/auth.test.ts` (refresh token in the keychain and the access token in memory; a refused refresh empties the
 keychain).
 
-Android backup: `app.config.ts` sets `android.allowBackup: false` in every variant, so no file in the app's data
-directory goes to Google Drive or a device transfer. The cache key lives in the Keystore and cannot follow a restore, so
-a restored cache would only be noise. Test: `config/appConfig.test.ts` "Android does not back up the app, in every
-variant". Status: **Met (config)**. iOS excludes Keychain items marked `THIS_DEVICE_ONLY` from backups by definition.
+Android backup: `app.config.ts` sets `android.allowBackup: false` in every variant, which stops cloud backup. From
+Android 12 that flag does not stop a device-to-device transfer, so the `withNoDataExtraction` plugin
+(`config/noDataExtraction.ts`) also sets `android:dataExtractionRules` to a rules file that excludes every domain under
+both `<cloud-backup>` and `<device-transfer>`. No file in the app's data directory goes to Google Drive or to a new phone.
+The cache key lives in the Keystore and cannot follow a restore, so a restored cache would only be noise. Tests:
+`config/appConfig.test.ts` "Android does not back up the app, in every variant" and "Android also excludes everything
+from a device-to-device transfer, in every variant". Status: **Met (config)**. iOS excludes Keychain items marked `THIS_DEVICE_ONLY` from backups by definition.
 
 ### STORAGE-2: the app prevents leakage of sensitive data (L1, L2)
 
@@ -273,7 +277,8 @@ It is used on:
 - the after screen: `src/app/(app)/groups/[groupId]/after.tsx`.
 
 Only the e2e build sets `EXPO_PUBLIC_ALLOW_CAPTURE=1` so Maestro can take screenshots; `assertReleaseEnv` makes a preview
-or production build refuse to start with it set, and the CI scan fails a release bundle containing it. Tests:
+or production build refuse to start with it set. The bundle scan cannot see it, because Metro replaces the variable with
+its value at build time. Tests:
 `src/ui/captureRoutes.test.ts` (each of the three routes calls the hook), `src/ui/useBlockCapture.test.tsx` (blocks while
 open, allows again after; leaves capture alone in the e2e build), `config/variants.test.ts` ("release variants refuse the
 capture and Storybook switches"), `config/eas.test.ts` ("only the e2e profile allows screen capture").
@@ -322,8 +327,8 @@ bytecode, where strings sit as plain text, so it pulls out runs of printable cha
 `apps/mobile/config/bundleScan.ts`: Google API key, AWS access key, private key block, Slack token, GitHub token, Stripe
 secret key, Meta access token, JWT, URL with a password, private network URL, and an inline `secret`, `token`, `password`
 or `apiKey` assignment. With `--release` it also fails on strings that mean a development or e2e build leaked into the
-release (`10.0.2.2`, `com.turnout.app.dev`, `com.turnout.app.e2e`, `turnout-dev://`, `turnout-e2e://`,
-`EXPO_PUBLIC_ALLOW_CAPTURE=1`); `--forbid <text>` adds more. A finding prints the rule, the file, the first four
+release (`10.0.2.2`, `com.turnout.app.dev`, `com.turnout.app.e2e`, `turnout-dev://`, `turnout-e2e://`);
+`--forbid <text>` adds more. A finding prints the rule, the file, the first four
 characters and the length, never the value. Exit code 0 is clean, 1 is a finding, 2 is a usage error or no bundle found.
 Images and fonts are skipped.
 

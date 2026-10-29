@@ -443,6 +443,8 @@ describe("S19 audit, nothing about a co-member leaves the server", () => {
         const sameGroup = groupOf(viewer) !== null && groupOf(viewer) === groupOf(other);
         const key = rawPhotoKey(other);
         if (!sameGroup || at < -3 * HOUR) expect([where, text.includes(key)]).toEqual([where, false]);
+        // and the same for the first name: nobody outside the group, and a co-member only from the reveal on
+        if (!sameGroup || at < -3 * HOUR) expect([where, new RegExp(`Person${index}\\b`).test(text)]).toEqual([where, false]);
       }
       if (path !== "GET /me") {
         let parsed: unknown = null;

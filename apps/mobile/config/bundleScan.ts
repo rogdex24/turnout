@@ -34,7 +34,6 @@ export const DEV_ONLY_STRINGS: readonly string[] = [
   "com.turnout.app.e2e",
   "turnout-dev://",
   "turnout-e2e://",
-  "EXPO_PUBLIC_ALLOW_CAPTURE=1",
 ];
 
 export interface Finding {

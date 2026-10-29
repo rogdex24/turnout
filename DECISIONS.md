@@ -870,7 +870,7 @@ Why. Each keeps what the plan promises (a way out that is plain, nothing kept th
 
 Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/grievance.test.ts`, `src/content/howMatchingWorks.test.ts`, `src/screens/settings/*.test.tsx`, `src/screens/you/YouScreen.test.tsx` and `src/router.test.tsx`.
 
-## 2026-10-29: M3 app, A17 (analytics funnel)
+## 2026-10-29: M5, A17 (analytics funnel)
 
 1. **The four funnel events are sent from the screens, not the views.** `ShowScreen` sends `show_viewed` once the show has loaded (a 404 or an error is not a view), `buy_tapped` before the ticket page opens, and `go_tapped` on every Go tap with `groups_enabled`, so the funnel also counts taps on a build where groups are off. `MeetScreen` sends `im_here_tapped` with the plan id when the person taps I'm here.
 2. **`ShowView` gets `onBuy` and `onGoTapped`.** The ticket link no longer goes through `onOpenLink`, so the screen can tell a Buy tap from the listing link.

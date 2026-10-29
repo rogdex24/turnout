@@ -70,8 +70,17 @@ function describe(samples: number[]): string {
 }
 
 /** The numbers are only ever rows in a temp file: nothing is sent to them. */
+/**
+ * Only 555-0100 to 555-0199 is set aside for fiction in each North American area code, so the members spread over a few area
+ * codes: 100 numbers each, 800 in all. No number here can belong to a real person.
+ */
+const FICTIONAL_AREAS = ["202", "212", "312", "415", "503", "617", "702", "808"];
+const MAX_MEMBERS = FICTIONAL_AREAS.length * 100;
+
 function phoneOf(index: number): string {
-  return `+1202555${String(1000 + index).padStart(4, "0")}`;
+  const area = FICTIONAL_AREAS[Math.floor(index / 100)];
+  if (area === undefined) throw new Error(`At most ${MAX_MEMBERS} members have a fictional number`);
+  return `+1${area}55501${String(index % 100).padStart(2, "0")}`;
 }
 
 /** One entry per member: the access token and the group to poll. */
