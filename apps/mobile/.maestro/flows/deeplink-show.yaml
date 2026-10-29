@@ -27,7 +27,8 @@ env:
     timeout: 10000
 - assertVisible:
     id: show-ticket
-- assertVisible: "Seed comedy night"
+# On iOS the poster is one element named "<title>, <category>", so the title is matched as the start of the name.
+- assertVisible: "Seed comedy night.*"
 
 # The same show by the short event form that the https links use.
 - runFlow:

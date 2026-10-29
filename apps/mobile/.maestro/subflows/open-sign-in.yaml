@@ -2,18 +2,22 @@
 appId: com.turnout.app.e2e
 name: open sign-in
 ---
-- launchApp:
-    clearState: true
-- extendedWaitUntil:
-    visible:
-      id: welcome
-    timeout: 30000
-- tapOn:
-    id: welcome-skip
-- extendedWaitUntil:
-    visible:
-      id: notice
-    timeout: 10000
+# Once on iOS a system banner over the top of the screen took the tap on Skip and opened Settings. A fresh launch tries again.
+- retry:
+    maxRetries: 2
+    commands:
+      - launchApp:
+          clearState: true
+      - extendedWaitUntil:
+          visible:
+            id: welcome
+          timeout: 30000
+      - tapOn:
+          id: welcome-skip
+      - extendedWaitUntil:
+          visible:
+            id: notice
+          timeout: 10000
 # Agree waits for the grievance officer's details, which the server sends with /config.
 - extendedWaitUntil:
     notVisible: "Loading the grievance officer's details"

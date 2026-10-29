@@ -19,7 +19,8 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 
 # A new plan needs its ticket, and says so with one button.
-- assertVisible: "Seed comedy night"
+# On iOS the poster is one element named "<title>, <category>", so the title is matched as the start of the name.
+- assertVisible: "Seed comedy night.*"
 - assertVisible: ".*Add your ticket.*"
 - assertVisible:
     id: plan-add-ticket

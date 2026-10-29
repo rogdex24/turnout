@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { Pressable, TextInput, type TextInputInstance, View } from "react-native";
+import { AutoFocusContext } from "./autoFocus";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
 
@@ -33,6 +34,7 @@ export function CodeEntry({
 }: CodeEntryProps) {
   const input = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
+  const focusAllowed = useContext(AutoFocusContext);
   const digits = value.replace(/\D/g, "").slice(0, length);
   const next = Math.min(digits.length, length - 1);
 
@@ -67,7 +69,7 @@ export function CodeEntry({
         value={digits}
         onChangeText={(text) => onChangeText(text.replace(/\D/g, "").slice(0, length))}
         editable={editable}
-        autoFocus={autoFocus}
+        autoFocus={autoFocus && focusAllowed}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="sms-otp"

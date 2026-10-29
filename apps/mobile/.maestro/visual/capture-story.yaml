@@ -20,8 +20,9 @@ tags:
     file: ../subflows/open-link.yaml
     env:
       LINK: turnout-e2e://storybook?story=${STORY_ID}
+# On iOS a text inside an element that is accessible as a whole, such as the poster, is only part of that element's name.
 - extendedWaitUntil:
-    visible: ${READY_TEXT}
+    visible: ".*${READY_TEXT}.*"
     timeout: 30000
 - waitForAnimationToEnd
 - takeScreenshot: capture

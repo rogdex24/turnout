@@ -1,6 +1,7 @@
 import { sizes } from "@turnout/design-tokens";
-import { type ComponentRef, type ReactNode, type Ref, useState } from "react";
+import { type ComponentRef, type ReactNode, type Ref, useContext, useState } from "react";
 import { TextInput, type TextInputProps, View } from "react-native";
+import { AutoFocusContext } from "../autoFocus";
 import { cn } from "../cn";
 import { useColors } from "../theme";
 import { Text } from "./Text";
@@ -26,6 +27,7 @@ export interface FieldProps extends Omit<TextInputProps, "style"> {
 export function Field({ label, help, error, prefix, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
   const colors = useColors();
   const [focused, setFocused] = useState(false);
+  const focusAllowed = useContext(AutoFocusContext);
   const below = error ?? help;
   return (
     <View className={className}>
@@ -55,6 +57,7 @@ export function Field({ label, help, error, prefix, inputRef, className, onFocus
             onBlur?.(event);
           }}
           {...input}
+          autoFocus={(input.autoFocus ?? false) && focusAllowed}
         />
       </View>
       {below ? (

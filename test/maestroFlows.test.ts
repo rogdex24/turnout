@@ -45,6 +45,23 @@ describe("Maestro flows", () => {
     expect(reset).toBeLessThan(text.indexOf("send-code.yaml"));
   });
 
+  // On iOS a system banner can take the tap on Skip and open Settings, so the launch and the Skip run again until the notice shows.
+  test("opening sign-in retries the launch and the tap on Skip", async () => {
+    const text = await Bun.file(`${root}/subflows/open-sign-in.yaml`).text();
+    const retry = text.indexOf("- retry:");
+    expect(retry).toBeGreaterThan(-1);
+    expect(retry).toBeLessThan(text.indexOf("launchApp"));
+    expect(retry).toBeLessThan(text.indexOf("welcome-skip"));
+  });
+
+  // On iOS the poster is one accessible element named "<title>, <category>", so a bare title never matches it.
+  test("no flow asserts a seeded show title as the whole text", async () => {
+    for (const file of files) {
+      const text = await Bun.file(`${root}/${file}`).text();
+      expect(text).not.toMatch(/^\s*- assertVisible: "Seed [^"]*[^*]"$/m);
+    }
+  });
+
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the
   // sequence aborts. after-show moves the server clock past every show, so running it early breaks the re-run in device-run.sh.
   test("every flow in flowsOrder runs, so after-show stays inside the ordered sequence", async () => {

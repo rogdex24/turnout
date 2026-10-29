@@ -31,3 +31,5 @@ name: sign in seed
     visible:
       id: home
     timeout: 20000
+# Once on iOS a show link opened while Home was still sliding in was dropped, and the app stayed on Home.
+- waitForAnimationToEnd
