@@ -10,7 +10,7 @@ import { configuredVariant } from "@/api/variant";
 import { settings } from "@/copy/settings";
 import { isApiError } from "@/model/apiError";
 import type { OnboardingStep } from "@/model/gates";
-import { grievanceBlocksStart } from "@/model/grievance";
+import { grievanceNotSet } from "@/model/grievance";
 import { AppProviders, useDeps } from "@/providers/AppProviders";
 import { useApi, useGate, useMe } from "@/providers/hooks";
 import { holdSplash, releaseSplash } from "@/providers/splash";
@@ -56,7 +56,7 @@ function ReleaseCheck({ children }: { children: ReactNode }) {
 function GrievanceGate({ children }: { children: ReactNode }) {
   const api = useApi();
   const config = useQuery(configQuery(api));
-  const blocked = config.data !== undefined && grievanceBlocksStart("production", config.data.grievance);
+  const blocked = config.data !== undefined && grievanceNotSet(config.data.grievance);
   useEffect(() => {
     if (blocked) releaseSplash();
   }, [blocked]);

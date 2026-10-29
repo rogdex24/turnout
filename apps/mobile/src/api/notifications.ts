@@ -94,11 +94,6 @@ export function onPermissionChanged(listener: () => void): () => void {
   return () => void permissionListeners.delete(listener);
 }
 
-/** Forgets this phone's device locally. Used when a session ends without a token to call the server with (a refused refresh). */
-export function forgetDevice(prefs: KeyValueStore): void {
-  prefs.remove(PREF_KEYS.pushDevice);
-}
-
 /**
  * Takes this phone's device off the server at sign-out. It runs with the access token the session still holds, because the session
  * has dropped it from the client by then. Only the sign-out route removes devices on the server, so this call is what does it; it

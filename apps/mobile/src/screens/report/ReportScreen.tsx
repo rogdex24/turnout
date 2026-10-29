@@ -5,7 +5,7 @@ import { Linking } from "react-native";
 import { groupQuery, isRevealed } from "@/api/groups";
 import { type Replayable, replayable } from "@/api/mutations";
 import { type ReportVariables, reportMutationKey } from "@/api/reports";
-import { isApiError } from "@/model/apiError";
+import { errorKind } from "@/model/apiError";
 import { reportBody } from "@/model/report";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
@@ -21,12 +21,6 @@ export interface ReportScreenProps {
   messageId?: string;
   onBack: () => void;
   onDone: () => void;
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }
 
 /**

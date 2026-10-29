@@ -5,7 +5,7 @@ import { afterQuery, type DownvoteVariables, feedbackMutationKey, markDownvoted 
 import { isRevealed } from "@/api/groups";
 import { queryKeys } from "@/api/keys";
 import { type Replayable, replayable } from "@/api/mutations";
-import { isApiError } from "@/model/apiError";
+import { errorKind, isApiError } from "@/model/apiError";
 import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
 import { useNow } from "@/providers/useNow";
@@ -24,12 +24,6 @@ export interface AfterScreenProps {
   onReport: (groupId: string, memberRef: string) => void;
   /** From the closed state back to the plans. */
   onClosed: () => void;
-}
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
 }
 
 /**

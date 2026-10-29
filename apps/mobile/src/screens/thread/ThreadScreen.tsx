@@ -5,7 +5,7 @@ import { groupQuery, isRevealed } from "@/api/groups";
 import { type Replayable, replayable } from "@/api/mutations";
 import { type ThreadSendVariables, threadQuery, threadSendMutationKey } from "@/api/thread";
 import { thread as copy } from "@/copy/thread";
-import { isApiError } from "@/model/apiError";
+import { errorKind, isApiError } from "@/model/apiError";
 import { istShort } from "@/model/planTime";
 import { type PendingMessage, threadClosesAt, threadItems, threadPhase } from "@/model/thread";
 import { useDeps } from "@/providers/AppProviders";
@@ -32,12 +32,6 @@ export interface ThreadScreenProps {
 
 /** One try at sending. `done` is a try the server has stored: it hides an earlier failed try of the same message. */
 type Send = Omit<PendingMessage, "status"> & { status: PendingMessage["status"] | "done"; variables: Replayable<ThreadSendVariables> };
-
-function errorKind(error: unknown): "offline" | "server" | "rate_limited" | "other" {
-  if (!isApiError(error)) return "other";
-  if (error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited") return error.kind;
-  return "other";
-}
 
 const notFound = (error: unknown) => isApiError(error) && error.kind === "not_found";
 

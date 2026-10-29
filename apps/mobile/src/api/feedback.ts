@@ -2,9 +2,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { GroupResponse } from "@turnout/contract/app/groups";
 import { z } from "zod";
 import type { ApiClient } from "./client";
-import { fetchGroup, isRevealed, retryCheckin } from "./groups";
+import { fetchGroup, isRevealed } from "./groups";
 import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
+import { retryTransient } from "./retry";
 
 /**
  * The group after the show. The same answer as the meet card, under its own key so it is not kept on disk: the faces of the people
@@ -33,7 +34,7 @@ export function sendDownvote(api: ApiClient) {
 
 /** Lets a mark made with no signal be sent after a restart, once the phone is back online. */
 export function registerFeedback(queryClient: QueryClient, api: ApiClient): void {
-  registerReplayable<DownvoteVariables>(queryClient, "feedback", sendDownvote(api), retryCheckin);
+  registerReplayable<DownvoteVariables>(queryClient, "feedback", sendDownvote(api), retryTransient);
 }
 
 export const feedbackMutationKey = mutationKey("feedback");

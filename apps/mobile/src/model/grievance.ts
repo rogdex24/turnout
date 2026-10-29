@@ -29,11 +29,3 @@ export function telHref(phone: string): string {
 export function mailtoHref(email: string): string {
   return `mailto:${email.trim()}`;
 }
-
-/**
- * The start-up check for a production build: the grievance officer's details are a legal requirement, so a build that would show
- * placeholders does not start. Development, e2e and preview builds talk to dev or staging servers, which only have placeholders.
- */
-export function grievanceBlocksStart(variant: string | undefined, officer: GrievanceOfficer): boolean {
-  return variant === "production" && grievanceNotSet(officer);
-}
