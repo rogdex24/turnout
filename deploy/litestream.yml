@@ -1,0 +1,19 @@
+# Litestream 0.5 config for the production database. Installed as /etc/litestream.yml.
+# The S3 values come from /etc/turnout/litestream.env through the litestream.service drop-in.
+# Staging is not backed up: its data is the repeatable seed.
+# Reference: https://litestream.io/reference/config/
+snapshot:
+  interval: 24h
+  # Seven days of restore points, as the plan asks.
+  retention: 168h
+
+dbs:
+  - path: /data/production.db
+    replica:
+      type: s3
+      endpoint: ${LITESTREAM_S3_ENDPOINT}
+      bucket: ${LITESTREAM_S3_BUCKET}
+      region: ${LITESTREAM_S3_REGION}
+      path: turnout/production
+      access-key-id: ${LITESTREAM_S3_ACCESS_KEY_ID}
+      secret-access-key: ${LITESTREAM_S3_SECRET_ACCESS_KEY}

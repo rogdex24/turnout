@@ -908,3 +908,20 @@ Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/gr
   row, opened Plans. Home, Plans and You now set it to "automatic"; `src/lists.test.ts` checks it.
 - **The link prompt is matched by the app's name.** The visual capture of the meet card failed on the large iOS simulator:
   "Open in .*" matched the card's "Open in Maps" button, and the subflow then looked for an Open button that was not there.
+
+## 2026-10-29: S21, the VPS deploy files
+
+- **Plain systemd and Caddy on the VPS, no container.** The plan rules out Docker in production. One templated unit
+  serves production and staging from their own env files; Caddy gets the certificates and replaces any
+  X-Forwarded-For a client sends, so `TRUST_PROXY_HEADER=x-forwarded-for` reads the real address.
+- **The app restores, then Litestream replicates.** Litestream's own restore-on-start runs inside its process, so the
+  app could open an empty file first. `deploy/prestart.sh` restores before the app starts, and Litestream is ordered
+  after the app.
+- **Production stays off until its values exist.** `release.sh` starts staging alone until `GRIEVANCE_NAME` is set,
+  so a first deploy does not crash-loop a production unit that refuses to start by design.
+- **The host installs the full server workspace.** A production-only install broke the map (it reads `DESIGN.md`
+  through `@google/design.md` at runtime) and the admin (it imports `shadcn/tailwind.css`). Both are dev
+  dependencies today; installing them is simpler than moving them and keeps the check and the host in step.
+- **The PII scan treats systemd unit names as file names.** `turnout@production.service` matched the email pattern.
+  The scan already skips `name@x.png` and `pkg@1.0.patch`; `.service`, `.timer`, `.socket` and `.target` join that
+  list, with a test.
