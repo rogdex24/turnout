@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
+import { processColor, StyleSheet } from "react-native";
 import { CodeEntry } from "./CodeEntry";
 
 function Harness({ initial = "", onChange }: { initial?: string; onChange?: (text: string) => void }) {
@@ -65,5 +66,13 @@ describe("CodeEntry", () => {
     const className = screen.getByTestId("code-input").props.className as string;
     expect(className.split(" ")).not.toContain("opacity-0");
     expect(className.split(" ")).toEqual(expect.arrayContaining(["text-transparent", "bg-transparent"]));
+  });
+
+  test("the typed text is see-through on Android too, where color 0 drew the digits in the default black", async () => {
+    await render(<Harness initial="482" />);
+    const color = processColor(StyleSheet.flatten(screen.getByTestId("code-input").props.style)?.color);
+    expect(typeof color).toBe("number");
+    expect(color).not.toBe(0);
+    expect((color as number) >>> 24).toBe(0);
   });
 });

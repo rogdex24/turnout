@@ -3,6 +3,7 @@ import { Pressable, TextInput, type TextInputInstance, View } from "react-native
 import { AutoFocusContext } from "./autoFocus";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
+import { useColors } from "./theme";
 
 export interface CodeEntryProps {
   value: string;
@@ -35,6 +36,7 @@ export function CodeEntry({
   const input = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
   const focusAllowed = useContext(AutoFocusContext);
+  const palette = useColors();
   const digits = value.replace(/\D/g, "").slice(0, length);
   const next = Math.min(digits.length, length - 1);
 
@@ -83,6 +85,9 @@ export function CodeEntry({
         // See-through rather than at zero opacity: iOS and Android leave a view at alpha 0 out of the accessibility tree, so
         // VoiceOver, TalkBack and the Maestro flows could not reach the field.
         className="absolute inset-0 bg-transparent text-transparent"
+        // With "transparent" (color 0) Android drew the typed digits in the default black over the first box, as if no color was set.
+        // The surface token at alpha 0 is a color other than 0, so the text stays see-through.
+        style={{ color: `${palette.surface}00` }}
       />
     </View>
   );
