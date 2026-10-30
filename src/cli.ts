@@ -174,6 +174,9 @@ async function main(): Promise<void> {
       port,
       // A photo is at most 10 MB; the app API refuses bigger ones itself, and this stops a bigger body being buffered at all.
       maxRequestBodySize: 12 * 1024 * 1024,
+      // iOS reuses an idle connection and does not retry a POST or PATCH when the server closed it first (error -1005).
+      // Bun closes after 10 s by default; 255 s is its maximum (CI run 41083720068 lost a settings PATCH this way).
+      idleTimeout: 255,
       fetch: (request, bunServer) =>
         new URL(request.url).pathname.startsWith(APP_PREFIX)
           ? appResponse(app, request, bunServer.requestIP(request)?.address ?? null)

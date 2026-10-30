@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import { displayFaces, spacing } from "@turnout/design-tokens";
-import { StyleSheet } from "react-native";
+import { PixelRatio, StyleSheet } from "react-native";
 import { Loaded } from "@/screens/home/HomeView.stories";
+import { Early } from "@/screens/meet/MeetView.stories";
+import { GroupConfirmed } from "@/screens/plan/PlanView.stories";
 import { Conversation } from "@/screens/thread/ThreadView.stories";
 import { BackBar } from "./BackBar";
 import { POSTER_HEIGHT, Poster } from "./Poster";
@@ -17,6 +19,8 @@ import { fitDisplaySize, LARGEST_TEXT_SCALE, scaledMetrics, TextScaleContext } f
 const fixedHeight = /(^|\s)h-\d/;
 
 describe("rows grow with the largest text size", () => {
+  afterEach(() => jest.restoreAllMocks());
+
   it.each(["primary", "secondary"] as const)("the %s button has a minimum height and no fixed one", async (variant) => {
     await render(
       <TextScaleContext value={LARGEST_TEXT_SCALE}>
@@ -114,5 +118,31 @@ describe("rows grow with the largest text size", () => {
     const titleRoom = POSTER_HEIGHT.featured - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", LARGEST_TEXT_SCALE).lineHeight;
     expect(fontSize).toBe(fitDisplaySize("The Monsoon Theory", 328 - 2 * spacing[4], "display-poster", 3, titleRoom));
     expect(fontSize).toBeLessThan(displayFaces["display-poster"].maxFontSize);
+  });
+  it("the meet countdown goes under the time instead of beside it, so the time keeps its width", async () => {
+    // The Matrix's default cell follows the system size, which the React Native mock puts at 2.
+    jest.spyOn(PixelRatio, "getFontScale").mockReturnValue(1);
+    const Story = Early.render as () => React.ReactElement;
+    await render(<Story />);
+    const hidden = { includeHiddenElements: true };
+    // At the default size the countdown sits in the column beside the digits, under PM.
+    const usual = within(screen.getByTestId("matrix-light-1"));
+    expect(within(usual.getByTestId("meet-time-side", hidden)).getByTestId("meet-countdown", hidden)).toBeOnTheScreen();
+    // At the largest size that column took most of an iPhone SE and the digits shrank to a third.
+    const large = within(screen.getByTestId(`matrix-light-${LARGEST_TEXT_SCALE}`));
+    expect(within(large.getByTestId("meet-time-side", hidden)).queryByTestId("meet-countdown", hidden)).toBeNull();
+    expect(within(large.getByTestId("meet-time")).getByTestId("meet-countdown", hidden)).toBeOnTheScreen();
+  });
+
+  it("the plan steps stack in a column, so no step label breaks inside a word", async () => {
+    jest.spyOn(PixelRatio, "getFontScale").mockReturnValue(1);
+    const Story = GroupConfirmed.render as () => React.ReactElement;
+    await render(<Story />);
+    const row = within(screen.getByTestId("matrix-light-1")).getByTestId("plan-steps");
+    expect(row.props.className).toMatch(/(^|\s)flex-row(\s|$)/);
+    const column = within(screen.getByTestId(`matrix-light-${LARGEST_TEXT_SCALE}`)).getByTestId("plan-steps");
+    expect(column.props.className).not.toMatch(/(^|\s)flex-row(\s|$)/);
+    // Each step is a bar beside its label, and the label has the rest of the width.
+    for (const step of within(column).getAllByTestId("plan-step")) expect(step.props.className).toMatch(/(^|\s)flex-row(\s|$)/);
   });
 });
