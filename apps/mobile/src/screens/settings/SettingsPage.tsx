@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { BackBar } from "@/ui/BackBar";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
@@ -20,22 +20,25 @@ export function SettingsPage({ title, lead, onBack, testID, footer, children }: 
   return (
     <SafeAreaView className="flex-1 bg-bg" testID={testID}>
       <BackBar onBack={onBack} />
-      <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 pb-6" keyboardShouldPersistTaps="handled">
-        <View>
-          <Text variant="title-large" accessibilityRole="header">
-            {title}
-          </Text>
-          {typeof lead === "string" ? (
-            <Text variant="body" className="mt-2 text-muted">
-              {lead}
+      {/* The footer action stays above the keyboard, so a page with a field (Social) can save without closing the keyboard first. */}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" testID={`${testID}-body`}>
+        <ScrollView className="flex-1" contentContainerClassName="gap-5 px-5 pb-6" keyboardShouldPersistTaps="handled">
+          <View>
+            <Text variant="title-large" accessibilityRole="header">
+              {title}
             </Text>
-          ) : (
-            lead
-          )}
-        </View>
-        {children}
-      </ScrollView>
-      {footer ? <View className="border-t border-line bg-bg px-4 pb-3 pt-3">{footer}</View> : null}
+            {typeof lead === "string" ? (
+              <Text variant="body" className="mt-2 text-muted">
+                {lead}
+              </Text>
+            ) : (
+              lead
+            )}
+          </View>
+          {children}
+        </ScrollView>
+        {footer ? <View className="border-t border-line bg-bg px-4 pb-3 pt-3">{footer}</View> : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

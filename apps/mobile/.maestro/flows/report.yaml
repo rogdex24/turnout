@@ -79,7 +79,12 @@ env:
 - tapOn:
     id: report-details
 - inputText: "Kept messaging me after I said no"
-- hideKeyboard
+# The send button sits above the keyboard, so the flow leaves the keyboard up on iOS, where hideKeyboard fails on a multiline field.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: report-send
 

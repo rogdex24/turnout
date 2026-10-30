@@ -108,6 +108,14 @@ describe("the custom scheme", () => {
     expect(resolve("turnout://storybook?other=1")).toBe("/storybook");
   });
 
+  it("keeps device=1 next to the story, which the visual capture link sends", () => {
+    expect(resolve("turnout://storybook?story=screens-home--loaded&device=1")).toBe("/storybook?story=screens-home--loaded&device=1");
+    expect(resolve("turnout://storybook?device=1&story=screens-home--loaded")).toBe("/storybook?story=screens-home--loaded&device=1");
+    expect(resolve("turnout://storybook?story=screens-home--loaded&device=2")).toBe("/storybook?story=screens-home--loaded");
+    expect(resolve("turnout://storybook?story=screens-home--loaded&other=1")).toBe("/storybook?story=screens-home--loaded");
+    expect(resolve("turnout://storybook?device=1")).toBe("/storybook");
+  });
+
   it("lets the dev client launcher through only in a development build", () => {
     const url = "turnout://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081";
     expect(resolve(url, { devClient: true })).toBe(url);
