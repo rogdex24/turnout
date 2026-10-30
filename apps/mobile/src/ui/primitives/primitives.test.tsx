@@ -154,6 +154,19 @@ describe("Text", () => {
     expect(screen.getByText("Hello").props.allowFontScaling).toBe(false);
   });
 
+  it("sets the fixed display sizes inline, so they do not depend on the size class", async () => {
+    await render(
+      <View>
+        <Text variant="display-hero">6:00</Text>
+        <Text variant="display-band">PM</Text>
+        <Text variant="body">Hello</Text>
+      </View>,
+    );
+    expect(StyleSheet.flatten(screen.getByText("6:00").props.style)).toMatchObject({ fontSize: 116, lineHeight: 90, letterSpacing: -1.16 });
+    expect(StyleSheet.flatten(screen.getByText("PM").props.style)).toMatchObject({ fontSize: 28, lineHeight: 28 });
+    expect(StyleSheet.flatten(screen.getByText("Hello").props.style ?? {})).not.toHaveProperty("fontSize");
+  });
+
   it("follows the system when nothing is forced", async () => {
     await render(
       <View>

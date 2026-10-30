@@ -1,5 +1,5 @@
 /**
- * The fonts embedded at build time (plan section 2): Inter 400, 500, 600 for text and Big Shoulders Display 700, 800, 900 for the
+ * The fonts embedded at build time (plan section 2): Inter 400, 500, 600 for text and Big Shoulders (the Display cut) 700, 800, 900 for the
  * display faces. The expo-font config plugin links them natively, so `fontFamily: "Inter"` with `fontWeight: "600"` (the pairs in
  * @turnout/design-tokens) resolves on both platforms and nothing loads at runtime.
  */
@@ -26,7 +26,9 @@ export const FONT_FAMILIES: readonly FontFamily[] = [
     ],
   },
   {
-    fontFamily: "Big Shoulders Display",
+    // iOS finds a font by the family name inside the file, and these files call it "Big Shoulders" (the Display cut is the
+    // default optical size). With "Big Shoulders Display" iOS fell back to the system bold. Android takes any name we give.
+    fontFamily: "Big Shoulders",
     pkg: "@expo-google-fonts/big-shoulders",
     faces: [
       { weight: 700, file: "700Bold/BigShoulders_700Bold.ttf" },

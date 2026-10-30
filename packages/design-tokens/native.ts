@@ -47,7 +47,7 @@ export const sizes = {
  */
 export const displayFaces = {
   "display-poster": {
-    fontFamily: "Big Shoulders Display",
+    fontFamily: "Big Shoulders",
     fontWeight: "800",
     minFontSize: 30,
     maxFontSize: 70,
@@ -55,7 +55,7 @@ export const displayFaces = {
     uppercase: true,
   },
   "display-numeral": {
-    fontFamily: "Big Shoulders Display",
+    fontFamily: "Big Shoulders",
     fontWeight: "800",
     minFontSize: 24,
     maxFontSize: 36,
