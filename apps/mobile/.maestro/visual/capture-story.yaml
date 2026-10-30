@@ -25,4 +25,15 @@ tags:
     visible: ".*${READY_TEXT}.*"
     timeout: 30000
 - waitForAnimationToEnd
+# Android shows a screen's scroll bar after layout and fades it out about half a second later.
+# waitForAnimationToEnd treats the thin bar as no change, so the shot caught the bar on some runs and not on others.
+# This wait for a text that never shows is a fixed 2 s pause; optional lets the flow go on after the timeout.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible: "visual capture pause, never on screen"
+          timeout: 2000
+        optional: true
 - takeScreenshot: capture
