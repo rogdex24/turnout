@@ -34,7 +34,8 @@ export function Matrix({ children, padded = false, framed = false }: { children:
   if (followDevice) {
     return (
       <AutoFocusContext.Provider value={false}>
-        <ScrollView>
+        {/* Android flashes this bar after layout and then fades it, so a shot caught it or not by timing. */}
+        <ScrollView showsVerticalScrollIndicator={false}>
           {/* A framed screen fills the window, so padding here would push its bottom edge (the thread composer) out of the shot. */}
           <View className={framed ? "bg-bg" : "bg-bg py-4"} testID="matrix-device">
             {content}

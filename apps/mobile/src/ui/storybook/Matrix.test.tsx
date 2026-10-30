@@ -59,4 +59,17 @@ describe("Matrix", () => {
     expect(cell.children[0]).toHaveStyle({ height: Dimensions.get("window").height });
     expect(screen.queryByText(/default text|largest text/)).toBeNull();
   });
+  // Android flashes the bar of a scroll view after layout and fades it, so whether a shot catches it depends on timing. In run
+  // 41083720068 8 of 40 android-small shots differed from their baselines only by that bar.
+  test("following the device, the wrapper shows no scroll bar, so a shot does not depend on when the bar fades", async () => {
+    await render(
+      <FollowDeviceContext.Provider value={true}>
+        <Matrix framed>
+          <Text>Body</Text>
+        </Matrix>
+      </FollowDeviceContext.Provider>,
+    );
+    const scroll = screen.getByTestId("matrix-device").parent?.parent;
+    expect(scroll?.props.showsVerticalScrollIndicator).toBe(false);
+  });
 });
