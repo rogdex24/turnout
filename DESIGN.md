@@ -1086,7 +1086,9 @@ Type. The app takes its scale from the Typography table, with these additions an
 data numerals; everything else is Inter. Section heads are sentence case; no eyebrows, no all-caps labels. Times, dates, prices,
 counts and codes use tabular figures. A poster title takes the largest `display-poster` size at which it fits the box in both
 directions: at most three lines (four on the show hero) across, and above the category line, which scales, down. The meet time
-stays on one line: where the hour has two digits and the phone is narrow, it shrinks to fit and never wraps. Radii (14 fields and
+stays on one line: where the hour has two digits and the phone is narrow, it shrinks to fit and never wraps. At a text size
+of 1.3 or more the layout takes its large-text form: the countdown goes on its own row under the meet time, so the time keeps
+its width, and the plan steps stack in a column, each bar beside its label, so no label breaks inside a word. Radii (14 fields and
 faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
 dp, hit areas (44 minimum, 56 primary button, 48 secondary), the springs and the pressed feedback are in `native.ts` too.
 

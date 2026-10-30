@@ -94,11 +94,17 @@ env:
     visible: ".*at the cafe.*"
     timeout: 20000
 
-# The Safety sheet puts Call 112 first and can be closed.
-- tapOn:
-    id: meet-safety
-- assertVisible:
-    id: safety-call
+# The Safety sheet puts Call 112 first and can be closed. On iOS in run 41042127207 the tap on Safety landed and the sheet did
+# not open, as with Back in back-to.yaml, so the tap goes again when the sheet does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: meet-safety
+      - extendedWaitUntil:
+          visible:
+            id: safety-call
+          timeout: 10000
 - tapOn: Close
 - assertNotVisible:
     id: safety-call
