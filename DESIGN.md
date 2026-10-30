@@ -1084,7 +1084,8 @@ Type. The app takes its scale from the Typography table, with these additions an
 `design.md` types take one size, so the two ranges (`display-poster`, `display-numeral`) and the scaling caps live in
 `packages/design-tokens/native.ts`. The display face is for the wordmark, poster titles, the marquee, the meet time and single
 data numerals; everything else is Inter. Section heads are sentence case; no eyebrows, no all-caps labels. Times, dates, prices,
-counts and codes use tabular figures. Radii (14 fields and faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
+counts and codes use tabular figures. The meet time stays on one line: where the hour has two digits and the phone is narrow, it shrinks to fit
+and never wraps. Radii (14 fields and faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
 dp, hit areas (44 minimum, 56 primary button, 48 secondary), the springs and the pressed feedback are in `native.ts` too.
 
 ## Verification

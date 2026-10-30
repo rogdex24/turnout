@@ -31,6 +31,8 @@ env:
     timeout: 10000
 - assertVisible: "Leave this plan?"
 - assertVisible: ".*Your BookMyShow ticket isn't affected.*"
+# The sheet springs open. A tap while it moves can miss Stay, which left the sheet open on android-large.
+- waitForAnimationToEnd
 - tapOn:
     id: cancel-stay
 - assertNotVisible:
@@ -50,6 +52,7 @@ env:
     visible:
       id: cancel-sheet
     timeout: 10000
+- waitForAnimationToEnd
 - tapOn:
     id: cancel-confirm
 - extendedWaitUntil:
