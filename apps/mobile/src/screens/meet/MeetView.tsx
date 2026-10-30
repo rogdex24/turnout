@@ -100,7 +100,17 @@ function BigTime({ meetAt, now }: { meetAt: string; now: number }) {
       className="mt-2.5 flex-row items-end gap-3"
       testID="meet-time"
     >
-      <Text variant="display-hero" tabular importantForAccessibility="no">
+      {/* 116 dp fits 6:00 next to PM, but not 11:53 on a narrow phone. One line, shrunk to fit, never wrapped. */}
+      <Text
+        variant="display-hero"
+        tabular
+        importantForAccessibility="no"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}
+        className="shrink"
+        testID="meet-time-digits"
+      >
         {clock.digits}
       </Text>
       <View className="items-start gap-2 pb-1" importantForAccessibility="no-hide-descendants">
