@@ -120,8 +120,11 @@ env:
     visible:
       id: notice
     timeout: 10000
+# The loading line can sit below the fold at the real type sizes, so wait on the button: it is enabled once the details are in.
 - extendedWaitUntil:
-    notVisible: "Loading the grievance officer's details"
+    visible:
+      id: agree
+      enabled: true
     timeout: 15000
 - tapOn:
     id: agree

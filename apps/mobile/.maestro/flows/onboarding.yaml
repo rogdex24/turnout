@@ -33,8 +33,11 @@ env:
     timeout: 10000
 # The notice shows the grievance officer's block from the server, and Agree waits for it.
 - assertVisible: "How we use your details"
+# The loading line can sit below the fold at the real type sizes, so wait on the button: it is enabled once the details are in.
 - extendedWaitUntil:
-    notVisible: "Loading the grievance officer's details"
+    visible:
+      id: agree
+      enabled: true
     timeout: 15000
 - tapOn:
     id: agree
