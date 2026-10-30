@@ -64,6 +64,30 @@ describe("rows grow with the largest text size", () => {
     expect(screen.getByRole("header", { name: "Meeting up" }).props.numberOfLines).toBe(1);
   });
 
+  it("a bar title with no room between the sides goes on its own row instead of vanishing", async () => {
+    await render(
+      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+        <BackBar onBack={jest.fn()} title="Meet card" trailing={<TextButton title="Safety" onPress={jest.fn()} testID="action" />} />
+      </TextScaleContext>,
+    );
+    const layout = (width: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width, height: 56 } } });
+    const side = (testID: string) => {
+      let node = screen.getByTestId(testID);
+      while (!node.props.onLayout && node.parent) node = node.parent;
+      return node;
+    };
+    const leading = side("back");
+    // An iPhone SE at the largest text size: the Safety action takes most of the 375 dp bar, as in the visual capture.
+    await fireEvent(leading.parent as typeof leading, "layout", layout(375));
+    await fireEvent(leading, "layout", layout(44));
+    await fireEvent(side("action"), "layout", layout(220));
+    const box = screen.getByTestId("back-bar-title");
+    expect(box.props.style?.paddingHorizontal).toBeUndefined();
+    expect(box.props.className).not.toContain("absolute");
+    expect(screen.getByRole("header", { name: "Meet card" }).props.numberOfLines).toBe(2);
+    expect((leading.parent as typeof leading).props.className).toContain("min-h-14");
+  });
+
   it("a Home day heading wraps its date under the title instead of running off the screen", async () => {
     const Story = Loaded.render as () => React.ReactElement;
     await render(
