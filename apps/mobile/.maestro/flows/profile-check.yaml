@@ -45,7 +45,12 @@ env:
 - tapOn:
     id: social-handle
 - inputText: "@asha.example"
-- hideKeyboard
+# Save sits above the keyboard (SettingsPage avoids it), so the flow leaves the keyboard up on iOS, where hideKeyboard can fail.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: social-save
 - extendedWaitUntil:

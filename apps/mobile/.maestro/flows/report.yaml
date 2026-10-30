@@ -79,13 +79,19 @@ env:
 - tapOn:
     id: report-details
 - inputText: "Kept messaging me after I said no"
-- hideKeyboard
+# The send button sits above the keyboard, so the flow leaves the keyboard up on iOS, where hideKeyboard fails on a multiline field.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: report-send
 
-# It says the report was received. It does not say what became of the person, and Call 112 stays.
+# It says the report was received. It does not say what became of the person, and Call 112 stays. On iOS the title and the body
+# are one accessible element, so the match allows the body after the title.
 - extendedWaitUntil:
-    visible: "We have your report"
+    visible: "We have your report.*"
     timeout: 20000
 - assertVisible:
     id: report-call-112
