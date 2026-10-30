@@ -21,9 +21,16 @@ env:
 - tapOn:
     id: welcome-next
 - assertVisible: ".*2 of 3"
-- swipe:
-    direction: LEFT
-- assertVisible: ".*3 of 3"
+# On iOS in run 41084310971 the swipe landed and the pager stayed on 2 of 3, so the swipe goes again when 3 of 3 does not come.
+# A swipe on the last page does nothing, so a late first swipe cannot go past it.
+- retry:
+    maxRetries: 2
+    commands:
+      - swipe:
+          direction: LEFT
+      - extendedWaitUntil:
+          visible: ".*3 of 3"
+          timeout: 5000
 - assertVisible: "Get started"
 - tapOn:
     id: welcome-next
