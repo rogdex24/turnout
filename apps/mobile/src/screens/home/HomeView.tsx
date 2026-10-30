@@ -99,7 +99,8 @@ export function HomeView(props: HomeViewProps) {
           renderItem={({ item }) => {
             if (item.kind === "day") {
               return (
-                <View className="flex-row items-baseline justify-between px-4 pb-3 pt-5">
+                // At the largest text sizes the title and the date do not fit on one line, so the date wraps under the title.
+                <View className="flex-row flex-wrap items-baseline justify-between gap-x-3 px-4 pb-3 pt-5" testID="home-day">
                   <Text variant="title-large" accessibilityRole="header">
                     {dayTitle(item)}
                   </Text>

@@ -2,7 +2,6 @@ import type { Cafe, GroupMember } from "@turnout/contract/app/groups";
 import {
   ArrowSquareOut,
   CalendarX,
-  CaretLeft,
   ChatCircle,
   Check,
   HandWaving,
@@ -14,18 +13,17 @@ import {
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { after as afterCopy } from "@/copy/after";
-import { common } from "@/copy/common";
 import { meet as copy } from "@/copy/meet";
 import { countdownText, hereButton, hereCount, istClock, type LocationLine, venueWalkMinutes } from "@/model/meetCard";
 import { checkInOpen } from "@/model/meetWindow";
 import { toPoint } from "@/model/walk";
+import { BackBar } from "@/ui/BackBar";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState, type ErrorStateProps } from "@/ui/ErrorState";
 import { OfflineBar } from "@/ui/OfflineBar";
 import { PersonAvatar } from "@/ui/PersonAvatar";
 import { Button } from "@/ui/primitives/Button";
 import { Icon } from "@/ui/primitives/Icon";
-import { IconButton } from "@/ui/primitives/IconButton";
 import { Note } from "@/ui/primitives/Note";
 import { dimOnPress } from "@/ui/primitives/press";
 import { Row } from "@/ui/primitives/Row";
@@ -319,15 +317,11 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
 
 function Header({ onBack, onSafety }: { onBack: () => void; onSafety: (() => void) | null }) {
   return (
-    <View className="h-14 flex-row items-center justify-between px-2">
-      <IconButton icon={CaretLeft} label={common.back} onPress={onBack} testID="back" />
-      <View className="absolute inset-x-0 items-center" pointerEvents="none">
-        <Text variant="control" className="font-semibold" accessibilityRole="header">
-          {copy.title}
-        </Text>
-      </View>
-      {onSafety ? <TextButton title={copy.safety} icon={Shield} onPress={onSafety} testID="meet-safety" /> : null}
-    </View>
+    <BackBar
+      onBack={onBack}
+      title={copy.title}
+      trailing={onSafety ? <TextButton title={copy.safety} icon={Shield} onPress={onSafety} testID="meet-safety" /> : null}
+    />
   );
 }
 
