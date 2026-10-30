@@ -8,15 +8,15 @@ How to read the table: "Done" means the work is in the repo and a test or a file
 check ran on the release commit. Lines that must be re-run on the release commit say so. "Owner step" means it needs a
 person, a phone, a Play Console login or a production secret that this repo does not have.
 
-State on 2026-10-29: the repo-side items are done or have a test. The owner steps, the baselines and the production
-checks are open. The release is not ready.
+State on 2026-10-30: the repo-side items and the visual baselines are done or have a test. The owner steps and the
+production checks are open. The release is not ready.
 
 ## The gate
 
 | # | Item | Status | Evidence, or what the owner does |
 | --- | --- | --- | --- |
 | 1 | Every required check is green on the release commit, including the iOS simulator run | Owner step (re-run on the release commit) | `.github/workflows/ci.yml`. The `ci-gate` job needs `check`, `secrets`, `e2e-web`, `mobile-health`, `build-android`, `build-ios`, `android-device` and `ios-device`. Read the run for the release commit and confirm each of those is `success`. `ci-gate` also accepts `skipped`, so open the run and confirm the device jobs were not skipped by the path filter. The iOS run is a simulator run only (`ios-device`); there is no real iPhone in the loop. |
-| 2 | Visual baselines complete for every screen and state | **Open. Not done.** | No baseline is committed. `apps/mobile/.maestro/visual/stories.json` lists 10 stories: the 8 listing screens and the two sign-in error states (`src/visualStories.test.tsx` checks each one renders). Run `android-device` and `ios-device`, accept with `scripts/visual-accept.ts <run-id>`, and check that every target (`android-small`, `android-large`, `ios-small`, `ios-large`), theme (light, dark) and text size (default, largest) has a file. `store/screenshots.md` lists the extra stories the listing needs. |
+| 2 | Visual baselines complete for every screen and state | Done for the 10 stories. Re-accept after a UI change | Accepted from CI run 41063394535 on `vorflux/app-m4` at 98c82f3. `apps/mobile/.maestro/visual/stories.json` lists 10 stories: the 8 listing screens and the two sign-in error states (`src/visualStories.test.tsx` checks each one renders). Each target (`android-small`, `android-large`, `ios-small`, `ios-large`) has 40 files in `apps/mobile/.maestro/visual/baselines/`: each story in light and dark at the default and the largest text size. The files are in Git LFS. To re-accept, run `android-device` and `ios-device` and use `scripts/visual-accept.ts <run-id>`. `store/screenshots.md` lists the extra stories the listing needs. |
 | 3 | `expo-doctor` is clean | Done in CI, re-run on the release commit | The `expo-doctor` step of `mobile-health` in `.github/workflows/ci.yml`. Locally `bun run doctor` in `apps/mobile`. `DECISIONS.md` records the 20 of 20 pass and the two packages kept in `expo.install.exclude`. |
 | 4 | No open high-severity S23 or A26 finding | A26 done. S23 owner step | A26: `docs/security/masvs-app.md`. It found one high gap, the group chat could be screenshotted on the branch it reviewed. The M4 work had already fixed the route, and `apps/mobile/src/ui/captureRoutes.test.ts` now fails if the chat, report or after route stops blocking capture. It also fixed `allowBackup` and three unused permissions (`apps/mobile/config/appConfig.test.ts`). No A26 finding is left open at high. The S23 findings list is not in this repo, so the owner confirms none is open at high. The server side of A26 is `docs/security/masvs-server.md`. |
 | 5 | The full loop by hand on a real mid-range Android phone in light, dark and the largest text size | Owner step | The loop is: install the production build from the closed track, sign in with a code, finish the profile, join a show, get a group, check in, chat, report, after screen, delete the account. Run it three times (light, dark, largest text). Also run it on the iOS simulator. Use `apps/mobile/A11Y.md` for TalkBack, VoiceOver, Reduce Motion and Reduce Transparency, and `apps/mobile/PERF.md` for the cold start and time to Home numbers on the reference phone. Write the result and the phone model in the table at the end of this file. |
@@ -54,7 +54,7 @@ Fill in at release time. One row per owner step, with the date, the commit and w
 | Item | Date | Commit or build | Result | Who |
 | --- | --- | --- | --- | --- |
 | 1 | | | | |
-| 2 | | | | |
+| 2 | 2026-10-30 | run 41063394535 at 98c82f3 | 160 baselines accepted, 40 per target | agent |
 | 5 (phone model, light, dark, largest text) | | | | |
 | 15 (scan line) | | | | |
 | 16 (audit result) | 2026-10-29 | branch `vorflux/deps-audit` | 1 high left (`zod` 3 in build tools, accepted above), 1 low | agent |
