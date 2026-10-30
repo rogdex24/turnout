@@ -1,17 +1,16 @@
 import type { GroupMember } from "@turnout/contract/app/groups";
-import { CalendarX, CaretLeft, Check, Flag, Hourglass, LockSimple } from "phosphor-react-native";
+import { CalendarX, Check, Flag, Hourglass, LockSimple } from "phosphor-react-native";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { after as copy } from "@/copy/after";
-import { common } from "@/copy/common";
 import { istWhen } from "@/model/planTime";
+import { BackBar } from "@/ui/BackBar";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState, type ErrorStateProps } from "@/ui/ErrorState";
 import { OfflineBar } from "@/ui/OfflineBar";
 import { PersonAvatar } from "@/ui/PersonAvatar";
 import { Button } from "@/ui/primitives/Button";
 import { Icon } from "@/ui/primitives/Icon";
-import { IconButton } from "@/ui/primitives/IconButton";
 import { Note } from "@/ui/primitives/Note";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Sheet } from "@/ui/primitives/Sheet";
@@ -200,14 +199,7 @@ export function AfterView(props: AfterViewProps) {
   const { state } = props;
   return (
     <SafeAreaView className="flex-1 bg-bg" testID="after">
-      <View className="h-14 flex-row items-center px-2">
-        <IconButton icon={CaretLeft} label={common.back} onPress={props.onBack} testID="back" />
-        <View className="absolute inset-x-0 items-center" pointerEvents="none">
-          <Text variant="control" className="font-semibold" accessibilityRole="header">
-            {copy.title}
-          </Text>
-        </View>
-      </View>
+      <BackBar onBack={props.onBack} title={copy.title} />
       {props.offline ? <OfflineBar /> : null}
       {state.status === "loading" ? <Loading /> : null}
       {state.status === "notYet" ? <EmptyState icon={Hourglass} title={copy.notYet.title} body={copy.notYet.body} /> : null}

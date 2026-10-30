@@ -41,13 +41,21 @@ const GLYPH_WIDTH = 0.42;
 
 /**
  * The size for a display-face string inside a fixed box: the largest size in the face's range for which the text wraps to at most
- * `maxLines` lines. Display text does not follow the system text size, so the box and this size are the same for everyone.
+ * `maxLines` lines and, when `boxHeight` is given, those lines fit in that height. Display text does not follow the system text
+ * size, but a label under it does, so the height left for the title shrinks as the text size grows.
  */
-export function fitDisplaySize(text: string, boxWidth: number, face: keyof typeof displayFaces, maxLines: number): number {
-  const { minFontSize, maxFontSize } = displayFaces[face];
+export function fitDisplaySize(
+  text: string,
+  boxWidth: number,
+  face: keyof typeof displayFaces,
+  maxLines: number,
+  boxHeight = Number.POSITIVE_INFINITY,
+): number {
+  const { minFontSize, maxFontSize, lineHeightRatio } = displayFaces[face];
   const words = text.trim().split(/\s+/).filter(Boolean);
   for (let size = maxFontSize; size > minFontSize; size -= 2) {
-    if (linesNeeded(words, boxWidth, size) <= maxLines) return size;
+    const lines = linesNeeded(words, boxWidth, size);
+    if (lines <= maxLines && lines * size * lineHeightRatio <= boxHeight) return size;
   }
   return minFontSize;
 }

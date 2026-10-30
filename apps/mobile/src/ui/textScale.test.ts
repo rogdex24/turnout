@@ -46,6 +46,12 @@ describe("fitDisplaySize", () => {
     expect(fitDisplaySize("Supercalifragilisticexpialidocious", 80, "display-poster", 3)).toBe(poster.minFontSize);
   });
 
+  it("shrinks a title whose lines would be taller than the box", () => {
+    // Across 296 "The Monsoon Theory" takes three lines at 70, which are 189 tall. At 62 it takes two, which are 111.6 tall.
+    expect(fitDisplaySize("The Monsoon Theory", 296, "display-poster", 3)).toBe(poster.maxFontSize);
+    expect(fitDisplaySize("The Monsoon Theory", 296, "display-poster", 3, 112)).toBe(62);
+  });
+
   it("allows more room when more lines are allowed", () => {
     const title = "Hyderabad Indie Music Night Live at the Lake";
     expect(fitDisplaySize(title, 240, "display-poster", 4)).toBeGreaterThanOrEqual(fitDisplaySize(title, 240, "display-poster", 2));

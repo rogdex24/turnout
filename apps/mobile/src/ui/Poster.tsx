@@ -1,4 +1,4 @@
-import { displayFaces, gutter } from "@turnout/design-tokens";
+import { displayFaces, gutter, spacing } from "@turnout/design-tokens";
 import { Image } from "expo-image";
 import { useState } from "react";
 import { type LayoutChangeEvent, useWindowDimensions, View } from "react-native";
@@ -6,7 +6,7 @@ import { common } from "@/copy/common";
 import { CategoryIcon } from "./CategoryIcon";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
-import { fitDisplaySize } from "./textScale";
+import { fitDisplaySize, scaledMetrics, useFontScale } from "./textScale";
 
 /** Poster box heights in dp from the design spec section 3. The box never changes with the image or the text, so the list does not shift as images arrive. */
 export const POSTER_HEIGHT = { featured: 180, tile: 196, hero: 336, thumb: 40 } as const;
@@ -46,6 +46,7 @@ export interface PosterProps {
 /** The poster: a fixed box with a photo or a flat category tone, a bottom scrim and the title in the display face. */
 export function Poster({ variant, title, category, subLine, imageUrl = null, className }: PosterProps) {
   const window = useWindowDimensions();
+  const fontScale = useFontScale();
   const [measured, setMeasured] = useState<number | null>(null);
   const height = POSTER_HEIGHT[variant];
   const tone = posterTone(category);
@@ -67,7 +68,9 @@ export function Poster({ variant, title, category, subLine, imageUrl = null, cla
   }
 
   const width = (measured ?? window.width - 2 * gutter.page) - 2 * gutter.page; // the box less the title's own side padding
-  const size = fitDisplaySize(title, width, "display-poster", TITLE_LINES[variant]);
+  // The title sits above the category line, which grows with the text size, inside the scrim's padding (pt-3, mt-1, pb-4).
+  const titleHeight = height - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", fontScale).lineHeight;
+  const size = fitDisplaySize(title, width, "display-poster", TITLE_LINES[variant], titleHeight);
   return (
     <View
       accessible
@@ -99,7 +102,7 @@ export function Poster({ variant, title, category, subLine, imageUrl = null, cla
         >
           {title}
         </Text>
-        <Text variant="meta" className="mt-1 font-medium text-on-photo">
+        <Text variant="meta" className="mt-1 font-medium text-on-photo" numberOfLines={1}>
           {subLine ?? categoryLine(category)}
         </Text>
       </View>
