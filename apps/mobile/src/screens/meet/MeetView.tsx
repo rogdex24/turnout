@@ -30,6 +30,7 @@ import { Row } from "@/ui/primitives/Row";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
+import { isLargeText, useFontScale } from "@/ui/textScale";
 import { MeetMap } from "./MeetMap";
 import { SafetySheet } from "./SafetySheet";
 import { StaticMap } from "./StaticMap";
@@ -88,42 +89,47 @@ export interface MeetViewProps {
 }
 
 function BigTime({ meetAt, now }: { meetAt: string; now: number }) {
+  const large = isLargeText(useFontScale());
   const clock = istClock(meetAt);
   if (!clock) return null;
   const countdown = countdownText(meetAt, now);
-  return (
+  const pill = countdown ? (
     <View
-      accessible
-      accessibilityLabel={copy.timeLabel(clock.text, countdown)}
-      className="mt-2.5 flex-row items-end gap-3"
-      testID="meet-time"
+      className="min-h-7 flex-row items-center gap-1.5 self-start rounded-pill bg-signal-soft px-2.5"
+      importantForAccessibility="no-hide-descendants"
+      testID="meet-countdown"
     >
-      {/* 116 dp fits 6:00 next to PM, but not 11:53 on a narrow phone. One line, shrunk to fit, never wrapped. */}
-      <Text
-        variant="display-hero"
-        tabular
-        importantForAccessibility="no"
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.5}
-        className="shrink"
-        testID="meet-time-digits"
-      >
-        {clock.digits}
+      <View className="size-2 rounded-pill bg-signal" />
+      <Text variant="meta" tabular className="font-semibold text-signal">
+        {countdown}
       </Text>
-      <View className="items-start gap-2 pb-1" importantForAccessibility="no-hide-descendants">
-        <Text variant="display-band" className="uppercase">
-          {clock.period}
+    </View>
+  ) : null;
+  return (
+    <View accessible accessibilityLabel={copy.timeLabel(clock.text, countdown)} className="mt-2.5 gap-2" testID="meet-time">
+      <View className="flex-row items-end gap-3">
+        {/* 116 dp fits 6:00 next to PM, but not 11:53 on a narrow phone. One line, shrunk to fit, never wrapped. */}
+        <Text
+          variant="display-hero"
+          tabular
+          importantForAccessibility="no"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+          className="shrink"
+          testID="meet-time-digits"
+        >
+          {clock.digits}
         </Text>
-        {countdown ? (
-          <View className="min-h-7 flex-row items-center gap-1.5 rounded-pill bg-signal-soft px-2.5">
-            <View className="size-2 rounded-pill bg-signal" />
-            <Text variant="meta" tabular className="font-semibold text-signal">
-              {countdown}
-            </Text>
-          </View>
-        ) : null}
+        <View className="items-start gap-2 pb-1" importantForAccessibility="no-hide-descendants" testID="meet-time-side">
+          <Text variant="display-band" className="uppercase">
+            {clock.period}
+          </Text>
+          {large ? null : pill}
+        </View>
       </View>
+      {/* At a large text size the countdown is wider than PM, and beside the digits it took the width they shrink into. */}
+      {large ? pill : null}
     </View>
   );
 }
