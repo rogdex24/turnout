@@ -59,6 +59,14 @@ describe("MeetView", () => {
     expect(screen.getByLabelText("Meet at 6:00 PM, in 48 min")).toBeOnTheScreen();
   });
 
+  it("keeps a four-digit meet time on one line, shrinking it on a narrow phone", async () => {
+    // At 116 dp, 11:53 and the AM column are wider than an iPhone SE, and the time wrapped to a second line.
+    await view();
+    const digits = screen.getByTestId("meet-time-digits");
+    expect(digits.props.numberOfLines).toBe(1);
+    expect(digits.props.adjustsFontSizeToFit).toBe(true);
+  });
+
   it("shows the smaller-group note", async () => {
     await view({}, { belowPlan: true, members: MEMBERS.slice(0, 3) });
     expect(screen.getByText(copy.group.smaller)).toBeOnTheScreen();
