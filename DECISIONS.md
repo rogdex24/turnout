@@ -675,6 +675,14 @@ says to wrap such a capture, so `patches/expo-modules-jsi@58.0.21.patch` (a `bun
 slot and changes nothing else. Drop the patch when a newer `expo-modules-jsi` compiles; the pin in the
 patch name makes `bun install` fail loudly if the version moves under it.
 
+## 2026-10-31: Expo SDK 58 patches of 2026-10-31
+
+`mobile-health` failed in device run 41193468137 because Expo published new SDK 58 patches that
+morning. `expo` (58.0.22), `expo-build-properties`, `expo-dev-client`, `expo-router`,
+`expo-updates` and `react-native-screens` moved to the expected patch, pinned exactly, with the
+14-day rule waived as in the 2026-10-28 entry. `expo-modules-core` 58.0.29 still resolves
+`expo-modules-jsi` 58.0.21, so `patches/expo-modules-jsi@58.0.21.patch` still applies.
+
 ## 2026-10-28: M2 app, A8 to A10
 
 - A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in
