@@ -25,3 +25,4 @@ export const NoWomenOnlyChoice: Story = { render: () => sheet({ womenOnlyOffered
 export const Making: Story = { render: () => sheet({ busy: true }) };
 export const MissingSomething: Story = { render: () => sheet({ issue: { kind: "not_matchable", missing: ["photo", "handle"] } }) };
 export const Offline: Story = { render: () => sheet({ issue: { kind: "offline" } }) };
+export const Stopped: Story = { render: () => sheet({ stopped: true }) };

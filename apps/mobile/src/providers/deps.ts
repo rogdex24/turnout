@@ -3,12 +3,16 @@ import type { Persister } from "@tanstack/react-query-persist-client";
 import { createSession, revokeOnServer, type Session } from "../api/auth";
 import { type ApiClient, createApiClient, fetchTransport, type Transport } from "../api/client";
 import { type Connectivity, createConnectivity } from "../api/connectivity";
+import { registerFeedback } from "../api/feedback";
 import { registerCheckin } from "../api/groups";
-import { forgetDevice, removeDeviceOnSignOut } from "../api/notifications";
+import { removeDeviceOnSignOut } from "../api/notifications";
 import { cacheBuster, createCachePersister } from "../api/persister";
 import type { KeyValueStore } from "../api/prefs";
 import { createAppQueryClient, followConnectivity } from "../api/queryClient";
+import { registerReport } from "../api/reports";
 import type { SecretStore } from "../api/secureStorage";
+import { createLocalWipe, type LocalWipe } from "../api/signOut";
+import { registerThreadSend } from "../api/thread";
 import { createStubWhatsAppOtp, type WhatsAppOtp } from "../api/whatsappOtp";
 import { createLocalFlags, type LocalFlags } from "./localFlags";
 
@@ -23,6 +27,8 @@ export interface AppDeps {
   buster: string;
   prefs: KeyValueStore;
   localFlags: LocalFlags;
+  /** The local half of sign-out. Deletion asks it to forget the welcome cards too. */
+  wipe: LocalWipe;
   whatsappOtp: WhatsAppOtp;
   appVersion: string;
 }
@@ -39,9 +45,17 @@ export interface DepParts {
   whatsappOtp?: WhatsAppOtp;
   queryClient?: QueryClient;
   now?: () => number;
+  /** Empties the image cache at sign-out. Tests leave it out. */
+  clearImages?: () => Promise<void>;
+  /** Deletes the files the person picked, which sit under the cache folder. Tests leave it out. */
+  clearPickedFiles?: () => Promise<void>;
+  /** Takes the delivered notifications and the badge off the phone. Tests leave it out. */
+  clearNotifications?: () => Promise<void>;
+  /** Stops Sentry and PostHog at sign-out. Tests leave it out. */
+  stopTelemetry?: () => void;
 }
 
-/** The one wiring of session, client, cache and local flags. The sign-out hook empties the cache and the notice, so the next person on the phone starts clean. */
+/** The one wiring of session, client, cache and local flags. The sign-out hook wipes the phone (cache, small facts, images, picked files, notifications, usage-data choice), so the next person on it starts clean. */
 export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
   const { secure, prefs, cacheStore, origin, transport = fetchTransport, appVersion } = parts;
   const connectivity = createConnectivity();
@@ -56,24 +70,38 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     origin,
     transport,
     now: parts.now,
-    // The phone's push device goes first, while the access token still works; the server ends the session's devices too.
-    revoke: async (accessToken) => {
-      await removeDeviceOnSignOut(api, prefs)(accessToken);
-      await revokeOnServer(api)(accessToken);
+    // The phone's push device goes first, and the server ends the session's devices too. Both run in the background after the local
+    // wipe, so the device is read now: the wipe empties the stored facts.
+    startRevoke: () => {
+      const removeDevice = removeDeviceOnSignOut(api, prefs);
+      return async (accessToken) => {
+        await removeDevice(accessToken);
+        await revokeOnServer(api)(accessToken);
+      };
     },
   });
   api = createApiClient({ origin, session, connectivity, transport });
 
-  const persister = createCachePersister(cacheStore, { buster: () => cacheBuster(appVersion, session.getState().userId) });
-  session.onSignedOut(() => {
-    // A session refused at refresh ends with no token to call the server, so the stored device goes here too; the next person on
-    // this phone registers it again.
-    forgetDevice(prefs);
-    queryClient.clear();
-    persister.removeClient();
-    localFlags.forgetNotice();
+  const persister = createCachePersister(cacheStore, {
+    buster: () => cacheBuster(appVersion, session.getState().userId),
+    signedIn: () => session.getState().userId !== null,
   });
+  const wipe = createLocalWipe({
+    prefs,
+    queryClient,
+    persister,
+    flags: localFlags,
+    clearImages: parts.clearImages ?? (async () => {}),
+    clearPickedFiles: parts.clearPickedFiles ?? (async () => {}),
+    clearNotifications: parts.clearNotifications ?? (async () => {}),
+    stopTelemetry: parts.stopTelemetry ?? (() => {}),
+  });
+  // A session refused at refresh ends with no token to call the server; the wipe empties the stored device with the other prefs.
+  session.onSignedOut(() => wipe.run());
   registerCheckin(queryClient, api);
+  registerThreadSend(queryClient, api);
+  registerReport(queryClient, api);
+  registerFeedback(queryClient, api);
   await session.load();
   followConnectivity(connectivity, queryClient);
 
@@ -86,6 +114,7 @@ export async function createAppDeps(parts: DepParts): Promise<AppDeps> {
     buster: cacheBuster(appVersion, session.getState().userId),
     prefs,
     localFlags,
+    wipe,
     whatsappOtp: parts.whatsappOtp ?? createStubWhatsAppOtp(),
     appVersion,
   };

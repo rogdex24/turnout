@@ -1,12 +1,11 @@
 import type { Database } from "bun:sqlite";
+import { MESSAGE_PAGE } from "@turnout/contract/app/thread";
 import { ulidAfter } from "../utils/ulid.js";
 import { addMinutes } from "./dates.js";
 import { currentMembers, getGroupForMember } from "./groups.js";
 import { canPostThread, canReadThread, type ThreadWindow, threadWindow } from "./model/threadWindow.js";
 import { DEFAULT_TUNABLES, type Tunables } from "./model/tunables.js";
 import { addNotice } from "./notices.js";
-
-export const MESSAGE_PAGE = 100;
 
 export interface ThreadMessage {
   id: string;

@@ -39,6 +39,7 @@ async function open(
     onBack: jest.fn(),
     onAddTicket: jest.fn(),
     onOpenMeetCard: jest.fn(),
+    onOpenAfter: jest.fn(),
     onLeave: jest.fn(),
     onFindShow: jest.fn(),
     onChangeHandle: jest.fn(),
@@ -192,6 +193,12 @@ describe("PlanScreen", () => {
       expect(await screen.findByText(copy.done.withGroup(4))).toBeOnTheScreen();
     });
 
+    it("opens the after-the-show screen of its group when done", async () => {
+      const app = await open(PLANS.done);
+      await fireEvent.press(await screen.findByTestId("plan-open-after"));
+      expect(app.onOpenAfter).toHaveBeenCalledWith("group-1");
+    });
+
     it("opens the leave sheet from the last row", async () => {
       const app = await open(PLANS.finding_group);
       await fireEvent.press(await screen.findByTestId("plan-leave"));
@@ -242,8 +249,10 @@ describe("PlanScreen", () => {
     });
 
     it("says it is offline, not loading forever, for a plan never seen", async () => {
-      await open(planFixture({ id: "plan-unseen" }), {}, BEFORE_REVEAL, false, (app) => app.deps.connectivity.report(false));
-      expect(await screen.findByText(common.errorOffline)).toBeOnTheScreen();
+      const routes = { "GET /plans/plan-unseen": new Error("no network") };
+      await open(planFixture({ id: "plan-unseen" }), routes, BEFORE_REVEAL, false, (app) => app.deps.connectivity.report(false));
+      // The first request still goes out; its retry waits a second, then pauses for the network.
+      expect(await screen.findByText(common.errorOffline, {}, { timeout: 4000 })).toBeOnTheScreen();
     });
 
     it("shows a plain error with a retry", async () => {

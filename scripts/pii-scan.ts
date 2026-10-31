@@ -32,7 +32,9 @@ const EMAIL = /[A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Z
 const PHONE =
   /(?:(?<=\\[nrt])|(?<=\\u00a0)|(?<![\w.+-]))(?:(?:\+|00)?91[\s-]?|0)?(?:[6-9]\d{4}[\s-]?\d{5}|[6-9]\d{2}[\s-]\d{3}[\s-]\d{4})(?![\w-]|\.\d)/g;
 /** `image@2x.png`, `name@1.2.3`, a `bun patch` file `name@1.2.3.patch` and similar are not addresses. */
-const FILE_EXTENSION = /\.(?:png|jpe?g|gif|webp|avif|svg|ico|css|js|mjs|cjs|ts|tsx|json|md|html|woff2?|ttf|map|patch)$/i;
+// The last group is systemd unit suffixes: a template unit names its instance with @ (turnout@production.service).
+const FILE_EXTENSION =
+  /\.(?:png|jpe?g|gif|webp|avif|svg|ico|css|js|mjs|cjs|ts|tsx|json|md|html|woff2?|ttf|map|patch|service|timer|socket|target)$/i;
 const SKIPPED_FILE = /\.(?:png|jpe?g|gif|webp|avif|ico|woff2?|ttf|sqlite[\w-]*|db|lock|lockb|pdf)$|(?:^|\/)bun\.lock$/i;
 /** A NUL byte in the first 8 KB marks a binary file (the same test git uses), which is not scanned as text. */
 const isBinary = (bytes: Buffer): boolean => bytes.subarray(0, 8192).includes(0);

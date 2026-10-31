@@ -189,7 +189,8 @@ Deviations from the plan and choices made while scaffolding:
   the events list is an M2 screen. `visual-compare.sh` passes with a notice until a target has an
   accepted baseline; none could be made without an emulator.
 - Device jobs are two matrix jobs, `android-device` and `ios-device`, whose run names are the four
-  targets. The one automatic re-run is `cmd || cmd` in the job script.
+  targets. `device-run.sh` runs the flows once, with no re-run inside the job (see the entry of
+  2026-10-29 on the device job re-run).
 - The iOS runner is `macos-26` instead of `macos-latest`, with the simulator runtime pinned to
   iOS 26.2, so a runner image change cannot move the baselines. actionlint does not know the
   `macos-26` label yet and reports it; the label is valid on GitHub.
@@ -674,6 +675,14 @@ says to wrap such a capture, so `patches/expo-modules-jsi@58.0.21.patch` (a `bun
 slot and changes nothing else. Drop the patch when a newer `expo-modules-jsi` compiles; the pin in the
 patch name makes `bun install` fail loudly if the version moves under it.
 
+## 2026-10-31: Expo SDK 58 patches of 2026-10-31
+
+`mobile-health` failed in device run 41193468137 because Expo published new SDK 58 patches that
+morning. `expo` (58.0.22), `expo-build-properties`, `expo-dev-client`, `expo-router`,
+`expo-updates` and `react-native-screens` moved to the expected patch, pinned exactly, with the
+14-day rule waived as in the 2026-10-28 entry. `expo-modules-core` 58.0.29 still resolves
+`expo-modules-jsi` 58.0.21, so `patches/expo-modules-jsi@58.0.21.patch` still applies.
+
 ## 2026-10-28: M2 app, A8 to A10
 
 - A8 Show screen. The Go button is built, but the go route is M3, so `EXPO_PUBLIC_GROUPS_ENABLED` (read by `groupsEnabled()` in
@@ -791,14 +800,14 @@ Where the build differs from the plan or fills a gap.
 
 1. **The push routing hook is in `src/providers`,** not `src/app`, because `routes-are-entry` forbids route files from holding logic. The route files stay thin.
 2. **An e2e-only link, `turnout-e2e://push?kind=..&noticeId=..&planId=..`,** stands in for a tap on a push, because a real push needs a Play-signed build and a Firebase key. The link filter lets it through in the e2e variant only; any other build goes Home.
-3. **The thread and morning-after kinds open the plan** (Home when there is no plan). Those screens are M4. The meet card kinds open `/groups/<groupId>/meet`.
+3. **The thread kind opens the plan** (Home when there is no plan); the thread screen is M4. The meet card kinds open `/groups/<groupId>/meet`. The morning-after kind now opens `/groups/<groupId>/after` (A20, below), and the plan when the notice names no group.
 4. **The push permission is asked only after the person has a plan.** A12 can call `registerDevice` with `mayAsk` when it lands.
 5. **iOS skips registration** (GET /config says push is off) and `enableRemoteNotifications` is false for iOS in `app.config.ts`.
 6. **No notification icon asset is in the repo.** The owner adds a 96x96 white-on-transparent icon.
 7. **The persisted query prefixes include `["group"]`,** so the meet card opens offline with the last cafe and members.
 8. **The venue pin comes from the show, not the group.** GET /groups/:id has the cafe's pin but not the venue's, so the card finds the plan that holds the group in GET /plans, then reads the public show for the venue. That is kept on disk as `["group", id, "context"]` and also supplies the plan id for Leave. Suggested for the server: add the venue's `lat` and `lng` to the revealed group answer, which removes two requests.
 9. **The phone's clock decides** when "I'm here" is on (T-90m to T+60m) and when the location watch runs. The server clock test hook does not move the phone, so `loop-meet.yaml` says the phone's clock has to be aligned.
-10. **The check-in is retried only after a bad connection or a busy server.** A refusal (409 outside the window) does not change on a second try, so `registerReplayable` takes a retry rule and the check-in passes `retryCheckin`.
+10. **The check-in is retried only after a bad connection or a busy server.** A refusal (409 outside the window) does not change on a second try, so `registerReplayable` takes a retry rule and the check-in passes `retryTransient`.
 11. **No cafe photo,** because the API has none. The Report and group chat cards of the design are left out: they are M4.
 12. **The static map is not to scale.** It is two token-coloured pins on a plain card, for builds with no map. `showsRealMap`: the e2e variant never has the map; iOS draws Apple Maps and needs no key; Android needs `GOOGLE_MAPS_ANDROID_API_KEY` (`extra.hasMapsKey` is true when it is set).
 13. **Safety has two rows:** Call 112 and Leave this plan. Leave opens `/plans/<planId>/cancel`, which `app-m3-plans` builds.
@@ -807,3 +816,163 @@ Where the build differs from the plan or fills a gap.
 16. **`loop-meet.yaml` is tagged `needs-group-seed` and excluded in `config.yaml`,** because the seed has no plan and group rows for the `meet_card_live` member yet. Neither Maestro flow has run on a device.
 
 Evidence. `src/model/walk.test.ts`, `meetWindow.test.ts`, `meetCard.test.ts`, `src/api/groups.test.ts`, `notifications.test.ts`, `src/providers/useMeetLocation.test.tsx`, `useNotificationRouting.test.tsx`, `src/screens/meet/*.test.tsx`, `test/appLinks.test.ts`, and the Playwright cases in `e2e/`.
+
+## 2026-10-29: M4 app, A19 and A21 (group chat, report)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The chat is kept on disk as its newest 50 messages,** with an `incomplete` flag. A phone that reopens from disk shows them at once and then loads the whole thread, because the cursor (the last message id) cannot be trusted to continue a trimmed list.
+2. **The cursor is the last message id.** The screen polls every 5 seconds only while it is focused, the thread is open, and the server has not answered 404. It stops on a read-only thread and when the app is in the background: TanStack's `focusManager` follows `AppState` (`useAppFocus`, called once in `AppProviders`), because the library's own focus signal is the browser's and never fires in React Native.
+3. **A person's own messages that have not arrived come from the mutation cache,** through `useMutationState`, not from a second list. Sending, queued (paused offline) and failed show under the line. The list is de-duplicated by `clientId`, and a sent message hides the earlier failed tries of the same one.
+4. **A send waits for the thread to reload instead of writing the POST result into it.** One path writes to the cache, so a poll that lands in between cannot show a message twice or out of order. The person's own entry (sending, queued or failed) is also left out of the list as soon as the list holds a message from the person (`isYou`) with the same text and a `createdAt` at or after the moment the send began (`sentAt`). That covers the gap between the thread being read and the send being marked done, and a send whose answer was lost, so a message is never drawn twice. The same words sent twice still show twice, because the older stored copy is before `sentAt`. The contract is unchanged: the match is on text and time, not on `clientId`, which the list does not carry.
+5. **Report on a message opens a bottom sheet,** not the design's inline menu, so the target is large and works the same on both platforms.
+6. **`no_group` is learned from the server's 404 on the messages, and only from that.** A `no_group` plan has no group, so the app cannot tell from the plans list that a group was called off. A messages 404 with nothing held means the chat has closed; a messages 404 with messages held keeps them readable and read-only. A 404 on the group does not close the chat: the group gives the title and the photos only, so with no group the screen still reads the messages, shows a plain title ("Group chat") and no photos, and lets the server's answer decide. The screen reads no plans for this.
+7. **No auto-linking.** A message is a plain `Text` with no data detectors, so an address in it is not tappable.
+8. **A report's text is the reason's label, then the details.** The body is `reportBody(reason, details)`, with the details capped at 1800 characters so the whole stays inside the contract's limit.
+9. **A report's `messageId` goes only with the person it came from.** If the person picks someone else on the form, the message is left out.
+10. **`useBlockCapture` takes no arguments and is called in the route file, once per screen.** Each call makes its own key (`useId`) for `preventScreenCaptureAsync` and `allowScreenCaptureAsync`, because the library keeps capture blocked until every key has been allowed. A single shared key would let the first screen to close (the report form, pushed over the after screen) allow capture under a screen that is still showing faces. The thread, after and report routes all call it. It does nothing when `EXPO_PUBLIC_ALLOW_CAPTURE` is 1 (the e2e build). `useHoldThreadPushes` takes `null` for a route with no group.
+11. **`thread_message` now opens the chat** (`/groups/<groupId>/thread`). `morning_after` opens the after screen (`/groups/<groupId>/after`, A20 item 9), and the plan when the notice names no group.
+12. **The meet card has a Group chat row, and the Safety sheet has Report someone** after Call 112 and before Leave this plan.
+13. **The composer and the report form check the contract before they send.** `postMessageRequestSchema` and `createReportRequestSchema` run on the phone first. A message or report they refuse (HTML in a message, text past `MESSAGE_MAX_CHARS` or `REPORT_MAX_CHARS`, which a paste can still bring past a field's `maxLength`) is not sent and not saved to be replayed. The words stay in the box and a line under it says why. The box's own limit comes from the contract (`MESSAGE_MAX_CHARS`, and `DETAILS_MAX_CHARS`, which is `REPORT_MAX_CHARS` less room for the reason's label), not a number typed again in the view. The message page size (`MESSAGE_PAGE`) is exported from the contract the same way, and the route and the app both import it.
+14. **A 4xx on a send is final.** A refusal other than "sign in again" and "slow down" (403, 404, 422: the chat closed, the person is not in it, the text was refused) will get the same answer again, so the entry says "Couldn't send this message." and cannot be tapped to send again. A 5xx, an offline phone and a 429 stay "Didn't send. Tap to try again.".
+15. **A report that is paused offline is kept on disk with its body,** so it can be sent when the phone is back online, even after a restart. This is a deliberate choice: the report is the one thing the person must not lose, and the body is what they wrote to the team, not a face or a name. It is removed from the queue when it is sent, and sign-out and account deletion clear it with the rest of the cache (A22 item 1).
+16. **The operator sidecar has a `say` route,** so a flow can make another member of a group write. `thread.yaml` and `report.yaml` are tagged `needs-group-seed` like `loop-meet.yaml` and have not run on a device.
+
+Evidence. `src/model/thread.test.ts`, `report.test.ts`, `src/api/persister.test.ts`, `src/screens/thread/ThreadScreen.test.tsx`, `src/screens/report/ReportScreen.test.tsx`, `src/screens/meet/*.test.tsx`, `src/ui/useBlockCapture.test.tsx`, `src/providers/useAppFocus.test.tsx`, `test/mobileServer.test.ts` (the `say` route).
+
+## 2026-10-29: M4 app, A20 (after the show)
+
+Where the build differs from the plan or fills a gap.
+
+1. **The after screen has its own query key, `["after", groupId]`, and it is not on disk.** It holds faces, so it is left out of `PERSISTED_PREFIXES`, is read again after five minutes (`staleTime`) and is dropped from memory five minutes after the last screen using it has gone (`gcTime`, `AFTER_GC_MS`). The report form (A21) reads its people from this query too, not from the meet card's copy on disk, and keeps their photos out of the disk image cache with the same `memoryCacheKey`. The meet card's `["group", id]` stays on disk as before. A phone with no signal shows the error state, not old faces.
+2. **Faces use the image cache in memory only.** `PersonAvatar` takes `memoryCacheKey`, which sets `cachePolicy="memory"` and a stable `cacheKey` of `<groupId>:<memberRef>`, so a renewed signed link does not load the photo again. There is no share, save or long-press on a face.
+3. **The after screen uses the same `useBlockCapture` as the thread and report screens** (A19 item 10). The A20 branch had its own copy keyed `turnout-faces`; the merge kept one hook. Each screen that calls it gets its own key, so the report form pushed over the after screen and then closed does not let capture back on under the faces. The thread route calls it too.
+4. **The server decides "not yet", the phone clock does not.** The screen shows its content only while `state` is `done`; before that it says the page opens the morning after. "Closed" is a 404 or `feedbackOpenUntil` passing (72 hours), the second by the phone clock, which only closes a page that the server would close a moment later.
+5. **The person's own tile is left out.** Nobody is asked to mark themselves, and the server answers 404 for it.
+6. **"I didn't feel comfortable" asks first (a Sheet), then posts to `/groups/:id/downvotes`.** It is a replayable mutation (`"feedback"`, already on the replay list), so a mark made offline is sent when the phone is back. The server answers 204 to a repeat, so a replay does no harm. The screen marks the person at once and puts it back on a failure. The copy says it is private and that the person is not told.
+7. **The page says doing nothing is fine, first.** Nothing is sent and nobody is told unless the person acts. There is no count of marks and no guilt copy.
+8. **Report is `router.push` to `/report` with `groupId` and `memberRef`.** It opens A21's report screen.
+9. **Entries.** The plan page's dock gets "How did it go?" when the plan is done and has a group. The meet card, once the group is done, the card has closed and the latest read of the group succeeded, offers it in place of "Back to your plans". A copy the phone holds after a failed read may be stale, so it does not count. A `morning_after` push opens the after screen (`notificationRoute.ts`).
+10. **The Maestro flow `after-show.yaml` runs last** (after `group-shrinks`) because it moves the server's clock to an hour past 10:00 IST the morning after, through a new operator route `POST /operator/after { eventId }`. The clock only goes forward. The flow has not run on a device.
+
+Evidence. `src/ui/useBlockCapture.test.tsx`, `src/api/feedback.test.ts` (the five minutes), `src/screens/after/*.test.tsx`, `src/model/notificationRoute.test.ts`, `src/api/notifications.test.ts`, `src/screens/plan/PlanScreen.test.tsx`, `src/screens/meet/MeetScreen.test.tsx`, `src/ui/components.test.tsx`. The `after` operator route was called against `e2e/mobile-server.ts` and moved the clock to 11:00 IST on the morning after the seeded show.
+
+## 2026-10-29: M4 app, A22 and A23 (settings, safety, deletion)
+
+Where the build differs from the plan or fills a gap.
+
+1. **One local wipe serves sign-out, a refused refresh and deletion** (`src/api/signOut.ts`). It stops telemetry, clears the query cache, the disk cache, MMKV, the image cache, the picked-file folders in the cache (`ImageManipulator`, `ImagePicker`, `DocumentPicker`, which hold the person's photo and ticket copies), and the delivered notifications and the badge, and runs through `session.onSignedOut`. Every step runs even when an earlier one fails, and the first failure is thrown at the end. The screens delete a prepared file as soon as its upload succeeds. Ordinary sign-out keeps the welcome cards seen (the plan sends it to the notice screen); deletion clears them too, so the app starts at Welcome. `KeyValueStore.clearAll()` and `Session.endLocal()` exist for this: after `DELETE /me` every token is dead, so the session ends on the phone only and makes no sign-out call.
+   Sign-out ends the session on the phone first (wipe, then the keychain, then `signed_out`, in a `finally` so a throwing step cannot keep the person signed in) and revokes on the server afterwards, in the background, with the token it captured. If that token is missing or within 30 seconds of expiry, it is refreshed first. Offline sign-out therefore still forgets everything; the server session then lapses on its own. A refresh that lands after the session ended is ignored.
+2. **Delete account is one route with three steps** (explain, confirm, code), not three routes. Back steps back inside the route and leaves from the first step. "Keep my account" is on both later steps, worded as a neutral choice.
+3. **The data map is mirrored in `src/copy/deleteAccount.ts`.** The phone hash is named once, as kept only if the account was banned, and the consent record and reports as kept for one year under a number that does not name the person.
+4. **The group is told someone left** when a plan with a group is not over and the show is within 3 hours or already started (`groupWillBeTold`, the same window as the meet card). Before the reveal a withdrawal is quiet.
+5. **The privacy page shows the notice the app carries** (`NOTICE_PARAGRAPHS`), not the `GET /config` copy, so it opens offline and cannot differ from what was agreed. The version is the one on the account.
+6. **`how-matching-works.md` is mirrored in `src/content/howMatchingWorks.ts`,** because Metro does not bundle Markdown. `howMatchingWorks.test.ts` fails when the two drift.
+7. **The women-only switch saves at once** with the whole profile (`PATCH /me/profile` needs all three fields), through the same `saveSteps` and `runSave` the profile form uses, so the cached member follows the server. It is offered when `womenOnlyAvailable` is true (woman or non-binary). A refused save keeps the old value and says why in one line.
+8. **Grievance details count as "not set"** when the name or address says "not set", the email is on example.com, org or net, or the phone is in the +1 202 555 01xx range (`grievanceNotSet`), which are the server's dev and staging placeholders. Only the production variant fails the start-up check, and only on details that were read. A config that cannot be read (offline, a server error) never blocks start. Preview builds point at staging, which only has placeholders, so they show "Details not set" like development.
+9. **"Share usage data"** turns PostHog and Sentry off at once through `telemetry(prefs).setConsent`, and reads the saved choice when the page opens. The wipe removes the choice.
+10. **The blocked list is read only and in memory only** (`queryKeys.blocked()`, not persisted), because it holds first names.
+11. **The "Safety and 112" page is not built.** It is not in the A22 file list. The meet card keeps its Call 112 row.
+12. **Both Maestro flows are written for CI and have not run on a device.** `settings.yaml` uses Chitra and puts her women-only choice back; `delete-account.yaml` uses Hari, who no other flow signs in as.
+
+Why. Each keeps what the plan promises (a way out that is plain, nothing kept that the data map does not name, no guilt copy) and fills the gaps the contract left without a new package.
+
+Evidence. `src/api/signOut.test.ts`, `src/model/deletion.test.ts`, `src/model/grievance.test.ts`, `src/content/howMatchingWorks.test.ts`, `src/screens/settings/*.test.tsx`, `src/screens/you/YouScreen.test.tsx` and `src/router.test.tsx`.
+
+## 2026-10-29: M5, A17 (analytics funnel)
+
+1. **The four funnel events are sent from the screens, not the views.** `ShowScreen` sends `show_viewed` once the show has loaded (a 404 or an error is not a view), `buy_tapped` before the ticket page opens, and `go_tapped` on every Go tap with `groups_enabled`, so the funnel also counts taps on a build where groups are off. `MeetScreen` sends `im_here_tapped` with the plan id when the person taps I'm here.
+2. **`ShowView` gets `onBuy` and `onGoTapped`.** The ticket link no longer goes through `onOpenLink`, so the screen can tell a Buy tap from the listing link.
+3. **The PostHog check from one Maestro run is an owner step.** It needs a PostHog test project key in the e2e build (`EXPO_PUBLIC_POSTHOG_KEY`) and the person's consent on, and CI has neither. Until then the unit tests show that each event is sent with its properties.
+
+## 2026-10-29: device job re-run, timeouts and react-native 0.88.1
+
+- **No re-run inside a device job.** `device-run.sh` ran the flows a second time after a failure. The second pass met the
+  data the first pass changed: the seed resets members but not plans or groups, so `browse` found 0102 no longer pending
+  and failed for a reason the first pass did not have. A failed device job is now re-run whole, which starts a fresh server.
+  The budget's "one automatic re-run only" is a cap, so zero re-runs keeps to it.
+- **Job limits are 60 minutes on Android and 75 on iOS.** Android took 38 and 43 minutes of the old 45. The large iOS
+  simulator reached 45 minutes before its flows ended.
+- **react-native follows Expo's patch, 0.88.1.** `expo install --check` in mobile-health asked for it, as the entry of
+  2026-10-28 on Expo pins says. `@react-native/jest-preset` moves with it.
+- **iOS joins a row's name.** An element marked `accessible` with text children is one element on iOS, named for example
+  "Instagram or LinkedIn, Checked". Flows match these rows with a regex (`".*Checked"`, `"Seed comedy night.*"`), and
+  `test/maestroFlows.test.ts` refuses a bare "Seed ..." match.
+- **The "Open in" prompt wait is 10 s.** On the large iOS simulator `deeplink-show` failed with no prompt seen in 5 s.
+- **You rows are scrolled to the middle before a tap.** On the small iOS simulator the grievance row stopped under the
+  floating tab bar, Maestro called it visible, and the tap opened Plans. The app is right: native tabs inset the first
+  scroll view, so a person can scroll every row clear. `centerElement: true` stops the scroll with the row in the middle,
+  and Maestro 2.11 falls back to the visibility check for the last row, which cannot reach the middle.
+- **after-show waits on `after-marked-*`, not the "Marked, privately" text.** On iOS that row's name is its label, "You
+  marked Esha, privately".
+- **A link to a screen opens again when the screen does not come.** On the small iOS simulator `deeplink-show` tapped Open
+  on the "Open in" prompt, the prompt closed, and the app stayed on Home. The app never got the link; the same flow passed
+  on the run before. `subflows/open-link-to.yaml` opens the link and waits for the screen, up to three times. Links that
+  should land on Home keep the plain subflow, because a retry there proves nothing.
+- **The Android capture waits for the emulator.** After all 17 flows passed, adb saw the small emulator as "device
+  offline" and the first capture failed. `device-run.sh` reconnects and waits for the device before each capture.
+- **Tab screens ask iOS to inset their lists.** React Native's ScrollView leaves `contentInsetAdjustmentBehavior` at
+  "never". On the small iOS simulator the You list ended under the floating tab bar, and the tap on Delete account, the last
+  row, opened Plans. Home, Plans and You now set it to "automatic"; `src/lists.test.ts` checks it.
+- **The link prompt is matched by the app's name.** The visual capture of the meet card failed on the large iOS simulator:
+  "Open in .*" matched the card's "Open in Maps" button, and the subflow then looked for an Open button that was not there.
+
+## 2026-10-29: S21, the VPS deploy files
+
+- **Plain systemd and Caddy on the VPS, no container.** The plan rules out Docker in production. One templated unit
+  serves production and staging from their own env files; Caddy gets the certificates and replaces any
+  X-Forwarded-For a client sends, so `TRUST_PROXY_HEADER=x-forwarded-for` reads the real address.
+- **The app restores, then Litestream replicates.** Litestream's own restore-on-start runs inside its process, so the
+  app could open an empty file first. `deploy/prestart.sh` restores before the app starts, and Litestream is ordered
+  after the app.
+- **Production stays off until its values exist.** `release.sh` starts staging alone until `GRIEVANCE_NAME` is set,
+  so a first deploy does not crash-loop a production unit that refuses to start by design.
+- **The host installs the full server workspace.** A production-only install broke the map (it reads `DESIGN.md`
+  through `@google/design.md` at runtime) and the admin (it imports `shadcn/tailwind.css`). Both are dev
+  dependencies today; installing them is simpler than moving them and keeps the check and the host in step.
+- **The PII scan treats systemd unit names as file names.** `turnout@production.service` matched the email pattern.
+  The scan already skips `name@x.png` and `pkg@1.0.patch`; `.service`, `.timer`, `.socket` and `.target` join that
+  list, with a test.
+
+## 2026-10-29: CI and hook speed
+
+Measured over the 29 finished runs of PR 19 (medians): 23.6 minutes from push to result, 30.5 Linux and 39.4 macOS job
+minutes a run. The repo is public, so the cost is the wait and the 5 macOS jobs GitHub allows at once, not money.
+
+- **The visual capture runs one Maestro run per theme and text size, not one per story.** Each `maestro test` starts
+  Maestro and its driver: about 10 s on Android and about 75 s on iOS. Forty single-story runs spent about 7 minutes of an
+  Android job and about 50 minutes of an iOS job on start-up, which is why the large iOS simulator hit its limit. The
+  shots, their names and the baselines are the same.
+- **A story with no shot is captured again on its own, up to twice.** This is not the re-run the entry above forbids: the
+  stories are Storybook screens opened with `clearState`, they read no seeded data, and the flows are still one pass. The
+  capture failures seen so far were infra (the Android emulator going offline, the iOS "Open in" prompt not coming). A
+  retry that passes leaves a `::warning::` on the run, and a story still without a shot fails the job as before. When a
+  batch leaves more than half the stories with no shot, the device has stopped, so the job fails at once instead of
+  spending its time limit on single retries. `takeScreenshot` must stay the last step of `capture-story.yaml`, because a
+  shot is taken as a passed story; `test/maestroFlows.test.ts` checks it.
+- **Device jobs need `check`.** A run whose types, lint or unit tests fail does not spend 40 minutes on devices. `check`
+  ends before the native builds, so a green run waits no longer.
+- **Switches for the device jobs:** the labels `ci:skip-device`, `ci:force-device` and `ci:fail-fast`, and the same three
+  choices on a manual run. The skip is for a change to shared paths (src, e2e, package.json) that cannot reach the app. It
+  is ignored when `apps/mobile` or `packages` changed, so a label cannot let `ci-gate` pass on an app change; any other
+  skip with mobile paths changed leaves a warning on `ci-gate`. Force wins over skip. The labels are read from the API,
+  so a re-run sees a label added after the push.
+- **`check` and its halves run their parts side by side** with `bun run --parallel --no-exit-on-error`, so every failing
+  part still reports and the exit code is still non-zero. `bun test --parallel` runs the files in worker processes. Locally
+  (4 cores) `check:server` went from 64 s to 27 s, `check:mobile` from 42 s to 25 s and `check` from 106 s to 50 s.
+  With everything sharing the cores, the map bundle tests and the ticket upload limit test take 3 to 4.5 s, close to
+  Bun's 5 s default, so `bun test` runs with `--timeout 15000`. The timeout only catches a hung test; no assertion changed.
+- **The write benchmark test writes to /dev/shm when it exists.** It checks journal modes and row counts, not disk speed,
+  and its 1,600 fsyncs took 21 of the 46 s of `bun test`. On /dev/shm it takes 0.5 s.
+- **The pre-commit checks run as a parallel group after the format job,** which stays first because it restages files.
+
+Tried and not taken:
+- Caching `~/.bun/install/cache`: it is 1.8 GB, and `bun install` takes 7 to 13 s on Linux and about 23 s on macOS, so a
+  restore would cost as much as it saves.
+- Caching the Playwright browser: the step is 20 s and most of it is the apt packages that `--with-deps` installs anyway.
+- More Playwright workers: 2, 3 and 4 workers all took 143 to 145 s locally, so the suite is not bound by workers.
+- An AVD snapshot cache: the emulator boots in about 1.4 minutes of a 40-minute job, and restoring a 2 GB snapshot costs
+  about half of that. Not worth a new way for the emulator to start badly.
+- Sharding the flows over two devices: flows share seeded members (104 and 105) and three move the clock, so they cannot
+  run at the same time on one server.
+- A docs-only skip of `check`: `check` is 2.2 minutes, it lints DESIGN.md, and tests read docs and flows.

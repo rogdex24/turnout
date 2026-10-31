@@ -315,6 +315,71 @@ describe("admin accounts", () => {
     expect((await s.call("POST", `/api/accounts/${b.memberId}/ban`)).status).toBe(404);
   });
 
+  test("erase on request: the same erasure as a self deletion, no ban row, the number can sign up again, one action row", async () => {
+    const s = await rig();
+    const [a, b] = s.members as [Session, Session];
+    const report = await fileReport(s, a, b);
+    await s.files.store.put(`photos/${b.memberId}.jpg`, new Uint8Array([1]), "image/jpeg");
+    s.t.db.query("UPDATE profile SET photo_key = ? WHERE member_id = ?").run(`photos/${b.memberId}.jpg`, b.memberId);
+    const consents = s.t.db.query("SELECT COUNT(*) AS n FROM consent_record WHERE member_id = ?").get(b.memberId);
+
+    const response = await s.call("POST", `/api/accounts/${b.memberId}/erase`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ memberId: b.memberId, status: "deleted" });
+    expect(getMember(s.t.db, b.memberId)).toMatchObject({ status: "deleted", status_reason: "request", phone_e164: null });
+    expect(s.t.db.query("SELECT COUNT(*) AS n FROM ban_list").get()).toEqual({ n: 0 });
+    expect(banReason(s.t.db, s.t.app.config.banPepper, b.phone)).toBeNull();
+    expect(isPhoneRefused(s.t.db, s.t.app.config.banPepper, b.phone)).toBe(false);
+    expect(await s.files.store.get(`photos/${b.memberId}.jpg`)).toBeNull();
+    expect(s.t.db.query("SELECT COUNT(*) AS n FROM plan WHERE member_id = ?").get(b.memberId)).toEqual({ n: 0 });
+    expect(s.t.db.query("SELECT COUNT(*) AS n FROM profile WHERE member_id = ?").get(b.memberId)).toEqual({ n: 0 });
+    // Consent and the report stay under the tombstone id, as for a self deletion.
+    expect(s.t.db.query("SELECT COUNT(*) AS n FROM consent_record WHERE member_id = ?").get(b.memberId)).toEqual(consents);
+    expect(reportRow(s.t, report)?.subject_id).toBe(b.memberId);
+    expect(actions(s.t, "member_erase_request")).toMatchObject([{ subject_type: "member", subject_id: b.memberId, detail: null }]);
+    expect(actions(s.t, "member_ban")).toHaveLength(0);
+
+    const again = await s.t.signIn(b.phone);
+    const me = await s.t.call("GET", "/me", { token: again.accessToken });
+    expect(me.status).toBe(200);
+    const row = s.t.db.query("SELECT id, status FROM member WHERE phone_e164 = ?").get(b.phone) as { id: string; status: string };
+    expect(row.id).not.toBe(b.memberId);
+    expect(row.status).toBe("active");
+
+    expect((await s.call("POST", `/api/accounts/${b.memberId}/erase`)).status).toBe(404);
+    expect(actions(s.t, "member_erase_request")).toHaveLength(1);
+  });
+
+  test("an account is found by the number on it, written the way the operator typed it, and an erased number finds nobody", async () => {
+    const s = await rig();
+    const b = s.members[1] as Session;
+    const found = await s.call("POST", "/api/accounts/find", { phone: b.phone });
+    expect(found.status).toBe(200);
+    expect(await found.json()).toEqual({ memberId: b.memberId });
+    expect((await s.call("POST", "/api/accounts/find", { phone: b.phone.replace("+91", "+91 ") })).status).toBe(200);
+    expect((await s.call("POST", "/api/accounts/find", { phone: "nonsense" })).status).toBe(400);
+    expect((await s.call("POST", "/api/accounts/find", { phone: b.phone, extra: 1 })).status).toBe(400);
+    expect((await s.call("POST", "/api/accounts/find", { phone: "+12025550177" })).status).toBe(404);
+    await s.call("POST", `/api/accounts/${b.memberId}/erase`);
+    expect((await s.call("POST", "/api/accounts/find", { phone: b.phone })).status).toBe(404);
+  });
+
+  test("erase on request needs no ban pepper", async () => {
+    const s = await rig({ pepper: null });
+    const b = s.members[1] as Session;
+    expect((await s.call("POST", `/api/accounts/${b.memberId}/erase`)).status).toBe(200);
+    expect(getMember(s.t.db, b.memberId)?.status).toBe("deleted");
+  });
+
+  test("the account page shows the erase on request in the actions", async () => {
+    const s = await rig();
+    const b = s.members[1] as Session;
+    await s.call("POST", `/api/accounts/${b.memberId}/erase`);
+    const detail = (await (await s.call("GET", `/api/accounts/${b.memberId}`)).json()) as AccountDetail;
+    expect(detail).toMatchObject({ status: "deleted", statusReason: "request" });
+    expect(detail.actions.map((x) => x.action)).toContain("member_erase_request");
+  });
+
   test("ban without the pepper is 503 and the account is untouched", async () => {
     const s = await rig({ pepper: null });
     const b = s.members[1] as Session;
@@ -472,6 +537,8 @@ describe("admin routes need the token", () => {
       ["GET", `/api/accounts/${b.memberId}`],
       ["POST", `/api/accounts/${b.memberId}/suspend`],
       ["POST", `/api/accounts/${b.memberId}/reinstate`],
+      ["POST", "/api/accounts/find", { phone: b.phone }],
+      ["POST", `/api/accounts/${b.memberId}/erase`],
       ["POST", `/api/accounts/${b.memberId}/ban`],
       ["POST", "/api/bans/lift", { phone: "+12025550100" }],
       ["GET", "/api/notices?status=failed"],
@@ -489,5 +556,6 @@ describe("admin routes need the token", () => {
     const s = await rig();
     expect((await s.call("GET", "/api/bans/lift")).status).toBe(405);
     expect((await s.call("DELETE", "/api/reports")).status).toBe(405);
+    expect((await s.call("GET", "/api/accounts/x/erase")).status).toBe(405);
   });
 });

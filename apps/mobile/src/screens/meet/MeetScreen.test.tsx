@@ -1,14 +1,27 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
-import { groupBeforeRevealFixture, groupFixture, MEET_AT, MEET_CONTEXT, MEMBERS, planFixture, SHOW_STARTS_AT } from "@/api/groupFixtures";
+import {
+  doneGroupFixture,
+  groupBeforeRevealFixture,
+  groupFixture,
+  MEET_AT,
+  MEET_CONTEXT,
+  MEMBERS,
+  planFixture,
+  SHOW_STARTS_AT,
+} from "@/api/groupFixtures";
 import { nativeLocation } from "@/api/locationNative";
 import { showDetailFixture } from "@/api/showFixtures";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
+import { after } from "@/copy/after";
 import { meet as copy } from "@/copy/meet";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
 import { moments } from "@/ui/moments";
 import { MeetScreen } from "./MeetScreen";
+
+const mockTrack = jest.fn();
+jest.mock("@/analytics", () => ({ telemetry: () => ({ start: () => undefined, setConsent: () => undefined, track: mockTrack }) }));
 
 const OPEN = Date.parse(SHOW_STARTS_AT) - 80 * 60_000;
 const EARLY = Date.parse(MEET_AT) - 48 * 60_000;
@@ -48,7 +61,15 @@ const routes = (over: Record<string, RouteReply | RouteReply[]> = {}): Record<st
 });
 
 async function open(over: Record<string, RouteReply | RouteReply[]> = {}) {
-  const props = { onBack: jest.fn(), onOpenShow: jest.fn(), onLeave: jest.fn(), onClosed: jest.fn() };
+  const props = {
+    onBack: jest.fn(),
+    onOpenShow: jest.fn(),
+    onLeave: jest.fn(),
+    onOpenThread: jest.fn(),
+    onReport: jest.fn(),
+    onClosed: jest.fn(),
+    onOpenAfter: jest.fn(),
+  };
   const app = await createTestApp({ me: meFixture({ handle: { state: "approved" } }), welcomeSeen: true, routes: routes(over) });
   await render(
     <AppProviders deps={app.deps}>
@@ -96,6 +117,37 @@ describe("MeetScreen", () => {
     expect(await screen.findByText(copy.closed.title)).toBeOnTheScreen();
   });
 
+  it("leads the closed card to the after-the-show screen once the group is done", async () => {
+    clock.mockReturnValue(Date.parse(SHOW_STARTS_AT) + 25 * 3_600_000);
+    const { onOpenAfter } = await open({ "GET /groups/g1": json(200, doneGroupFixture()) });
+    await fireEvent.press(await screen.findByText(after.open));
+    expect(onOpenAfter).toHaveBeenCalled();
+  });
+
+  it("stops offering the after-the-show screen when the latest read of the group failed, and offers it again when one works", async () => {
+    clock.mockRestore();
+    const closed = Date.parse(SHOW_STARTS_AT) + 25 * 3_600_000;
+    jest.useFakeTimers({ now: closed });
+    try {
+      const { onOpenAfter, ...app } = await open({
+        "GET /groups/g1": [json(200, doneGroupFixture()), json(403, { error: "forbidden" })],
+      });
+      expect(await screen.findByText(after.open)).toBeOnTheScreen();
+      // The next read fails, leaving the copy the phone holds: it may be stale, so it is not enough to offer the screen.
+      await act(async () => jest.advanceTimersByTimeAsync(30_000 + 100));
+      await waitFor(() => expect(screen.queryByText(after.open)).toBeNull());
+      expect(screen.getByText(copy.closed.title)).toBeOnTheScreen();
+      expect(app.transport.callsTo("GET /groups/g1").length).toBeGreaterThan(1);
+      app.transport.set("GET /groups/g1", json(200, doneGroupFixture()));
+      await act(async () => jest.advanceTimersByTimeAsync(30_000 + 100));
+      expect(await screen.findByText(after.open)).toBeOnTheScreen();
+      expect(onOpenAfter).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+      clock = jest.spyOn(Date, "now").mockReturnValue(OPEN);
+    }
+  });
+
   describe("I'm here", () => {
     it("is off before check-in opens and says when it will", async () => {
       clock.mockReturnValue(EARLY);
@@ -110,6 +162,7 @@ describe("MeetScreen", () => {
       const app = await open({ "GET /groups/g1": [json(200, groupFixture()), json(200, checkedIn)] });
       await fireEvent.press(await screen.findByTestId("meet-here"));
       expect(imHere).toHaveBeenCalledTimes(1);
+      expect(mockTrack).toHaveBeenCalledWith("im_here_tapped", { plan_id: MEET_CONTEXT.planId });
       await waitFor(() => expect(app.transport.callsTo("POST /groups/g1/checkin")).toHaveLength(1));
       const [call] = app.transport.callsTo("POST /groups/g1/checkin") as unknown as { body: string }[];
       expect(JSON.parse(call?.body ?? "")).toEqual({});
@@ -185,7 +238,7 @@ describe("MeetScreen", () => {
   it("opens the cafe in the maps app", async () => {
     await open();
     await fireEvent.press(await screen.findByTestId("meet-open-maps"));
-    expect(openURL).toHaveBeenCalledWith(expect.stringMatching(/^geo:17\.4435,78\.3772\?q=/));
+    expect(openURL).toHaveBeenCalledWith("https://www.google.com/maps/search/?api=1&query=17.4435%2C78.3772");
   });
 
   it("opens the show from the show row", async () => {
@@ -195,12 +248,25 @@ describe("MeetScreen", () => {
     expect(onOpenShow).toHaveBeenCalledWith("traffic-jam-tales");
   });
 
+  it("opens the group chat", async () => {
+    const { onOpenThread } = await open();
+    await fireEvent.press(await screen.findByTestId("meet-thread"));
+    expect(onOpenThread).toHaveBeenCalledTimes(1);
+  });
+
   describe("Safety", () => {
     it("calls 112 first", async () => {
       await open();
       await fireEvent.press(await screen.findByTestId("meet-safety"));
       await fireEvent.press(screen.getByTestId("safety-call"));
       expect(openURL).toHaveBeenCalledWith("tel:112");
+    });
+
+    it("reports through the report form", async () => {
+      const { onReport } = await open();
+      await fireEvent.press(await screen.findByTestId("meet-safety"));
+      await fireEvent.press(screen.getByTestId("safety-report"));
+      expect(onReport).toHaveBeenCalledTimes(1);
     });
 
     it("leaves the plan through the plan's own screen", async () => {

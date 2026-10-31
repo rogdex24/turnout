@@ -7,6 +7,12 @@ export function appVariant(): string {
   return typeof variant === "string" ? variant : "production";
 }
 
+/** The variant exactly as the config set it, or undefined where there is none (a test run, Storybook). */
+export function configuredVariant(): string | undefined {
+  const variant = Constants.expoConfig?.extra?.variant;
+  return typeof variant === "string" ? variant : undefined;
+}
+
 /** Dev and e2e builds take a full seed phone number, because the staging server's allowlist holds the seed members. */
 export function allowSeedNumbers(variant: string = appVariant()): boolean {
   return variant === "development" || variant === "e2e";

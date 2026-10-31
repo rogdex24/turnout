@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { deletePickedFile } from "@/api/pickedFiles";
 import { runSave, SaveError } from "@/api/saveProfile";
 import { profile } from "@/copy/profile";
 import { isApiError } from "@/model/apiError";
@@ -31,6 +32,11 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const [errors, setErrors] = useState<ReturnType<typeof problemsToErrors>>({});
   const [saved, setSaved] = useState(false);
 
+  // The prepared file is only needed until the picture is up; it is the person's own face, so it does not stay in the cache.
+  const dropPicked = () => {
+    if (picked) deletePickedFile(picked.uri);
+  };
+
   const save = useMutation({
     mutationFn: (steps: Parameters<typeof runSave>[1]) =>
       runSave(
@@ -48,13 +54,17 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       setFraction(null);
     },
     onSuccess: () => {
+      dropPicked();
       setPicked(null);
       setSaved(true);
     },
     onError: (error) => {
       // A failure after the picture went up leaves it stored, so it is not sent again.
       if (error instanceof SaveError) {
-        if (error.step === "handle") setPicked(null);
+        if (error.step === "handle") {
+          dropPicked();
+          setPicked(null);
+        }
         setErrors(saveErrorToErrors(error, draft));
       } else {
         setErrors({ form: profile.errors.server });
@@ -75,6 +85,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
     try {
       const photo = await choosePhoto();
       if (photo) {
+        dropPicked();
         setPicked(photo);
         setErrors(({ photo: _gone, ...rest }) => rest);
       }

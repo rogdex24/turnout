@@ -1,0 +1,173 @@
+# The You tab and the pages behind it: the handle check state, the women-only switch saving and saving back, the blocked list, the
+# notification status, how matching works, the privacy notice with the WhatsApp (Meta) and banned-only phone hash lines, and the
+# grievance page, which on this server shows "Details not set". Chitra (+12025550104) chose women-only, so the switch goes off and
+# back on and leaves her as it found her. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: settings
+tags:
+  - settings
+env:
+  MEMBER: "+12025550104"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- tapOn: "You"
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+
+# The handle row shows its check state.
+- assertVisible:
+    id: you-social
+# On iOS the row is one element named "Instagram or LinkedIn, Checked", so the state is matched as the end of that name.
+- assertVisible: ".*Checked"
+
+# Women-only: saved at once, in both directions, with the line that says when it applies.
+- assertVisible: "Applies to plans you join from now on."
+# The switch is disabled while the save is in flight, so each tap waits for the expected value with the switch enabled again. Chitra
+# starts with it on: the first tap turns it off, the second puts it back.
+- tapOn:
+    id: you-women-only
+- extendedWaitUntil:
+    visible:
+      id: you-women-only
+      checked: false
+      enabled: true
+    timeout: 10000
+- assertNotVisible:
+    id: you-women-only-error
+- tapOn:
+    id: you-women-only
+- extendedWaitUntil:
+    visible:
+      id: you-women-only
+      checked: true
+      enabled: true
+    timeout: 10000
+- assertNotVisible:
+    id: you-women-only-error
+- assertVisible:
+    id: you-women-only
+    checked: true
+
+# Blocked people: a list to look at.
+# Each You row is scrolled to the middle: on iOS the tab bar floats over the bottom of the list, and Maestro calls a row under it
+# visible, so a tap there lands on the bar.
+- scrollUntilVisible:
+    element:
+      id: you-blocked
+    centerElement: true
+- tapOn:
+    id: you-blocked
+- extendedWaitUntil:
+    visible:
+      id: settings-blocked
+    timeout: 10000
+- assertVisible: "Blocked people"
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
+# Safety and 112: the 112 button comes first. The flow does not tap it, so nothing dials.
+- scrollUntilVisible:
+    element:
+      id: you-safety
+    centerElement: true
+- tapOn:
+    id: you-safety
+- extendedWaitUntil:
+    visible:
+      id: settings-safety
+    timeout: 10000
+- assertVisible:
+    id: safety-call-112
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
+# Notifications: where the phone's permission stands. The row sits above Blocked and Safety, so on a small screen it is
+# already scrolled off the top here.
+- scrollUntilVisible:
+    element:
+      id: you-notifications
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: you-notifications
+- extendedWaitUntil:
+    visible:
+      id: settings-notifications
+    timeout: 10000
+- assertVisible:
+    id: notifications-status
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
+# How matching works.
+- scrollUntilVisible:
+    element:
+      id: you-how-matching
+    centerElement: true
+- tapOn:
+    id: you-how-matching
+- extendedWaitUntil:
+    visible:
+      id: settings-how-matching
+    timeout: 10000
+- assertVisible: "How matching works"
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
+# Privacy notice: the version, the WhatsApp (Meta) line and the banned-only phone hash line.
+- scrollUntilVisible:
+    element:
+      id: you-privacy
+    centerElement: true
+- tapOn:
+    id: you-privacy
+- extendedWaitUntil:
+    visible:
+      id: settings-privacy
+    timeout: 10000
+- assertVisible:
+    id: privacy-version
+- scrollUntilVisible:
+    element:
+      text: ".*WhatsApp, a service of Meta.*"
+- assertVisible: ".*If you are banned, we keep a one-way scrambled form of your phone number.*"
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
+# Grievance officer: the e2e server has no details set, so the page says so.
+- scrollUntilVisible:
+    element:
+      id: you-grievance
+    centerElement: true
+- tapOn:
+    id: you-grievance
+- extendedWaitUntil:
+    visible:
+      id: settings-grievance
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: grievance-not-set
+    timeout: 15000
+- assertVisible: "Details not set"
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you

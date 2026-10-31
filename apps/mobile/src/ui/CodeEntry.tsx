@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { Pressable, TextInput, type TextInputInstance, View } from "react-native";
+import { AutoFocusContext } from "./autoFocus";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
 
@@ -33,6 +34,7 @@ export function CodeEntry({
 }: CodeEntryProps) {
   const input = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
+  const focusAllowed = useContext(AutoFocusContext);
   const digits = value.replace(/\D/g, "").slice(0, length);
   const next = Math.min(digits.length, length - 1);
 
@@ -51,7 +53,7 @@ export function CodeEntry({
             key={i}
             testID={testID ? `${testID}-box-${i}` : undefined}
             className={cn(
-              "h-16 flex-1 items-center justify-center rounded-field border bg-surface",
+              "min-h-16 flex-1 items-center justify-center rounded-field border bg-surface",
               focused && editable && i === next ? "border-ink" : "border-outline",
             )}
           >
@@ -67,7 +69,7 @@ export function CodeEntry({
         value={digits}
         onChangeText={(text) => onChangeText(text.replace(/\D/g, "").slice(0, length))}
         editable={editable}
-        autoFocus={autoFocus}
+        autoFocus={autoFocus && focusAllowed}
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="sms-otp"
@@ -78,6 +80,10 @@ export function CodeEntry({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         underlineColorAndroid="transparent"
+        // The field only collects digits for the boxes above. At the largest text size Android drew its value through the
+        // boxes: NativeWind's text-transparent did not reach the native text color, so the style sets it and the size stays fixed.
+        allowFontScaling={false}
+        style={{ color: "transparent" }}
         // See-through rather than at zero opacity: iOS and Android leave a view at alpha 0 out of the accessibility tree, so
         // VoiceOver, TalkBack and the Maestro flows could not reach the field.
         className="absolute inset-0 bg-transparent text-transparent"

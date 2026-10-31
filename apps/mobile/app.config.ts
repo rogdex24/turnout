@@ -3,6 +3,7 @@ import { colors } from "@turnout/design-tokens/tokens";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import { androidIntentFilters, resolveLinkHost } from "./config/appLinks.ts";
 import { FONT_FAMILIES } from "./config/fonts.ts";
+import { withNoDataExtraction } from "./config/noDataExtraction.ts";
 import { assertReleaseEnv, parseVariant, resolveApiUrls, resolveMapsKey, VARIANT_CONFIG } from "./config/variants.ts";
 
 /** Font paths relative to the app folder, so the EAS fingerprint does not depend on where the repo is checked out. */
@@ -49,6 +50,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: v.bundleId,
+      // Nothing on the phone should be restored onto another one (withNoDataExtraction below covers the device transfer): the cache key lives in the keystore and cannot follow it, so a
+      // restored cache file would be noise, and the small facts in prefs (whose cache this is) should not follow either.
+      allowBackup: false,
+      // The photo and the ticket come from system pickers, which hand over one file with no storage permission. The libraries add the old
+      // shared storage permissions up to Android 12 anyway, so they are removed: the app never reads or writes shared storage.
+      // The Expo template also asks to draw over other apps, which only the development overlay needs, so release builds drop it.
+      blockedPermissions: [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        ...(variant === "preview" || variant === "production" ? ["android.permission.SYSTEM_ALERT_WINDOW"] : []),
+      ],
       ...(intentFilters.length > 0 ? { intentFilters } : {}),
       ...(env.GOOGLE_SERVICES_JSON ? { googleServicesFile: env.GOOGLE_SERVICES_JSON } : {}),
       ...(mapsKey ? { config: { googleMaps: { apiKey: mapsKey } } } : {}),
@@ -69,6 +81,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       "expo-secure-store",
+      // allowBackup above stops cloud backup only; this also stops the device-to-device transfer from Android 12.
+      withNoDataExtraction,
       "expo-image",
       // The profile photo comes from the system picker, which needs no permission on Android. No camera and no microphone: both are blocked.
       [

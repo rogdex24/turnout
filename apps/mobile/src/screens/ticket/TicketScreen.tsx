@@ -3,6 +3,7 @@ import { CalendarX } from "phosphor-react-native";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { queryKeys } from "@/api/keys";
 import { permissionChanged } from "@/api/notifications";
+import { deletePickedFile } from "@/api/pickedFiles";
 import { memberShowQuery, planDetailQuery, putTicket } from "@/api/plans";
 import { markTicketAsked, ticketAsked } from "@/api/prefs";
 import { ticket as copy } from "@/copy/ticket";
@@ -71,7 +72,9 @@ export function TicketScreen({ planId, onBack, onLater, onDone, onPlan }: Ticket
       setProgress(0);
       return putTicket(api, planId, blob, (sent, total) => setProgress(uploadProgress(sent, total)));
     },
-    onSuccess: (updated) => {
+    onSuccess: (updated, sent) => {
+      // The ticket is up; the copy the picker made in the cache is the person's own proof, so it does not stay.
+      deletePickedFile(sent.uri);
       queryClient.setQueryData(queryKeys.planDetail(planId), updated);
       void queryClient.invalidateQueries({ queryKey: queryKeys.plansList() });
       setFile(null);

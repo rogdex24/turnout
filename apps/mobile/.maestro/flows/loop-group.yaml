@@ -29,6 +29,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -40,6 +41,7 @@ env:
       DECISION: approve
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
     timeout: 80000
@@ -56,6 +58,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: "+12025550106,+12025550107,+12025550108"
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*Group confirmed.*"
     timeout: 80000
@@ -66,12 +69,10 @@ env:
 
 # Before the names open nobody is named on the plan, the Plans tab or Home.
 - assertNotVisible: ".*(Esha|Farid|Gita).*"
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: plans
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: plans
 - assertVisible: ".*Group confirmed.*"
 - assertNotVisible: ".*(Esha|Farid|Gita).*"
 
@@ -86,6 +87,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -97,6 +99,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -108,6 +111,7 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""
 - runFlow:
     file: ../subflows/operator.yaml
     env:
@@ -119,3 +123,4 @@ env:
       DECISION: ""
       REASON: ""
       PHONES: ""
+      TEXT: ""

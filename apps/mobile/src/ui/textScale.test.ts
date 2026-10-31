@@ -9,6 +9,14 @@ describe("scaleFor", () => {
     expect(scaleFor("label", 2)).toBe(1.3);
   });
 
+  // The largest iOS text size is about 3.1 for body text. Past 2 one message filled the thread and the phone field hid its +91.
+  it("stops every style at 2, the largest text size the stories check", () => {
+    for (const token of ["title", "body", "meta", "control", "display"] as const) {
+      expect(scaleFor(token, 3.1)).toBeLessThanOrEqual(LARGEST_TEXT_SCALE);
+    }
+    expect(scaleFor("body", 3.1)).toBe(2);
+  });
+
   it("holds the display faces still", () => {
     expect(scaleFor("display-hero", 2)).toBe(1);
     expect(scaleFor("display-band", 2)).toBe(1);
@@ -44,6 +52,25 @@ describe("fitDisplaySize", () => {
 
   it("falls back to the minimum when one word cannot fit", () => {
     expect(fitDisplaySize("Supercalifragilisticexpialidocious", 80, "display-poster", 3)).toBe(poster.minFontSize);
+  });
+
+  it("shrinks a title whose lines would be taller than the box", () => {
+    // Across 296 "The Monsoon Theory" takes three lines at 70, which are 189 tall. At 46 it takes two, which are 82.8 tall.
+    expect(fitDisplaySize("The Monsoon Theory", 296, "display-poster", 3)).toBe(poster.maxFontSize);
+    expect(fitDisplaySize("The Monsoon Theory", 296, "display-poster", 3, 112)).toBe(46);
+  });
+
+  it("counts a glyph at 0.58 of its size, so a title that wraps one line too many does not pass as fitting", () => {
+    // 10 glyphs at 50 are 290 wide, which fits 296. At the old 0.42 share these 12 glyphs would have passed at 50 (252 wide), though they are 348 wide.
+    expect(fitDisplaySize("ABCDEFGHIJ", 296, "display-poster", 1)).toBe(50);
+    expect(fitDisplaySize("ABCDEFGHIJKL", 296, "display-poster", 1)).toBe(42);
+  });
+
+  it("lets a word wider than the box break across lines instead of giving up", () => {
+    // 34 letters take two lines at 36 across 296 (14 fit a line at 0.58), so a three-line title keeps a size above the minimum.
+    const word = "Supercalifragilisticexpialidocious";
+    expect(fitDisplaySize(word, 296, "display-poster", 3)).toBeGreaterThan(poster.minFontSize);
+    expect(fitDisplaySize(word, 296, "display-poster", 1)).toBe(poster.minFontSize);
   });
 
   it("allows more room when more lines are allowed", () => {

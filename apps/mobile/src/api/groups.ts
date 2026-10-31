@@ -13,6 +13,7 @@ import type { ApiClient } from "./client";
 import { queryKeys } from "./keys";
 import { mutationKey, type Replayable, registerReplayable } from "./mutations";
 import { fetchPlans } from "./plans";
+import { retryTransient } from "./retry";
 import { fetchShow } from "./shows";
 
 /** The plan that holds this group, or null when the list does not have it (not loaded yet, or the plan is gone). */
@@ -82,13 +83,7 @@ export function sendCheckin(api: ApiClient) {
 
 /** Lets a check-in made without a network be sent after a restart, once the phone is back online. */
 export function registerCheckin(queryClient: QueryClient, api: ApiClient): void {
-  registerReplayable<CheckinVariables>(queryClient, "checkin", sendCheckin(api), retryCheckin);
-}
-
-/** A refusal (outside the check-in window, not in the group) will not change on a second try, so only a bad connection or a busy server is retried. */
-export function retryCheckin(failureCount: number, error: unknown): boolean {
-  if (failureCount >= 3) return false;
-  return !isApiError(error) || error.kind === "offline" || error.kind === "server" || error.kind === "rate_limited";
+  registerReplayable<CheckinVariables>(queryClient, "checkin", sendCheckin(api), retryTransient);
 }
 
 export const checkinMutationKey = mutationKey("checkin");

@@ -10,15 +10,15 @@ import { Text } from "./Text";
 const button = cva("items-center justify-center rounded-pill px-6", {
   variants: {
     variant: {
-      primary: "h-14 bg-primary",
-      secondary: "h-12 border border-outline bg-transparent",
+      primary: "min-h-14 bg-primary py-2",
+      secondary: "min-h-12 border border-outline bg-transparent py-1.5",
     },
     disabled: { true: "opacity-40", false: "" },
   },
   defaultVariants: { variant: "primary", disabled: false },
 });
 
-const label = cva("", {
+const label = cva("shrink text-center", {
   variants: { variant: { primary: "text-on-primary", secondary: "text-ink" } },
   defaultVariants: { variant: "primary" },
 });
@@ -34,7 +34,7 @@ export interface ButtonProps extends Omit<PressableProps, "children" | "disabled
   className?: string;
 }
 
-/** The pill button: 56 dp tall when primary, 48 when secondary, shrinks a little while pressed. */
+/** The pill button: at least 56 dp tall when primary and 48 when secondary (it grows when a large text size wraps the label), shrinks a little while pressed. */
 export function Button({ title, variant, className, disabled, loading = false, icon, style, ...rest }: ButtonProps) {
   const colors = useColors();
   const off = !!disabled || loading;
@@ -48,7 +48,7 @@ export function Button({ title, variant, className, disabled, loading = false, i
       style={(state) => [scaleOnPress(state), resolveStyle(style, state)]}
       {...rest}
     >
-      <View className="flex-row items-center justify-center gap-2">
+      <View className="shrink flex-row items-center justify-center gap-2">
         {loading ? <ActivityIndicator color={variant === "secondary" ? colors.ink : colors.onPrimary} /> : null}
         {icon && !loading ? <Icon icon={icon} size="sm" tone={variant === "secondary" ? "ink" : "onPrimary"} /> : null}
         <Text variant="control" className={label({ variant })}>

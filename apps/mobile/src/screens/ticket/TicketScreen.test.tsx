@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { queryKeys } from "@/api/keys";
+import { deletePickedFile } from "@/api/pickedFiles";
 import { ticketAsked } from "@/api/prefs";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
 import { common } from "@/copy/common";
@@ -14,10 +15,12 @@ import { chooseTicket, readTicket } from "./ticketPicker";
 
 jest.mock("./ticketPicker", () => ({ chooseTicket: jest.fn(), readTicket: jest.fn() }));
 jest.mock("./askNotifications", () => ({ askNotifications: jest.fn() }));
+jest.mock("@/api/pickedFiles", () => ({ deletePickedFile: jest.fn() }));
 
 const choose = jest.mocked(chooseTicket);
 const read = jest.mocked(readTicket);
 const ask = jest.mocked(askNotifications);
+const deleteFile = jest.mocked(deletePickedFile);
 
 const shot: PickedTicket = { uri: "file:///cache/shot.png", name: "shot.png", mime: "image/png", bytes: 120_000 };
 
@@ -25,6 +28,7 @@ beforeEach(() => {
   choose.mockReset();
   read.mockReset().mockResolvedValue(new Blob(["png"]));
   ask.mockReset().mockResolvedValue(true);
+  deleteFile.mockReset();
 });
 afterEach(() => clearTestClients());
 
@@ -76,6 +80,24 @@ describe("TicketScreen", () => {
     const [call] = app.transport.callsTo(`PUT /plans/${plan.id}/ticket`) as unknown as { body: unknown }[];
     expect(call?.body).toBeInstanceOf(Blob);
     expect(app.queryClient.getQueryData(queryKeys.planDetail(plan.id))).toEqual(checking);
+  });
+
+  it("deletes the picked file once it is up, and keeps it while the server refuses it", async () => {
+    const plan = PLANS.needs_ticket;
+    const checking = { ...PLANS.checking_ticket, id: plan.id };
+    await open(plan, {
+      [`PUT /plans/${plan.id}/ticket`]: [json(400, { error: { code: "bad_ticket", message: "x" } }), json(200, checking)],
+    });
+    await pickAndSend();
+    await screen.findByText(copy.problems.bad_ticket);
+    expect(deleteFile).not.toHaveBeenCalled();
+    const other = { ...shot, uri: "file:///cache/other.png", name: "other.png" };
+    choose.mockResolvedValue(other);
+    await fireEvent.press(screen.getByTestId("ticket-another"));
+    await fireEvent.press(await screen.findByTestId("ticket-send"));
+    expect(await screen.findByText(copy.checking.title)).toBeOnTheScreen();
+    expect(deleteFile).toHaveBeenCalledTimes(1);
+    expect(deleteFile).toHaveBeenCalledWith(other.uri);
   });
 
   it("asks about notifications once, after the first ticket, and only asks the system when told yes", async () => {

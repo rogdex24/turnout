@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { MeResponse } from "@turnout/contract/app/me";
 import { queryKeys } from "@/api/keys";
 import { goExplained } from "@/api/prefs";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
+import { common } from "@/copy/common";
 import { go } from "@/copy/go";
 import { planFixture } from "@/model/planFixtures";
 import { AppProviders } from "@/providers/AppProviders";
@@ -28,6 +29,13 @@ async function open(me: MeResponse, routes: Record<string, RouteReply | RouteRep
 }
 
 describe("GoScreen", () => {
+  it("puts the go-sheet id on the sheet panel, which holds the actions, for a man too", async () => {
+    // Maestro skips a view with no size, and for a man the sheet has no group type to choose, so its own content is empty.
+    await open(meFixture({ profile: { gender: "man" } }));
+    expect(screen.queryByTestId("go-open")).toBeNull();
+    expect(within(screen.getByTestId("go-sheet")).getByTestId("go-next")).toBeTruthy();
+  });
+
   it("makes the plan and goes on to the ticket", async () => {
     const plan = planFixture();
     const app = await open(meFixture(), { "POST /plans": json(201, plan) });
@@ -115,5 +123,23 @@ describe("GoScreen", () => {
     await fireEvent.press(screen.getByTestId("go-not-now"));
     expect(app.onClose).toHaveBeenCalled();
     expect(app.transport.callsTo("POST /plans")).toHaveLength(0);
+  });
+
+  it("tells a stopped member that grouping has stopped, instead of offering Go", async () => {
+    const stopped = meFixture({ status: "stopped" });
+    const app = await open({ ...stopped, matchable: { ok: false, missing: ["account"] } });
+    expect(screen.getByText(common.groupingStopped)).toBeOnTheScreen();
+    expect(screen.queryByTestId("go-next")).toBeNull();
+    expect(screen.queryByTestId("go-open")).toBeNull();
+    expect(screen.queryByText(go.explain)).toBeNull();
+    expect(screen.queryByText(go.missing.items.account, { exact: false })).toBeNull();
+    await fireEvent.press(screen.getByTestId("go-not-now"));
+    expect(app.onClose).toHaveBeenCalled();
+    expect(app.transport.callsTo("POST /plans")).toHaveLength(0);
+  });
+
+  it("does not show the stopped line to an active member", async () => {
+    await open(meFixture());
+    expect(screen.queryByText(common.groupingStopped)).toBeNull();
   });
 });

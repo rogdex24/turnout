@@ -17,6 +17,12 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 
 # The sheet, and Stay: the plan is as it was.
+# At the real type sizes the Leave row is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: plan-leave
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: plan-leave
 - extendedWaitUntil:
@@ -25,6 +31,8 @@ env:
     timeout: 10000
 - assertVisible: "Leave this plan?"
 - assertVisible: ".*Your BookMyShow ticket isn't affected.*"
+# The sheet springs open. A tap while it moves can miss Stay, which left the sheet open on android-large.
+- waitForAnimationToEnd
 - tapOn:
     id: cancel-stay
 - assertNotVisible:
@@ -33,12 +41,18 @@ env:
     id: plan-add-ticket
 
 # Leave plan: the plan ends, and the page offers the next show instead of an empty screen.
+- scrollUntilVisible:
+    element:
+      id: plan-leave
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: plan-leave
 - extendedWaitUntil:
     visible:
       id: cancel-sheet
     timeout: 10000
+- waitForAnimationToEnd
 - tapOn:
     id: cancel-confirm
 - extendedWaitUntil:

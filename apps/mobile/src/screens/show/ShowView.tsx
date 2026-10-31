@@ -36,10 +36,14 @@ export interface ShowViewProps {
   onBack: () => void;
   onRetry: () => void;
   onSeeShows: () => void;
-  /** Opens a web address in the browser: the ticket page or the listing. */
+  /** Opens a web address in the browser: the listing. */
   onOpenLink: (url: string) => void;
+  /** Opens the ticket page in the browser. Kept apart from `onOpenLink` so the screen can count the tap. */
+  onBuy: (url: string) => void;
   /** Starts a group for this show. Only called when groups are enabled. */
   onGo: (publicId: string) => void;
+  /** Every tap on Go, whether groups are on or not, so the screen can count it. */
+  onGoTapped: () => void;
 }
 
 const BULBS = Array.from({ length: 28 }, (_, index) => `bulb-${index}`);
@@ -112,7 +116,7 @@ function Facts({ show }: { show: ApiEvent }) {
 }
 
 /** The ticket stub: venue and price over a dashed tear line, then the buy link, which opens in the browser. */
-function TicketStub({ show, onOpenLink }: { show: ApiEvent; onOpenLink: (url: string) => void }) {
+function TicketStub({ show, onBuy }: { show: ApiEvent; onBuy: (url: string) => void }) {
   const ticketUrl = safeWebUrl(show.ticket_url);
   const source = show.source.name;
   return (
@@ -132,7 +136,7 @@ function TicketStub({ show, onOpenLink }: { show: ApiEvent; onOpenLink: (url: st
               title={source ? copy.buy(source) : copy.buyFallback}
               accessibilityLabel={source ? copy.buyLabel(source) : copy.buyLabelFallback}
               icon={ArrowSquareOut}
-              onPress={() => onOpenLink(ticketUrl)}
+              onPress={() => onBuy(ticketUrl)}
               testID="show-buy"
             />
           </View>
@@ -205,7 +209,11 @@ function ReadyShow({ show, ...props }: ShowViewProps & { show: ApiEvent }) {
   const insets = useSafeAreaInsets();
   const [comingSoon, setComingSoon] = useState(false);
   const eligible = show.group_eligible;
-  const onGo = () => (props.groupsEnabled ? props.onGo(show.id) : setComingSoon(true));
+  const onGo = () => {
+    props.onGoTapped();
+    if (props.groupsEnabled) props.onGo(show.id);
+    else setComingSoon(true);
+  };
   return (
     <View className="flex-1 bg-bg">
       <ScrollView contentContainerClassName="pb-6">
@@ -217,7 +225,7 @@ function ReadyShow({ show, ...props }: ShowViewProps & { show: ApiEvent }) {
         </View>
         <Marquee when={formatShowWhen(show.starts_at_local).toUpperCase()} />
         <View className="px-4 pt-3.5">
-          <TicketStub show={show} onOpenLink={props.onOpenLink} />
+          <TicketStub show={show} onBuy={props.onBuy} />
           <Looking count={props.lookingCount} />
           <View className="mt-3.5">
             <Text variant="title" accessibilityRole="header">
@@ -240,7 +248,7 @@ function ReadyShow({ show, ...props }: ShowViewProps & { show: ApiEvent }) {
           testID="show-go"
         />
         {eligible ? null : (
-          <Text variant="meta" className="mt-2 text-center text-muted" testID="show-go-reason">
+          <Text variant="meta" maxFontSizeMultiplier={1.6} className="mt-2 text-center text-muted" testID="show-go-reason">
             {copy.goOff.notEligible}
           </Text>
         )}

@@ -21,9 +21,16 @@ env:
 - tapOn:
     id: welcome-next
 - assertVisible: ".*2 of 3"
-- swipe:
-    direction: LEFT
-- assertVisible: ".*3 of 3"
+# On iOS in run 41084310971 the swipe landed and the pager stayed on 2 of 3, so the swipe goes again when 3 of 3 does not come.
+# A swipe on the last page does nothing, so a late first swipe cannot go past it.
+- retry:
+    maxRetries: 2
+    commands:
+      - swipe:
+          direction: LEFT
+      - extendedWaitUntil:
+          visible: ".*3 of 3"
+          timeout: 5000
 - assertVisible: "Get started"
 - tapOn:
     id: welcome-next
@@ -33,8 +40,11 @@ env:
     timeout: 10000
 # The notice shows the grievance officer's block from the server, and Agree waits for it.
 - assertVisible: "How we use your details"
+# The loading line can sit below the fold at the real type sizes, so wait on the button: it is enabled once the details are in.
 - extendedWaitUntil:
-    notVisible: "Loading the grievance officer's details"
+    visible:
+      id: agree
+      enabled: true
     timeout: 15000
 - tapOn:
     id: agree
@@ -73,26 +83,62 @@ env:
 - assertVisible: "Enter your first name."
 - assertVisible: "Choose one."
 - assertVisible: "Add a photo of your face to continue."
-- assertVisible: "Add your Instagram or LinkedIn."
+# At the real type sizes the form is longer than a small screen, so the last error line is below the fold.
+- scrollUntilVisible:
+    element: "Add your Instagram or LinkedIn."
+    direction: DOWN
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: first-name
+    direction: UP
+    centerElement: true
 
-# The women-only switch appears for women and goes away for men.
+# The women-only switch appears for women and goes away for men. The error lines make the form longer than a small screen, and the
+# keyboard covers the lower half, so the flow closes the keyboard and scrolls to each control before it uses it.
 - tapOn:
     id: first-name
 - inputText: "Ananya"
+# hideKeyboard fails on some iOS keyboards. A single-line field blurs on submit, so the return key closes the keyboard instead.
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: gender-woman
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: gender-woman
-- assertVisible:
-    id: women-only
+- scrollUntilVisible:
+    element:
+      id: women-only
+    direction: DOWN
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: gender-man
+    direction: UP
+    centerElement: true
 - tapOn:
     id: gender-man
 - assertNotVisible:
     id: women-only
 - tapOn:
     id: gender-woman
+- scrollUntilVisible:
+    element:
+      id: handle
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: handle
 - inputText: "https://www.instagram.com/ananya.k/"
-- assertVisible: "So we can check you're a real person. Others in your group never see it."
+- pressKey: Enter
+- scrollUntilVisible:
+    element: "So we can check you're a real person. Others in your group never see it."
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: save
-- assertVisible: "Add a photo of your face to continue."
+- scrollUntilVisible:
+    element: "Add a photo of your face to continue."
+    direction: UP

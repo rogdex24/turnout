@@ -46,6 +46,23 @@ describe("with consent", () => {
     expect(h.makeSentry).toHaveBeenCalledTimes(2);
   });
 
+  it("sends app_opened once per launch, at the start the saved choice allows", () => {
+    const h = harness();
+    h.telemetry.setConsent(true);
+    expect(h.client.capture).not.toHaveBeenCalled();
+    const again = createTelemetry({ config: { posthogKey: "k" }, prefs: h.prefs, makeClient: h.makeClient, makeSentry: h.makeSentry });
+    again.start();
+    again.start();
+    expect(h.client.capture.mock.calls).toEqual([["app_opened", {}]]);
+  });
+
+  it("sends no app_opened at start without consent", () => {
+    const h = harness();
+    h.telemetry.start();
+    h.telemetry.setConsent(true);
+    expect(h.client.capture).not.toHaveBeenCalled();
+  });
+
   it("drops an event that carries a location, handle or person", () => {
     const h = harness();
     h.telemetry.setConsent(true);

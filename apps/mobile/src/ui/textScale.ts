@@ -36,18 +36,29 @@ export function scaledMetrics(token: TypographyToken, scale: number): { fontSize
   return { fontSize: fontSize * k, lineHeight: lineHeight * k };
 }
 
-/** Rough width of a Big Shoulders Display glyph as a share of its size. The face is condensed, so this is well under 1. */
-const GLYPH_WIDTH = 0.42;
+/**
+ * Width of a Big Shoulders Display glyph as a share of its size, measured on uppercase poster titles at 800 weight. The face is
+ * condensed, so this is well under 1. Too small a value says a title fits when it wraps onto an extra line and is cut off.
+ */
+const GLYPH_WIDTH = 0.58;
 
 /**
  * The size for a display-face string inside a fixed box: the largest size in the face's range for which the text wraps to at most
- * `maxLines` lines. Display text does not follow the system text size, so the box and this size are the same for everyone.
+ * `maxLines` lines and, when `boxHeight` is given, those lines fit in that height. Display text does not follow the system text
+ * size, but a label under it does, so the height left for the title shrinks as the text size grows.
  */
-export function fitDisplaySize(text: string, boxWidth: number, face: keyof typeof displayFaces, maxLines: number): number {
-  const { minFontSize, maxFontSize } = displayFaces[face];
+export function fitDisplaySize(
+  text: string,
+  boxWidth: number,
+  face: keyof typeof displayFaces,
+  maxLines: number,
+  boxHeight = Number.POSITIVE_INFINITY,
+): number {
+  const { minFontSize, maxFontSize, lineHeightRatio } = displayFaces[face];
   const words = text.trim().split(/\s+/).filter(Boolean);
   for (let size = maxFontSize; size > minFontSize; size -= 2) {
-    if (linesNeeded(words, boxWidth, size) <= maxLines) return size;
+    const lines = linesNeeded(words, boxWidth, size);
+    if (lines <= maxLines && lines * size * lineHeightRatio <= boxHeight) return size;
   }
   return minFontSize;
 }
@@ -65,12 +76,15 @@ function linesNeeded(words: string[], boxWidth: number, size: number): number {
   let lines = 1;
   let used = 0;
   for (const word of words) {
-    if (word.length > perLine) return Number.POSITIVE_INFINITY;
     const needed = used === 0 ? word.length : used + 1 + word.length;
     if (needed <= perLine) used = needed;
-    else {
+    else if (word.length <= perLine) {
       lines += 1;
       used = word.length;
+    } else {
+      // A word wider than the box breaks across lines, so it costs as many as its length needs.
+      lines += used === 0 ? Math.ceil(word.length / perLine) - 1 : Math.ceil(word.length / perLine);
+      used = word.length % perLine || perLine;
     }
   }
   return lines;

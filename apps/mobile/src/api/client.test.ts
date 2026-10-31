@@ -33,6 +33,12 @@ test("builds app and origin urls with an encoded query", () => {
   );
 });
 
+test("asks for a fresh answer, so the platform HTTP cache cannot answer for the server", async () => {
+  const { client, calls } = setup([json(200, { ok: true })]);
+  await client.request({ root: "origin", path: "/api/events", schema, auth: false });
+  expect(calls[0]?.headers["cache-control"]).toBe("no-cache");
+});
+
 test("sends the bearer token and parses the answer", async () => {
   const { client, calls } = setup([json(200, { ok: true })]);
   await expect(client.request({ path: "/me", schema })).resolves.toEqual({ ok: true });

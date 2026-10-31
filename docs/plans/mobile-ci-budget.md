@@ -84,6 +84,6 @@ The repo is public, so standard runners are free. The limits that matter:
 | Runners | Standard only (`ubuntu-latest` with KVM for Android, `macos-latest` for iOS) | No larger runners, which are billed |
 
 Controls from F19 and F20: caches for native builds by fingerprint, `fetchexclude` for LFS,
-one automatic re-run only, and a flow that is flaky more than 1 run in 10 in a week is fixed
+no automatic re-run of the flows inside a device job (a failed job is re-run whole, on a fresh server; a visual capture with no shot is taken again on its own, up to twice, because the stories read no seeded data), and a flow that is flaky more than 1 run in 10 in a week is fixed
 or quarantined that week. Software emulation on Linux and required device jobs can block
 merges, which is why `ci-gate` is the single required check and the fix-or-quarantine rule exists.

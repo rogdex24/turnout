@@ -3,7 +3,9 @@ import { z } from "zod";
 import { normalizePhone } from "../../social/model/phone.js";
 import type { Route } from "../context.js";
 import { invalidRequest, notFound } from "../errors.js";
-import { ok, parseBody } from "../http.js";
+import { ok, parseBody, readBytes } from "../http.js";
+import { sinkFor } from "../posthogSink.js";
+import { clearLimits } from "../rateLimit.js";
 import { runTickerPass } from "../ticker.js";
 import type { FakeOtpSender } from "../vendors/otpSender.js";
 
@@ -34,9 +36,19 @@ function tokenMatches(given: string | null, expected: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
+/** The most a capture post may hold, as sent (the sink caps it again once unzipped). */
+const CAPTURE_MAX_BYTES = 256 * 1024;
+/** The longest a read of the captured events may hold the request open, waiting for the events a flow expects. */
+const EVENTS_MAX_WAIT_MS = 8000;
+
+function requireToken(app: { config: { stagingTestToken: string | null } }, request: Request): void {
+  const token = app.config.stagingTestToken;
+  if (token === null || !tokenMatches(request.headers.get(TEST_TOKEN_HEADER), token)) throw notFound();
+}
+
 /**
- * Routes for the end-to-end tests on a staging server: read the last sign-in code for a number (no WhatsApp in staging) and move
- * the server's clock. They exist only outside production, only with `STAGING_TEST_TOKEN` set, and answer 404 without it.
+ * Routes for the end-to-end tests on a staging server: read the last sign-in code for a number (no WhatsApp in staging), move
+ * the server's clock, empty the rate limits and keep the analytics events the e2e build sends. They exist only outside production, only with `STAGING_TEST_TOKEN` set, and answer 404 without it.
  * `appRoutes` leaves them out of the route table in production, so there is nothing to find.
  */
 export const testOnlyRoutes: Route[] = [
@@ -71,6 +83,58 @@ export const testOnlyRoutes: Route[] = [
       if (body.advanceMs !== undefined) app.adjustClock.advance(body.advanceMs);
       if (body.tick) await runTickerPass(app, "test-clock");
       return ok({ now: app.adjustClock().toISOString() });
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/__test/limits",
+    auth: "none",
+    // The device job runs the flows a second time on the same server when the first run fails, and the sign-in flows would then
+    // hit the per phone limit. Each run starts by emptying the limits.
+    handler: async ({ app, request }) => {
+      const token = app.config.stagingTestToken;
+      if (token === null || !tokenMatches(request.headers.get(TEST_TOKEN_HEADER), token)) throw notFound();
+      clearLimits(app.db);
+      return ok({});
+    },
+  },
+  // A stand-in for PostHog in the e2e build, whose host is this path (the SDK adds `/batch/`). The app cannot send the test token, which
+  // is new for every run, so a post is taken on the build's own project key instead (see E2E_POSTHOG_KEY) and only these routes' existence
+  // depends on the token. Reading and emptying what was kept need the token like every other route here.
+  ...["batch", "capture", "e"].map(
+    (name): Route => ({
+      method: "POST",
+      pattern: `/__test/posthog/${name}`,
+      auth: "none",
+      handler: async ({ app, request, now }) => {
+        const body = await readBytes(request, CAPTURE_MAX_BYTES);
+        sinkFor(app).ingest(body, request.headers.get("content-encoding"), now);
+        return ok({ status: 1 });
+      },
+    }),
+  ),
+  {
+    method: "GET",
+    pattern: "/__test/posthog/events",
+    auth: "none",
+    // `until` is a comma list of event names; the answer comes as soon as they have all arrived in that order, or after `waitMs`
+    // (the SDK sends in batches every 10 s). `matched` says which.
+    handler: async ({ app, request, url }) => {
+      requireToken(app, request);
+      const until = (url.searchParams.get("until") ?? "").split(",").filter(Boolean);
+      const waitMs = Math.min(Math.max(Number(url.searchParams.get("waitMs") ?? 0) || 0, 0), EVENTS_MAX_WAIT_MS);
+      const { events, matched } = await sinkFor(app).waitFor(until, waitMs);
+      return ok({ events, matched });
+    },
+  },
+  {
+    method: "POST",
+    pattern: "/__test/posthog/reset",
+    auth: "none",
+    handler: async ({ app, request }) => {
+      requireToken(app, request);
+      sinkFor(app).clear();
+      return ok({});
     },
   },
 ];

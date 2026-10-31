@@ -1,5 +1,6 @@
 import { dehydrate, MutationObserver, type QueryClient } from "@tanstack/react-query";
 import type { PersistedClient } from "@tanstack/react-query-persist-client";
+import { KEPT_ON_DISK } from "@/model/thread";
 import { queryKeys } from "./keys";
 import { CACHE_STORE_KEY, cacheBuster, createCachePersister, dehydrateOptions, trimForDisk } from "./persister";
 import { memoryKv } from "./prefs";
@@ -17,16 +18,16 @@ describe("dehydrate allowlist", () => {
     client.setQueryData(queryKeys.me(), { id: "u1" });
     client.setQueryData(queryKeys.areas(), ["Bandra"]);
     client.setQueryData(queryKeys.showDetail("abc"), { title: "x" });
-    client.setQueryData(queryKeys.thread("g1"), [{ text: "a private message" }]);
+    client.setQueryData(queryKeys.after("g1"), { answers: "a private answer" });
     client.setQueryData(queryKeys.blocked(), ["u9"]);
     const keys = snapshot(client).clientState.queries.map((query) => query.queryKey[0]);
     expect(keys.sort()).toEqual(["areas", "me"]);
   });
 
-  it("never writes a private thread message to disk", () => {
+  it("keeps the thread, which is clipped to the newest messages before it is written", () => {
     const client = testQueryClient();
-    client.setQueryData(queryKeys.thread("g1"), [{ text: "a private message" }]);
-    expect(JSON.stringify(snapshot(client))).not.toContain("a private message");
+    client.setQueryData(queryKeys.thread("g1"), { messages: [], thread: "open", complete: true });
+    expect(snapshot(client).clientState.queries.map((query) => query.queryKey[0])).toEqual(["thread"]);
   });
 
   it("does not keep a query that failed", async () => {
@@ -46,6 +47,17 @@ describe("shows list on disk", () => {
     const trimmed = trimForDisk(snapshot(client));
     const [query] = trimmed.clientState.queries;
     expect(query?.state.data).toEqual({ pages: [{ items: [1] }], pageParams: [null] });
+  });
+
+  it("keeps the newest messages of a thread and marks the copy incomplete", () => {
+    const client = testQueryClient();
+    const messages = Array.from({ length: KEPT_ON_DISK + 5 }, (_, index) => ({ id: `m${String(index).padStart(3, "0")}` }));
+    client.setQueryData(queryKeys.thread("g1"), { messages, thread: "open", complete: true });
+    const [query] = trimForDisk(snapshot(client)).clientState.queries;
+    const data = query?.state.data as { messages: { id: string }[]; complete: boolean };
+    expect(data.messages).toHaveLength(KEPT_ON_DISK);
+    expect(data.messages[0]?.id).toBe("m005");
+    expect(data.complete).toBe(false);
   });
 
   it("leaves other queries alone", () => {
@@ -108,6 +120,23 @@ describe("cache persister", () => {
     void persister.removeClient();
     jest.advanceTimersByTime(5000);
     expect(store.getString(CACHE_STORE_KEY)).toBeUndefined();
+  });
+
+  it("writes nothing while no one is signed in, so a late write does not put the last person back on disk", () => {
+    jest.useFakeTimers();
+    const store = memoryKv();
+    let signedIn = true;
+    const persister = createCachePersister(store, { throttleMs: 1000, signedIn: () => signedIn });
+    const client = testQueryClient();
+    client.setQueryData(queryKeys.areas(), ["Bandra"]);
+    void persister.persistClient(snapshot(client));
+    signedIn = false;
+    jest.advanceTimersByTime(1000);
+    expect(store.getString(CACHE_STORE_KEY)).toBeUndefined();
+    signedIn = true;
+    void persister.persistClient(snapshot(client));
+    jest.advanceTimersByTime(1000);
+    expect(store.getString(CACHE_STORE_KEY)).toContain("Bandra");
   });
 
   it("drops a cache it cannot read", () => {

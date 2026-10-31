@@ -38,6 +38,9 @@ const base: MeetViewProps = {
   onOpenSettings: noop,
   onHere: noop,
   onCall: noop,
+  onOpenThread: noop,
+  onReport: noop,
+  onOpenAfter: null,
   onLeave: noop,
   onClosed: noop,
 };
@@ -86,5 +89,6 @@ export const AtTheCafe: Story = { render: ready({}, { line: { kind: "at_cafe" } 
 export const SmallerGroup: Story = { render: ready({ belowPlan: true, members: MEMBERS.slice(0, 3) }) };
 export const OfflineWithoutPlan: Story = { render: ready({}, { offline: true, onOpenShow: null, onLeave: null }) };
 export const Closed: Story = { render: framed({ state: { status: "closed" } }) };
+export const ClosedAfterShow: Story = { render: framed({ state: { status: "closed" }, onOpenAfter: noop }) };
 export const ErrorServer: Story = { render: framed({ state: { status: "error", kind: "server" } }) };
 export const ErrorOffline: Story = { render: framed({ state: { status: "error", kind: "offline" }, offline: true }) };

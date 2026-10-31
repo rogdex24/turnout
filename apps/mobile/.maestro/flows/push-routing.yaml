@@ -18,33 +18,48 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 
 # A kind the app does not know opens Home.
-- openLink: turnout-e2e://push?kind=made_up_kind&noticeId=n-1
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://push?kind=made_up_kind&noticeId=n-1
 - extendedWaitUntil:
     visible:
       id: home
     timeout: 10000
 
 # Data with a bad id is not followed: Home again, not a screen built from the id.
-- openLink: turnout-e2e://push?kind=ticket_approved&noticeId=n-1&planId=../../settings
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://push?kind=ticket_approved&noticeId=n-1&planId=../../settings
 - extendedWaitUntil:
     visible:
       id: home
     timeout: 10000
 
 # A handle that was turned down opens the social handle screen.
-- openLink: turnout-e2e://push?kind=handle_rejected&noticeId=n-2
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://push?kind=handle_rejected&noticeId=n-2
 - extendedWaitUntil:
     notVisible:
       id: home
     timeout: 10000
 
 # A ticket kind opens the plan it belongs to.
-- openLink: turnout-e2e://
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://
 - extendedWaitUntil:
     visible:
       id: home
     timeout: 10000
-- openLink: turnout-e2e://push?kind=ticket_approved&noticeId=n-3&planId=plan-1
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://push?kind=ticket_approved&noticeId=n-3&planId=plan-1
 - extendedWaitUntil:
     notVisible:
       id: home

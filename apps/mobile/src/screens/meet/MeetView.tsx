@@ -2,7 +2,7 @@ import type { Cafe, GroupMember } from "@turnout/contract/app/groups";
 import {
   ArrowSquareOut,
   CalendarX,
-  CaretLeft,
+  ChatCircle,
   Check,
   HandWaving,
   Hourglass,
@@ -12,23 +12,25 @@ import {
 } from "phosphor-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import { common } from "@/copy/common";
+import { after as afterCopy } from "@/copy/after";
 import { meet as copy } from "@/copy/meet";
 import { countdownText, hereButton, hereCount, istClock, type LocationLine, venueWalkMinutes } from "@/model/meetCard";
 import { checkInOpen } from "@/model/meetWindow";
 import { toPoint } from "@/model/walk";
+import { BackBar } from "@/ui/BackBar";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState, type ErrorStateProps } from "@/ui/ErrorState";
 import { OfflineBar } from "@/ui/OfflineBar";
 import { PersonAvatar } from "@/ui/PersonAvatar";
 import { Button } from "@/ui/primitives/Button";
 import { Icon } from "@/ui/primitives/Icon";
-import { IconButton } from "@/ui/primitives/IconButton";
 import { Note } from "@/ui/primitives/Note";
 import { dimOnPress } from "@/ui/primitives/press";
+import { Row } from "@/ui/primitives/Row";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
+import { isLargeText, useFontScale } from "@/ui/textScale";
 import { MeetMap } from "./MeetMap";
 import { SafetySheet } from "./SafetySheet";
 import { StaticMap } from "./StaticMap";
@@ -74,39 +76,60 @@ export interface MeetViewProps {
   onOpenSettings: () => void;
   onHere: () => void;
   onCall: () => void;
+  /** Opens the group chat. */
+  onOpenThread: () => void;
+  /** Opens the report form for this group. */
+  onReport: () => void;
   /** Opens the way to leave the plan. Null while the plan is not known. */
   onLeave: (() => void) | null;
   /** From the closed card back to the plans. */
   onClosed: () => void;
+  /** From the closed card to the after-the-show screen. Null until the group is done. */
+  onOpenAfter: (() => void) | null;
 }
 
 function BigTime({ meetAt, now }: { meetAt: string; now: number }) {
+  const large = isLargeText(useFontScale());
   const clock = istClock(meetAt);
   if (!clock) return null;
   const countdown = countdownText(meetAt, now);
-  return (
+  const pill = countdown ? (
     <View
-      accessible
-      accessibilityLabel={copy.timeLabel(clock.text, countdown)}
-      className="mt-2.5 flex-row items-end gap-3"
-      testID="meet-time"
+      className="min-h-7 flex-row items-center gap-1.5 self-start rounded-pill bg-signal-soft px-2.5"
+      importantForAccessibility="no-hide-descendants"
+      testID="meet-countdown"
     >
-      <Text variant="display-hero" tabular importantForAccessibility="no">
-        {clock.digits}
+      <View className="size-2 rounded-pill bg-signal" />
+      <Text variant="meta" tabular className="font-semibold text-signal">
+        {countdown}
       </Text>
-      <View className="items-start gap-2 pb-1" importantForAccessibility="no-hide-descendants">
-        <Text variant="display-band" className="uppercase">
-          {clock.period}
+    </View>
+  ) : null;
+  return (
+    <View accessible accessibilityLabel={copy.timeLabel(clock.text, countdown)} className="mt-2.5 gap-2" testID="meet-time">
+      <View className="flex-row items-end gap-3">
+        {/* 116 dp fits 6:00 next to PM, but not 11:53 on a narrow phone. One line, shrunk to fit, never wrapped. */}
+        <Text
+          variant="display-hero"
+          tabular
+          importantForAccessibility="no"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+          className="shrink"
+          testID="meet-time-digits"
+        >
+          {clock.digits}
         </Text>
-        {countdown ? (
-          <View className="min-h-7 flex-row items-center gap-1.5 rounded-pill bg-signal-soft px-2.5">
-            <View className="size-2 rounded-pill bg-signal" />
-            <Text variant="meta" tabular className="font-semibold text-signal">
-              {countdown}
-            </Text>
-          </View>
-        ) : null}
+        <View className="items-start gap-2 pb-1" importantForAccessibility="no-hide-descendants" testID="meet-time-side">
+          <Text variant="display-band" className="uppercase">
+            {clock.period}
+          </Text>
+          {large ? null : pill}
+        </View>
       </View>
+      {/* At a large text size the countdown is wider than PM, and beside the digits it took the width they shrink into. */}
+      {large ? pill : null}
     </View>
   );
 }
@@ -170,7 +193,7 @@ function Member({ member }: { member: GroupMember }) {
   );
 }
 
-function Group({ members, belowPlan }: { members: GroupMember[]; belowPlan: boolean }) {
+function Group({ members, belowPlan, onOpenThread }: { members: GroupMember[]; belowPlan: boolean; onOpenThread: () => void }) {
   const count = hereCount(members);
   return (
     <View className="mt-5" testID="meet-group">
@@ -194,6 +217,9 @@ function Group({ members, belowPlan }: { members: GroupMember[]; belowPlan: bool
           {copy.group.smaller}
         </Note>
       ) : null}
+      <View className="mt-4 overflow-hidden rounded-card border border-line bg-surface">
+        <Row title={copy.group.chat} sub={copy.group.chatSub} icon={ChatCircle} caret onPress={onOpenThread} testID="meet-thread" />
+      </View>
     </View>
   );
 }
@@ -213,7 +239,8 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
   const venuePoint = toPoint(venue.lat, venue.lng);
   const walk = venueWalkMinutes(cafePoint, venuePoint);
   const showRow = copy.showRow(card.showTitle, istClock(card.startsAt)?.text ?? null);
-  const mapLabel = copy.map.label(cafe.name, venuePoint ? venue.name : null);
+  // The pin shows the venue as "Venue" when it has no name, so the label must say the same.
+  const mapLabel = copy.map.label(cafe.name, venuePoint ? (venue.name ?? copy.map.venue) : null);
   const done = card.members.some((member) => member.isYou && member.checkedIn);
   const button = hereButton(card.startsAt, props.now, checkInOpen(card.startsAt, props.now));
   const hint = hereHint(props.here, button, done);
@@ -229,13 +256,13 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
             style={dimOnPress}
             testID="meet-show"
           >
-            <Text variant="meta" tabular className="text-muted" numberOfLines={1} importantForAccessibility="no">
+            <Text variant="meta" tabular className="text-muted" importantForAccessibility="no">
               {showRow}
             </Text>
           </Pressable>
         ) : (
           <View className="min-h-11 justify-center" testID="meet-show">
-            <Text variant="meta" tabular className="text-muted" numberOfLines={1}>
+            <Text variant="meta" tabular className="text-muted">
               {showRow}
             </Text>
           </View>
@@ -282,7 +309,7 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
             </>
           ) : null}
         </View>
-        <Group members={card.members} belowPlan={card.belowPlan} />
+        <Group members={card.members} belowPlan={card.belowPlan} onOpenThread={props.onOpenThread} />
       </ScrollView>
       <SafeAreaView edges={["bottom"]} className="border-t border-line bg-bg px-4 pt-3">
         {hint ? (
@@ -307,15 +334,11 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
 
 function Header({ onBack, onSafety }: { onBack: () => void; onSafety: (() => void) | null }) {
   return (
-    <View className="h-14 flex-row items-center justify-between px-2">
-      <IconButton icon={CaretLeft} label={common.back} onPress={onBack} testID="back" />
-      <View className="absolute inset-x-0 items-center" pointerEvents="none">
-        <Text variant="control" className="font-semibold" accessibilityRole="header">
-          {copy.title}
-        </Text>
-      </View>
-      {onSafety ? <TextButton title={copy.safety} icon={Shield} onPress={onSafety} testID="meet-safety" /> : null}
-    </View>
+    <BackBar
+      onBack={onBack}
+      title={copy.title}
+      trailing={onSafety ? <TextButton title={copy.safety} icon={Shield} onPress={onSafety} testID="meet-safety" /> : null}
+    />
   );
 }
 
@@ -347,7 +370,11 @@ export function MeetView(props: MeetViewProps) {
           icon={CalendarX}
           title={copy.closed.title}
           body={copy.closed.body}
-          action={{ title: copy.closed.action, onPress: props.onClosed }}
+          action={
+            props.onOpenAfter
+              ? { title: afterCopy.open, onPress: props.onOpenAfter }
+              : { title: copy.closed.action, onPress: props.onClosed }
+          }
         />
       ) : null}
       {state.status === "error" ? <ErrorState kind={state.kind} onRetry={props.onRetry} /> : null}
@@ -356,6 +383,10 @@ export function MeetView(props: MeetViewProps) {
         visible={safetyOpen}
         onClose={() => setSafetyOpen(false)}
         onCall={props.onCall}
+        onReport={() => {
+          setSafetyOpen(false);
+          props.onReport();
+        }}
         onLeave={
           props.onLeave
             ? () => {

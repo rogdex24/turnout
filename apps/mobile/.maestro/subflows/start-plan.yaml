@@ -10,17 +10,21 @@ name: start plan
       PHONE: ${PHONE}
       SERVER_URL: ${SERVER_URL}
       TEST_TOKEN: ${TEST_TOKEN}
-- openLink: turnout-e2e://show/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
-- tapOn:
-    id: show-go
-- extendedWaitUntil:
-    visible:
-      id: go-sheet
-    timeout: 10000
+- runFlow:
+    file: open-link-to.yaml
+    env:
+      LINK: turnout-e2e://show/${SHOW_ID}
+      SCREEN: show
+# Once on iOS the tap came while the link was still opening the show, and no sheet came. The tap goes again when the sheet does not.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: show-go
+      - extendedWaitUntil:
+          visible:
+            id: go-sheet
+          timeout: 10000
 - tapOn:
     id: go-next
 - extendedWaitUntil:
@@ -33,12 +37,10 @@ name: start plan
     visible:
       id: show
     timeout: 10000
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: home
-    timeout: 10000
+- runFlow:
+    file: back-to.yaml
+    env:
+      SCREEN: home
 # The plan is on Home's plan bar and on the Plans tab, and a row there opens it.
 - assertVisible:
     id: plan-bar

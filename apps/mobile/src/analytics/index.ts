@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
+import { apiBaseUrl } from "../api/baseUrl";
 import type { KeyValueStore } from "../api/prefs";
-import { createPostHogClient } from "./posthog";
+import { createPostHogClient, resolvePosthogHost } from "./posthog";
 import { startSentry } from "./sentry";
 import { createTelemetry, type Telemetry, telemetryConfig } from "./telemetry";
 
@@ -13,7 +14,7 @@ let current: Telemetry | null = null;
 function create(prefs: KeyValueStore): Telemetry {
   const config = telemetryConfig({
     posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY,
-    posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+    posthogHost: resolvePosthogHost(process.env.EXPO_PUBLIC_POSTHOG_HOST?.trim(), apiBaseUrl),
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
   });
   const environment = String(Constants.expoConfig?.extra?.variant ?? "development");

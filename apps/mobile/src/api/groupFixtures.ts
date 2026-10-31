@@ -39,6 +39,13 @@ export function groupFixture(over: Partial<GroupRevealed> = {}): GroupRevealed {
   };
 }
 
+/** The group the morning after: done, with the 72 hour window open until the Wednesday at 10:00 IST. */
+export const FEEDBACK_OPEN_UNTIL = "2026-11-11T04:30:00.000Z";
+
+export function doneGroupFixture(over: Partial<GroupRevealed> = {}): GroupRevealed {
+  return groupFixture({ state: "done", feedbackOpenUntil: FEEDBACK_OPEN_UNTIL, downvotedRefs: [], ...over });
+}
+
 export function planFixture(over: Partial<Plan> = {}): Plan {
   return {
     id: "plan-1",

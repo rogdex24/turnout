@@ -4,6 +4,11 @@ import type { KeyValueStore } from "./prefs";
 import { ensureCacheKey, type SecretStore } from "./secureStorage";
 
 /** Small facts that are not secret (welcome seen, accepted notice version, whose cache this is). Plain MMKV; nothing sensitive goes here. */
+/** Holds only the install mark (see `forgetSecretsFromAnOldInstall`). Nothing clears it, so it goes only with the app. */
+export function openInstallMark(): KeyValueStore {
+  return createMMKV({ id: "turnout-install" });
+}
+
 export function openPrefs(): KeyValueStore {
   return createMMKV({ id: "turnout-prefs" });
 }

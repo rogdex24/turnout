@@ -17,31 +17,38 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 
 # A show link opens the show: the ticket stub and the title of the seeded show.
-- openLink: turnout-e2e://show/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://show/${SHOW_ID}
+      SCREEN: show
 - assertVisible:
     id: show-ticket
-- assertVisible: "Seed comedy night"
+# On iOS the poster is one element named "<title>, <category>", so the title is matched as the start of the name.
+- assertVisible: "Seed comedy night.*"
 
 # The same show by the short event form that the https links use.
-- openLink: turnout-e2e://
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://
 - extendedWaitUntil:
     visible:
       id: home
     timeout: 10000
-- openLink: turnout-e2e://e/${SHOW_ID}
-- extendedWaitUntil:
-    visible:
-      id: show
-    timeout: 10000
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://e/${SHOW_ID}
+      SCREEN: show
 - assertVisible:
     id: show-ticket
 
 # A link to a screen that is not a show link is not followed: the app lands on Home.
-- openLink: turnout-e2e://settings
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://settings
 - extendedWaitUntil:
     visible:
       id: home

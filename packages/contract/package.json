@@ -8,6 +8,7 @@
     ".": "./index.ts",
     "./app/auth": "./app/auth.ts",
     "./app/config": "./app/config.ts",
+    "./app/deletion": "./app/deletion.ts",
     "./app/devices": "./app/devices.ts",
     "./app/errors": "./app/errors.ts",
     "./app/groups": "./app/groups.ts",

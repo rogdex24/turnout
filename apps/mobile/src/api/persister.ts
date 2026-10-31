@@ -1,5 +1,6 @@
 import type { DehydrateOptions } from "@tanstack/react-query";
 import type { PersistedClient, Persister } from "@tanstack/react-query-persist-client";
+import { clipForDisk, type ThreadData } from "@/model/thread";
 import { isPersistedKey, keyStartsWith } from "./keys";
 import type { KeyValueStore } from "./prefs";
 
@@ -21,9 +22,16 @@ export const dehydrateOptions: DehydrateOptions = {
     REPLAYABLE_MUTATION_KEYS.some((name) => mutation.options.mutationKey?.[0] === name),
 };
 
-/** The shows list is an infinite query; only its first page goes to disk, so an offline start does not replay a long scroll. */
+/**
+ * The shows list is an infinite query; only its first page goes to disk, so an offline start does not replay a long scroll. A thread
+ * keeps its newest messages only.
+ */
 export function trimForDisk(client: PersistedClient): PersistedClient {
   const queries = client.clientState.queries.map((query) => {
+    if (keyStartsWith(query.queryKey, ["thread"])) {
+      const data = query.state.data as ThreadData | undefined;
+      return data?.messages ? { ...query, state: { ...query.state, data: clipForDisk(data) } } : query;
+    }
     if (!keyStartsWith(query.queryKey, ["shows", "list"])) return query;
     const data = query.state.data as { pages?: unknown[]; pageParams?: unknown[] } | undefined;
     if (!data?.pages) return query;
@@ -42,16 +50,25 @@ export interface PersisterOptions {
    * would otherwise leave a file stamped for nobody and lose it at the next start.
    */
   buster?: () => string;
+  /**
+   * Whether anyone is signed in. A write that lands after sign-out (a query that settled late, or a cache event the wipe itself
+   * caused) would put the last person's data back on disk, so while this says no, nothing is written.
+   */
+  signedIn?: () => boolean;
 }
 
 /** Writes the cache to the (encrypted) store at most once per `throttleMs`; the last state always lands. */
-export function createCachePersister(store: KeyValueStore, { throttleMs = 1000, buster }: PersisterOptions = {}): Persister {
+export function createCachePersister(store: KeyValueStore, { throttleMs = 1000, buster, signedIn }: PersisterOptions = {}): Persister {
   let pending: PersistedClient | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   function flush() {
     timer = null;
     if (pending === null) return;
+    if (signedIn && !signedIn()) {
+      pending = null;
+      return;
+    }
     const value = trimForDisk(pending);
     if (buster) value.buster = buster();
     pending = null;

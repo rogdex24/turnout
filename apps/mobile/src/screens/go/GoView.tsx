@@ -2,6 +2,7 @@ import type { MatchableItem } from "@turnout/contract/app/me";
 import type { GroupType } from "@turnout/contract/app/plans";
 import { WarningCircle } from "phosphor-react-native";
 import { View } from "react-native";
+import { common } from "@/copy/common";
 import { go } from "@/copy/go";
 import type { GoIssue } from "@/model/goPlan";
 import { joinItems } from "@/model/goPlan";
@@ -16,6 +17,8 @@ export interface GoViewProps {
   womenOnlyOffered: boolean;
   /** The one sentence about groups: first time only. */
   explain: boolean;
+  /** The stop rule has caught this account: the sheet says so and offers no Go. */
+  stopped?: boolean;
   /** The plan is being made. */
   busy?: boolean;
   /** Why the last try did not go through. */
@@ -52,11 +55,13 @@ function issueText(issue: GoIssue): string {
 /**
  * Go with a group, the sheet over the Show page. One choice (any group, or women and non-binary only), then on to the ticket. The
  * sentence about how groups work is there the first time only. A person with something missing is told what, with a way to add it.
+ * A stopped member gets one line instead, and no Go.
  */
 export function GoView({
   groupType,
   womenOnlyOffered,
   explain,
+  stopped = false,
   busy = false,
   issue = null,
   onGroupType,
@@ -65,6 +70,21 @@ export function GoView({
   onFinish,
 }: GoViewProps) {
   const needsProfile = issue?.kind === "not_matchable";
+  if (stopped) {
+    return (
+      <Sheet
+        visible
+        title={go.title}
+        onClose={onClose}
+        secondary={{ title: common.close, onPress: onClose, testID: "go-not-now" }}
+        testID="go-sheet"
+      >
+        <View accessibilityLiveRegion="polite" testID="go-stopped">
+          <Note icon={WarningCircle}>{common.groupingStopped}</Note>
+        </View>
+      </Sheet>
+    );
+  }
   return (
     <Sheet
       visible
@@ -77,8 +97,9 @@ export function GoView({
           : { title: go.next, onPress: onNext, loading: busy, testID: "go-next" }
       }
       secondary={{ title: go.notNow, onPress: onClose, testID: "go-not-now" }}
+      testID="go-sheet"
     >
-      <View className="gap-3" testID="go-sheet">
+      <View className="gap-3">
         {womenOnlyOffered ? (
           <View accessibilityRole="radiogroup" className="gap-2">
             <Text variant="label" className="text-muted">

@@ -1,0 +1,20 @@
+# Installed as /etc/caddy/Caddyfile. TURNOUT_DOMAIN comes from /etc/caddy/turnout.env.
+# Caddy gets the certificates itself and replaces any X-Forwarded-For a client sends, so the
+# last value of that header is the real client address (TRUST_PROXY_HEADER=x-forwarded-for).
+(common) {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	request_body {
+		max_size 12MB
+	}
+}
+
+{$TURNOUT_DOMAIN}, go.{$TURNOUT_DOMAIN} {
+	import common
+	reverse_proxy 127.0.0.1:3000
+}
+
+staging.{$TURNOUT_DOMAIN} {
+	import common
+	reverse_proxy 127.0.0.1:3002
+}

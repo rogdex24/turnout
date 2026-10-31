@@ -119,8 +119,8 @@ describe("venueWalkMinutes", () => {
 });
 
 describe("mapsUrl", () => {
-  it("is a geo link with the cafe's name as the label", () => {
-    expect(mapsUrl({ lat: 17.44, lng: 78.37 }, "Cafe Niloufer")).toBe("geo:17.44,78.37?q=17.44,78.37(Cafe%20Niloufer)");
+  it("is the keyless Google Maps link on the cafe's point, which every phone can open", () => {
+    expect(mapsUrl({ lat: 17.44, lng: 78.37 })).toBe("https://www.google.com/maps/search/?api=1&query=17.44%2C78.37");
   });
 });
 

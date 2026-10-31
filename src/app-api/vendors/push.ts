@@ -1,4 +1,4 @@
-import type { PushPayload } from "@turnout/contract/app/notices";
+import type { PushChannel, PushPayload } from "@turnout/contract/app/notices";
 
 /** One push to one device. The title and body are the fixed generic text for the kind; the data is ids and the kind only. */
 export interface PushMessage {
@@ -8,6 +8,10 @@ export interface PushMessage {
   data: PushPayload;
   /** How long the push service keeps trying, so a late push is never delivered after its notice went stale. */
   ttlSeconds: number;
+  /** The Android channel (`NOTICE_CHANNEL`). */
+  channelId: PushChannel;
+  /** Pushes with the same key show as one entry on the phone (`pushGroupKey`); null stands alone. */
+  groupKey: string | null;
 }
 
 /** What the push service said about one message. */

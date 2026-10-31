@@ -26,10 +26,13 @@ import { checkinRequestSchema, checkinResponseSchema, groupBeforeRevealSchema, g
 import { consentRequestSchema, handleResponseSchema, MAX_PHOTO_BYTES, meResponseSchema } from "@turnout/contract/app/me";
 import { NOTICE_PARAGRAPHS, NOTICE_TEXT, NOTICE_VERSION } from "@turnout/contract/app/notice";
 import {
+  NOTICE_CHANNEL,
   NOTICE_KINDS,
   NOTICE_PUSH_TEXT,
   noticeListQuerySchema,
   noticeReadRequestSchema,
+  PUSH_CHANNELS,
+  pushGroupKey,
   pushPayloadSchema,
 } from "@turnout/contract/app/notices";
 import {
@@ -310,6 +313,20 @@ describe("app contract: plans, groups, notices and devices", () => {
     for (const { title, body } of Object.values(NOTICE_PUSH_TEXT)) {
       expect(`${title} ${body}`).not.toMatch(/\bverified\b|ID.?check|\bKYC\b|—/i);
     }
+  });
+
+  test("every notice kind goes to one of the three channels, and only the meet card and head over go to show day", () => {
+    expect(Object.keys(NOTICE_CHANNEL).sort()).toEqual([...NOTICE_KINDS].sort());
+    for (const channel of Object.values(NOTICE_CHANNEL)) expect(PUSH_CHANNELS).toContain(channel);
+    expect(NOTICE_KINDS.filter((kind) => NOTICE_CHANNEL[kind] === "show-day").sort()).toEqual(["head_over", "meet_card_live"]);
+    expect(NOTICE_KINDS.filter((kind) => NOTICE_CHANNEL[kind] === "thread")).toEqual(["thread_message"]);
+  });
+
+  test("thread pushes share one group key per plan, and no other push has one", () => {
+    expect(pushGroupKey("thread_message", "01hp")).toBe("thread:01hp");
+    expect(pushGroupKey("thread_message", "01hp")).not.toBe(pushGroupKey("thread_message", "01hq"));
+    expect(pushGroupKey("thread_message", null)).toBeNull();
+    for (const kind of NOTICE_KINDS.filter((k) => k !== "thread_message")) expect(pushGroupKey(kind, "01hp")).toBeNull();
   });
 
   test("a push payload is the kind and two ids", () => {

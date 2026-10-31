@@ -2,26 +2,39 @@
 appId: com.turnout.app.e2e
 name: sign in seed
 ---
-- runFlow: open-sign-in.yaml
-- runFlow:
-    file: send-code.yaml
-    env:
-      PHONE: ${PHONE}
-- extendedWaitUntil:
-    visible:
-      id: code
-    timeout: 10000
-- runScript:
-    file: ../scripts/otp-code.js
-    env:
-      SERVER_URL: ${SERVER_URL}
-      TEST_TOKEN: ${TEST_TOKEN}
-      PHONE: ${PHONE}
-- runFlow:
-    file: enter-code.yaml
-    env:
-      CODE: ${output.code}
-- extendedWaitUntil:
-    visible:
-      id: home
-    timeout: 20000
+# Once on iOS the verify took 20 s on a busy runner, the app gave up and said it was offline, and the code was already spent.
+# A second pass starts over from a fresh install with a new code.
+- retry:
+    maxRetries: 1
+    commands:
+      - runFlow: open-sign-in.yaml
+      # Flows sign the same members in again within minutes, faster than the server's per-number limit allows a person.
+      - runScript:
+          file: ../scripts/reset-limits.js
+          env:
+            SERVER_URL: ${SERVER_URL}
+            TEST_TOKEN: ${TEST_TOKEN}
+      - runFlow:
+          file: send-code.yaml
+          env:
+            PHONE: ${PHONE}
+      - extendedWaitUntil:
+          visible:
+            id: code
+          timeout: 10000
+      - runScript:
+          file: ../scripts/otp-code.js
+          env:
+            SERVER_URL: ${SERVER_URL}
+            TEST_TOKEN: ${TEST_TOKEN}
+            PHONE: ${PHONE}
+      - runFlow:
+          file: enter-code.yaml
+          env:
+            CODE: ${output.code}
+      - extendedWaitUntil:
+          visible:
+            id: home
+          timeout: 20000
+      # Once on iOS a show link opened while Home was still sliding in was dropped, and the app stayed on Home.
+      - waitForAnimationToEnd

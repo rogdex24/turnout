@@ -5,7 +5,8 @@
   "build": {
     "base": {
       "bun": "1.4.3",
-      "node": "24.22.1"
+      "node": "24.22.1",
+      "env": { "EXPO_PUBLIC_GROUPS_ENABLED": "1" }
     },
     "development": {
       "extends": "base",
@@ -23,7 +24,7 @@
       "extends": "base",
       "distribution": "internal",
       "environment": "development",
-      "env": { "APP_VARIANT": "e2e", "EXPO_PUBLIC_STORYBOOK": "1", "EXPO_PUBLIC_ALLOW_CAPTURE": "1", "EXPO_PUBLIC_GROUPS_ENABLED": "1" },
+      "env": { "APP_VARIANT": "e2e", "EXPO_PUBLIC_STORYBOOK": "1", "EXPO_PUBLIC_ALLOW_CAPTURE": "1" },
       "android": { "buildType": "apk" },
       "ios": { "simulator": true }
     },

@@ -30,6 +30,33 @@ test("stop removes the temp database", async () => {
   expect(fs.existsSync(other.dbPath)).toBe(false);
 }, 90_000);
 
+test("the network route cuts the app's connection to the server and gives it back, and needs the token", async () => {
+  const other = await startMobileServer();
+  try {
+    const network = (online: unknown, token = other.testToken) =>
+      fetch(`${other.operatorUrl}/operator/network`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-staging-test-token": token },
+        body: JSON.stringify({ online }),
+      });
+    const events = () => fetch(`${other.url}/api/events?limit=1`);
+    expect((await events()).status).toBe(200);
+
+    expect((await network(false, "wrong")).status).toBe(404);
+    expect((await network("no")).status).toBe(400);
+    expect((await events()).status).toBe(200);
+
+    // Off: the request fails in the transport, the way it does on a phone with no network, not with an HTTP status.
+    expect((await network(false)).status).toBe(200);
+    await expect(events()).rejects.toThrow();
+
+    expect((await network(true)).status).toBe(200);
+    expect((await events()).status).toBe(200);
+  } finally {
+    await other.stop();
+  }
+}, 90_000);
+
 test("it is a staging server: seeded members sign in with the code the test route reads, and the test routes need the token", async () => {
   const other = await startMobileServer();
   try {
@@ -116,6 +143,24 @@ test("the operator routes act for the operator and the other members, on the ser
     };
     const show = "seed-show-t2d";
 
+    // The plan route names the seeded live group's plan and its meet card notice for a push link, and refuses a member with no
+    // plan on the show. The app reads the group from the notice, so the notice must be in the member's list with the group's id.
+    const meet = await operator("plan", { phone: phone("0114"), eventId: "seed-show-meet-live" });
+    expect(meet.status).toBe(200);
+    const lata = { authorization: `Bearer ${await signIn(phone("0114"))}` };
+    const plan = (await (await fetch(`${api}/plans/${meet.body.planId}`, { headers: lata })).json()) as {
+      state: string;
+      group: { id: string } | null;
+    };
+    expect(plan.state).toBe("meet_card_live");
+    const { notices } = (await (await fetch(`${api}/notices`, { headers: lata })).json()) as {
+      notices: { id: string; kind: string; groupId: string | null }[];
+    };
+    const notice = notices.find((n) => n.id === meet.body.noticeId);
+    expect(notice?.kind).toBe("meet_card_live");
+    expect(notice?.groupId).toBe(plan.group?.id ?? "no group");
+    expect((await operator("plan", { phone: phone("0104"), eventId: "seed-show-meet-live" })).status).toBe(404);
+
     // A handle in review is turned down with a reason and then accepted, as the profile-check flow does.
     const asha = { authorization: `Bearer ${await signIn(phone("0102"))}` };
     const handle = async () =>
@@ -161,6 +206,18 @@ test("the operator routes act for the operator and the other members, on the ser
     const shrunk = await state();
     expect(shrunk.group?.size).toBe(3);
     expect((await operator("withdraw", { phone: phone("0108"), eventId: show })).status).toBe(409);
+
+    // The thread opens at T-3h. Before that nobody can say anything; after, a member's line reaches the others, and a blank one is refused.
+    const groupId = (await state()).group as unknown as { id: string };
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "At the cafe" })).status).toBe(409);
+    await post(`${api}/__test/clock`, { advanceMs: 21 * 3600 * 1000, tick: true }, { "x-staging-test-token": other.testToken });
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "At the cafe" })).status).toBe(200);
+    expect((await operator("say", { phone: phone("0106"), eventId: show, text: "  " })).status).toBe(400);
+    auth = { authorization: `Bearer ${await signIn(phone("0105"))}` };
+    const thread = (await (await fetch(`${api}/groups/${groupId.id}/messages`, { headers: auth })).json()) as {
+      messages: { body: string; isYou: boolean }[];
+    };
+    expect(thread.messages.map((m) => [m.body, m.isYou])).toEqual([["At the cafe", false]]);
   } finally {
     await other.stop();
   }

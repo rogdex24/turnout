@@ -1,7 +1,9 @@
 import { sizes } from "@turnout/design-tokens";
-import { type ComponentRef, type ReactNode, type Ref, useState } from "react";
+import { type ComponentRef, type ReactNode, type Ref, useContext, useState } from "react";
 import { TextInput, type TextInputProps, View } from "react-native";
+import { AutoFocusContext } from "../autoFocus";
 import { cn } from "../cn";
+import { isLargeText, useFontScale } from "../textScale";
 import { useColors } from "../theme";
 import { Text } from "./Text";
 
@@ -17,16 +19,22 @@ export interface FieldProps extends Omit<TextInputProps, "style"> {
   error?: string | null;
   /** Content before the input, such as the +91 prefix. */
   prefix?: ReactNode;
+  /** Keep the input on one line at every text size, for a short value such as a phone number. */
+  singleLine?: boolean;
   /** The text input itself, for a screen that moves focus to it. */
   inputRef?: Ref<FieldInput>;
   className?: string;
 }
 
 /** A 56 dp text field: label above, outline border, help or error below. */
-export function Field({ label, help, error, prefix, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
+export function Field({ label, help, error, prefix, singleLine = false, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
   const colors = useColors();
   const [focused, setFocused] = useState(false);
+  const focusAllowed = useContext(AutoFocusContext);
   const below = error ?? help;
+  // A single line cuts a long placeholder or value off at a large text size, so there the input wraps like a multiline one but
+  // still submits on the return key. A wrapping input is taller than one line, so a short value opts out with `singleLine`.
+  const wraps = isLargeText(useFontScale()) && !input.multiline && !singleLine;
   return (
     <View className={className}>
       <Text variant="control" className="mb-2 font-semibold">
@@ -45,7 +53,8 @@ export function Field({ label, help, error, prefix, inputRef, className, onFocus
           selectionColor={colors.ink}
           cursorColor={colors.ink}
           allowFontScaling
-          className="flex-1 py-0 font-sans text-title text-ink"
+          {...(wraps ? { multiline: true, submitBehavior: "blurAndSubmit" as const } : null)}
+          className="flex-1 py-2 font-sans text-title text-ink"
           onFocus={(event) => {
             setFocused(true);
             onFocus?.(event);
@@ -55,6 +64,7 @@ export function Field({ label, help, error, prefix, inputRef, className, onFocus
             onBlur?.(event);
           }}
           {...input}
+          autoFocus={(input.autoFocus ?? false) && focusAllowed}
         />
       </View>
       {below ? (

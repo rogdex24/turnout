@@ -37,7 +37,7 @@ Contrast checked (computed from DESIGN.md by `test/mobileTokens.test.ts`; DESIGN
 | `title-large` | Inter 600 | 22/28 | Yes, cap 1.6 |
 | `title` | Inter 600 | 17/24 | Yes, no cap |
 | `body` | Inter 400 | 15/22 | Yes, no cap |
-| `control` | Inter 500 to 600 | 15/20 (buttons 17) | Yes, no cap |
+| `control` | Inter 500 to 600 | 15/20 (buttons 17) | Yes, cap 1.6 |
 | `meta` | Inter 400 | 13/18 | Yes, no cap |
 | `label` | Inter 500 | 12/16 | Yes, cap 1.3 |
 

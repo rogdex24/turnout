@@ -178,6 +178,11 @@ describe("resolveTapRoute", () => {
     expect(await resolveTapRoute(api, data("meet_card_live"))).toBe("/groups/g7/meet");
   });
 
+  it("opens the after-the-show screen for the group the morning-after notice names", async () => {
+    const { api } = setup({ "GET /notices": json(200, { notices: [notice("n1", "g7")] }) });
+    expect(await resolveTapRoute(api, data("morning_after"))).toBe("/groups/g7/after");
+  });
+
   it("does not read notices for a kind that opens the plan", async () => {
     const { api, net } = setup({});
     expect(await resolveTapRoute(api, data("group_confirmed"))).toBe("/plans/p1");

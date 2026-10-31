@@ -1,4 +1,4 @@
-import { ApiError, classifyFailure, isApiError, offlineError, retryAfterSeconds } from "./apiError";
+import { ApiError, classifyFailure, isApiError, offlineError, pendingRead, retryAfterSeconds, stalledOffline } from "./apiError";
 
 const body = (code: string) => JSON.stringify({ error: { code, message: "for logs" } });
 
@@ -63,4 +63,28 @@ test("offlineError is an ApiError of kind offline", () => {
   expect(error).toBeInstanceOf(ApiError);
   expect(error.kind).toBe("offline");
   expect(isApiError(new Error("x"))).toBe(false);
+});
+
+describe("pendingRead", () => {
+  const read = { isPending: true, isError: false, error: null, fetchStatus: "fetching", failureCount: 0 };
+
+  test("a first read in flight is loading", () => {
+    expect(pendingRead(read)).toEqual({ status: "loading" });
+  });
+
+  test("a read paused before any failure is still loading", () => {
+    expect(pendingRead({ ...read, fetchStatus: "paused" })).toEqual({ status: "loading" });
+  });
+
+  test("a read paused after a failure is offline", () => {
+    const stalled = { ...read, fetchStatus: "paused", failureCount: 1 };
+    expect(stalledOffline(stalled)).toBe(true);
+    expect(pendingRead(stalled)).toEqual({ status: "error", kind: "offline" });
+  });
+
+  test("a failed read takes the kind of its error", () => {
+    const failed = { ...read, isPending: false, isError: true, fetchStatus: "idle", failureCount: 3 };
+    expect(pendingRead({ ...failed, error: new ApiError("server", 500, "server_error") })).toEqual({ status: "error", kind: "server" });
+    expect(pendingRead({ ...failed, error: new ApiError("not_found", 404, "not_found") })).toEqual({ status: "error", kind: "other" });
+  });
 });

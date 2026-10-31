@@ -1,5 +1,5 @@
 # A seeded member with an approved handle browses the shows: the list loads, an area pill narrows it and All areas widens it, and
-# a card opens its show. Two more members check the handle strip. Written for CI; it has not run on a device yet.
+# a card opens its show. Two more members check the handle strip. Written for CI.
 appId: com.turnout.app.e2e
 name: browse
 tags:
@@ -25,18 +25,20 @@ env:
 - assertNotVisible:
     id: profile-check-strip
 
-# An area narrows the list and All areas goes back to every show.
+# An area narrows the list and All areas goes back to every show. Every seeded show is at Seed Hall, which has no named area, so
+# Gachibowli shows the empty state. iOS reads the empty state's title and body as one label, so the text match is a pattern.
 - tapOn:
-    id: "area-(?!all).*"
-- assertVisible:
-    id: "show-card-.*"
+    id: area-gachibowli
+- extendedWaitUntil:
+    visible: ".*No shows here yet.*"
+    timeout: 10000
 - tapOn:
     id: area-all
 - assertVisible:
     id: "show-card-.*"
 
 # A card opens its show: the ticket stub, the buy link and Go with a group. Go opens the Go with a group sheet, and Not now closes it.
-# The system back goes back to the list.
+# The show's own back button goes back to the list. Maestro's back command presses the Android system back and does nothing on iOS.
 - tapOn:
     id: "show-card-.*"
 - extendedWaitUntil:
@@ -56,7 +58,10 @@ env:
     id: go-not-now
 - assertNotVisible:
     id: go-sheet
-- back
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: home
 - assertVisible: "Shows coming up"
 
 # A handle in review shows the strip, and the list still works.
@@ -72,7 +77,7 @@ env:
 - assertVisible:
     id: "show-card-.*"
 
-# A handle that was turned down says why and offers Change handle, which opens the profile form.
+# A handle that was turned down says why and offers Change handle, which opens the handle page in Settings.
 - runFlow:
     file: ../subflows/sign-in-seed.yaml
     env:
@@ -83,5 +88,5 @@ env:
 - tapOn: "Change handle"
 - extendedWaitUntil:
     visible:
-      id: profile
+      id: settings-social
     timeout: 10000

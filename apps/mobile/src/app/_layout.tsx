@@ -1,13 +1,18 @@
 // Board: B16.1
 import "../global.css";
+import { useQuery } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { configQuery } from "@/api/config";
+import { configuredVariant } from "@/api/variant";
+import { settings } from "@/copy/settings";
 import { isApiError } from "@/model/apiError";
 import type { OnboardingStep } from "@/model/gates";
+import { grievanceNotSet } from "@/model/grievance";
 import { AppProviders, useDeps } from "@/providers/AppProviders";
-import { useGate, useMe } from "@/providers/hooks";
+import { useApi, useGate, useMe } from "@/providers/hooks";
 import { holdSplash, releaseSplash } from "@/providers/splash";
 import { StepContext } from "@/providers/step";
 import { useBoot } from "@/providers/useBoot";
@@ -23,7 +28,9 @@ export default function RootLayout() {
       <StatusBar style="auto" />
       {boot.state === "ready" ? (
         <AppProviders deps={boot.deps}>
-          <Routes />
+          <ReleaseCheck>
+            <Routes />
+          </ReleaseCheck>
         </AppProviders>
       ) : boot.state === "failed" ? (
         <BootFailed onRetry={retry} />
@@ -35,6 +42,26 @@ export default function RootLayout() {
 function BootFailed({ onRetry }: { onRetry: () => void }) {
   useEffect(releaseSplash, []);
   return <StartFailed onRetry={onRetry} />;
+}
+
+/**
+ * The production build does not start while the server's grievance officer is a placeholder. A config that cannot be read (offline,
+ * a server error) never blocks: the check stops only on details that were read and found unset.
+ */
+function ReleaseCheck({ children }: { children: ReactNode }) {
+  const variant = configuredVariant();
+  return variant === "production" ? <GrievanceGate>{children}</GrievanceGate> : children;
+}
+
+function GrievanceGate({ children }: { children: ReactNode }) {
+  const api = useApi();
+  const config = useQuery(configQuery(api));
+  const blocked = config.data !== undefined && grievanceNotSet(config.data.grievance);
+  useEffect(() => {
+    if (blocked) releaseSplash();
+  }, [blocked]);
+  if (blocked) return <StartFailed message={settings.grievance.startFailed} onRetry={() => void config.refetch()} />;
+  return children;
 }
 
 function MeFailed() {

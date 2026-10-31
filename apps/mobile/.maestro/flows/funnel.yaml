@@ -1,0 +1,99 @@
+# The analytics funnel, from one run: Share usage data on, a show opened, Go with a group tapped, the meet card opened and "I'm
+# here" tapped. The e2e build sends its PostHog events to the seeded server's capture sink (src/app-api/posthogSink.ts, host and key
+# in ci/env.sh), and the flow asks the sink for show_viewed, go_tapped and im_here_tapped in that order. A real PostHog project is
+# not involved. Nisha is a member of the seed's live group (scripts/seed-staging.ts) that no other flow checks in, and her show has
+# check-in open (T-90m to T+60m), like loop-meet's, so config.yaml runs this flow with the other live-group flows.
+appId: com.turnout.app.e2e
+name: funnel
+tags:
+  - loop
+  - analytics
+env:
+  MEMBER: "+12025550116"
+  SHOW_ID: seed-show-t2d
+  EVENT_ID: seed-show-meet-live
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# Nothing is sent until the switch is on, and the sink starts empty so only this run's events count.
+- runScript:
+    file: ../scripts/posthog-reset.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- tapOn: "You"
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: you-usage
+    centerElement: true
+- tapOn:
+    id: you-usage
+- extendedWaitUntil:
+    visible:
+      id: you-usage
+      checked: true
+    timeout: 10000
+
+# A show opens: show_viewed. Go with a group opens its sheet: go_tapped. Not now closes it without making a plan.
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://show/${SHOW_ID}
+      SCREEN: show
+# Once on iOS the tap came while the link was still opening the show, and no sheet came. The tap goes again when the sheet does not.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: show-go
+      - extendedWaitUntil:
+          visible:
+            id: go-sheet
+          timeout: 10000
+- tapOn:
+    id: go-not-now
+- assertNotVisible:
+    id: go-sheet
+
+# The plan's id and its meet card notice come from the server, as in loop-meet. The push link opens the card.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: plan
+      PHONE: ${MEMBER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: ""
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
+      SCREEN: meet
+
+# I'm here: im_here_tapped, and the button says the person is checked in.
+- tapOn:
+    id: meet-here
+- extendedWaitUntil:
+    visible: ".*checked in.*"
+    timeout: 15000
+
+# The funnel, in order. The SDK sends every 10 seconds, so the script waits for the last event to arrive.
+- runScript:
+    file: ../scripts/expect-posthog-events.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      EXPECT: show_viewed,go_tapped,im_here_tapped

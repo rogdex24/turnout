@@ -31,3 +31,6 @@ apps/mobile/ios/
 apps/mobile/android/
 apps/mobile/.expo/
 apps/mobile/dist/
+
+# per-story capture flows written by apps/mobile/.maestro/ci/device-run.sh
+apps/mobile/.maestro/visual-run/
