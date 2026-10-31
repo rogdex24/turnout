@@ -154,7 +154,7 @@ export function MeetScreen({
       onRetry={() => void group.refetch()}
       onOpenShow={plan ? () => onOpenShow(plan.eventId) : null}
       onOpenMaps={() => {
-        if (cafePoint && revealed) open(mapsUrl(cafePoint, revealed.cafe.name));
+        if (cafePoint && revealed) open(mapsUrl(cafePoint));
       }}
       onAskLocation={location.request}
       onOpenSettings={() => void Linking.openSettings().catch(() => undefined)}
