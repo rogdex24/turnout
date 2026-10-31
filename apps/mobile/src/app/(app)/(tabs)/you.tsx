@@ -9,6 +9,7 @@ const ROUTES = {
   social: "/settings/social",
   notifications: "/settings/notifications",
   blocked: "/settings/blocked",
+  safety: "/settings/safety",
   howMatching: "/settings/how-matching-works",
   privacy: "/settings/privacy",
   grievance: "/settings/grievance",

@@ -6,6 +6,7 @@ import {
   GenderFemale,
   Headset,
   InstagramLogo,
+  Lifebuoy,
   Question,
   SignOut,
   Trash,
@@ -20,7 +21,16 @@ import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
 import { ToggleRow } from "@/ui/ToggleRow";
 
-export type YouTarget = "profile" | "social" | "notifications" | "blocked" | "howMatching" | "privacy" | "grievance" | "deleteAccount";
+export type YouTarget =
+  | "profile"
+  | "social"
+  | "notifications"
+  | "blocked"
+  | "safety"
+  | "howMatching"
+  | "privacy"
+  | "grievance"
+  | "deleteAccount";
 
 export interface YouViewProps {
   /** The first name, or null before the profile is filled in. */
@@ -99,6 +109,7 @@ export function YouView({
             onPress={() => onOpen("blocked")}
             testID="you-blocked"
           />
+          <Row icon={Lifebuoy} title={you.safety} caret onPress={() => onOpen("safety")} testID="you-safety" />
           <Row icon={Question} title={you.howMatching} caret onPress={() => onOpen("howMatching")} testID="you-how-matching" />
         </Section>
 

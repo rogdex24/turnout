@@ -41,4 +41,41 @@ export const settings = {
     startFailed: "Turnout can't start until the grievance officer's details are set. Try again in a little while.",
   },
   howMatching: { title: "How matching works" },
+  /** Settings, safety and 112 (B14). What keeps a meet safe, and what to do when one is not. */
+  safety: {
+    title: "Safety and 112",
+    lead: "Turnout groups meet in public places. Here is what we do, and what you can do at any time.",
+    sections: [
+      {
+        heading: "In danger now",
+        items: [
+          "Call 112. It reaches the police, fire and ambulance anywhere in India.",
+          "Turnout is not an emergency service, and we can't send help.",
+        ],
+      },
+      {
+        heading: "Where you meet",
+        items: [
+          "Your group meets at a cafe we pick. Never at a home, never in a car.",
+          "Names, photos and the cafe appear 3 hours before the show.",
+          "You can leave a plan whenever you like.",
+        ],
+      },
+      {
+        heading: "On the day",
+        items: [
+          "The meet card has a Safety button with Call 112, Report and Leave.",
+          "Tell a friend where you are going and who you are meeting.",
+        ],
+      },
+      {
+        heading: "If someone makes you uneasy",
+        items: [
+          "Report them from the meet card, from one of their messages, or after the show.",
+          "They stop being matched at once. We read every report within 24 hours, and they won't know who reported them.",
+          "After the show you can mark someone privately. You are never put in a group with them again, and they are not told.",
+        ],
+      },
+    ],
+  },
 } as const;

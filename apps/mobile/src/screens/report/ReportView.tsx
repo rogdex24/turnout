@@ -1,16 +1,16 @@
-import { CheckCircle, Phone, Tray } from "phosphor-react-native";
+import { CheckCircle, Tray } from "phosphor-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { report as copy } from "@/copy/report";
 import { DETAILS_MAX_CHARS } from "@/model/report";
 import { BackBar } from "@/ui/BackBar";
+import { EmergencyCall } from "@/ui/EmergencyCall";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState, type ErrorStateProps } from "@/ui/ErrorState";
 import { OfflineBar } from "@/ui/OfflineBar";
 import { PersonAvatar } from "@/ui/PersonAvatar";
 import { Button } from "@/ui/primitives/Button";
 import { Field } from "@/ui/primitives/Field";
-import { Icon } from "@/ui/primitives/Icon";
 import { dimOnPress } from "@/ui/primitives/press";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
@@ -53,30 +53,6 @@ export interface ReportViewProps {
   /** Answers with a line to show when the report cannot be sent, null when it went. */
   onSubmit: (submission: ReportSubmission) => string | null;
   onDone: () => void;
-}
-
-function Emergency({ onCall }: { onCall: () => void }) {
-  return (
-    <View
-      accessibilityRole="summary"
-      accessibilityLabel={copy.sos.text}
-      className="mx-4 flex-row items-center gap-3 rounded-field bg-surface-raised px-4 py-3"
-      testID="report-sos"
-    >
-      <Icon icon={Phone} size="sm" />
-      <Text variant="control" className="flex-1 font-semibold">
-        {copy.sos.text}
-      </Text>
-      <Button
-        variant="secondary"
-        title={copy.sos.button}
-        accessibilityLabel={copy.sos.label}
-        className="min-h-11 px-4"
-        onPress={onCall}
-        testID="report-call-112"
-      />
-    </View>
-  );
 }
 
 function Form({
@@ -235,7 +211,7 @@ export function ReportView(props: ReportViewProps) {
         {copy.title}
       </Text>
       <View className="mt-3">
-        <Emergency onCall={props.onCall} />
+        <EmergencyCall onCall={props.onCall} testID="report-sos" callTestID="report-call-112" className="mx-4" />
       </View>
       {props.offline ? <OfflineBar /> : null}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">

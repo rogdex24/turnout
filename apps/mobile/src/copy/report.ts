@@ -1,11 +1,6 @@
 /** Every user-facing string lives under src/copy. The report form (B13). */
 export const report = {
   title: "Report",
-  sos: {
-    text: "In danger now? Call 112",
-    button: "Call 112",
-    label: "Call 112, emergency, opens your phone",
-  },
   who: "Who is this about?",
   whoLabel: (name: string) => name,
   why: "What happened?",
