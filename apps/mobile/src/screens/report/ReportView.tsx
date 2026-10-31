@@ -89,7 +89,12 @@ function Form({
             {copy.message}
           </Text>
         ) : null}
-        <View accessibilityRole="radiogroup" className="mt-3 flex-row flex-wrap gap-x-3 gap-y-4" testID="report-people">
+        {/* At a large text size a name under its avatar breaks inside the word, so each person becomes a row with the name beside the avatar. */}
+        <View
+          accessibilityRole="radiogroup"
+          className={cn("mt-3", large ? "gap-2" : "flex-row flex-wrap gap-x-3 gap-y-4")}
+          testID="report-people"
+        >
           {people.map((person) => {
             const picked = person.memberRef === memberRef;
             return (
@@ -99,7 +104,7 @@ function Form({
                 accessibilityLabel={copy.whoLabel(person.firstName)}
                 accessibilityState={{ checked: picked }}
                 onPress={() => setMemberRef(person.memberRef)}
-                className={cn("min-h-11 items-center", large ? "w-28" : "w-[62px]")}
+                className={cn("min-h-11 items-center", large ? "flex-row gap-3" : "w-[62px]")}
                 style={dimOnPress}
                 testID={`report-person-${person.memberRef}`}
               >
@@ -109,7 +114,11 @@ function Form({
                 >
                   <PersonAvatar name={person.firstName} photoUrl={person.photoUrl} size="sm" memoryCacheKey={person.memoryCacheKey} />
                 </View>
-                <Text variant="meta" className={picked ? "mt-1.5 font-semibold" : "mt-1.5 text-muted"} importantForAccessibility="no">
+                <Text
+                  variant="meta"
+                  className={cn(large ? "shrink" : "mt-1.5", picked ? "font-semibold" : "text-muted")}
+                  importantForAccessibility="no"
+                >
                   {person.firstName}
                 </Text>
               </Pressable>

@@ -4,6 +4,7 @@ import { PixelRatio, StyleSheet } from "react-native";
 import { Loaded } from "@/screens/home/HomeView.stories";
 import { Early } from "@/screens/meet/MeetView.stories";
 import { GroupConfirmed } from "@/screens/plan/PlanView.stories";
+import { NobodyPicked } from "@/screens/report/ReportView.stories";
 import { Empty as PhoneEmpty } from "@/screens/signin/PhoneView.stories";
 import { Conversation } from "@/screens/thread/ThreadView.stories";
 import { BackBar } from "./BackBar";
@@ -74,6 +75,26 @@ describe("rows grow with the largest text size", () => {
     const inputs = screen.getAllByTestId("phone-input");
     expect(inputs.length).toBeGreaterThan(0);
     for (const input of inputs) expect(input.props.multiline).toBeFalsy();
+  });
+
+  it("the report people become rows, so a name sits beside its avatar instead of breaking inside the word", async () => {
+    const Story = NobodyPicked.render as () => React.ReactElement;
+    await render(
+      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+        <Story />
+      </TextScaleContext>,
+    );
+    const groups = screen.getAllByTestId("report-people");
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group.props.className).not.toContain("flex-row");
+      const people = within(group).getAllByRole("radio");
+      expect(people.length).toBeGreaterThan(0);
+      for (const person of people) {
+        expect(person.props.className).toContain("flex-row");
+        expect(person.props.className).not.toMatch(/(^|\s)w-/);
+      }
+    }
   });
 
   it("a centred bar title keeps clear of the wider side and ends in an ellipsis", async () => {
