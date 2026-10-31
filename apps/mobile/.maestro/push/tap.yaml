@@ -1,0 +1,22 @@
+# Second half of the iOS push check, run after the script has sent push/handle-rejected.json. The app is in the background: the flow
+# opens Notification Center, taps the push and checks that the app opens the social handle screen, which is where a turned-down
+# handle goes (src/model/notificationRoute.ts). It does not launch the app, a launch would open it without the tap.
+# Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: ios push tap
+---
+# The swipe from the top edge can miss, so it runs again until the push shows.
+- retry:
+    maxRetries: 2
+    commands:
+      - swipe:
+          start: 30%, 1%
+          end: 30%, 60%
+      - extendedWaitUntil:
+          visible: "Push routing check"
+          timeout: 10000
+- tapOn: "Push routing check"
+- extendedWaitUntil:
+    visible:
+      id: settings-social
+    timeout: 20000

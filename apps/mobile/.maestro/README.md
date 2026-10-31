@@ -33,6 +33,8 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `scripts/operator.js` | Calls the seeded server's operator routes (`e2e/mobile-operator.ts`), served on the port after the server's, which it works out from `SERVER_URL` |
 | `scripts/clock.js` | Moves the seeded server's clock forward and runs one ticker pass (the server runs with `--no-ticker`) |
 | `ci/device-run.sh` | What a CI device job runs: pins the clock and screen, runs the flows, then captures every story in `visual/stories.json` |
+| `push/` | The iOS push check, outside the workspace because a push is sent between its two flows: `arm.yaml` signs in and sends the app to the home screen, `handle-rejected.json` is the sample payload (Expo push service shape, the data under `body`), `tap.yaml` opens Notification Center, taps the push and checks that the social handle screen opens |
+| `ci/ios-push-check.sh` | What the `ios-small` job runs after the capture: `arm.yaml`, `xcrun simctl push booted com.turnout.app.e2e push/handle-rejected.json`, then `tap.yaml`. It proves the handler, not delivery |
 
 Run locally, with an e2e build installed on an emulator or simulator:
 

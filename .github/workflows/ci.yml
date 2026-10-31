@@ -539,6 +539,11 @@ jobs:
           apps/mobile/.maestro/ci/device-run.sh "${{ matrix.target }}"
       - name: Compare the shots with the baselines
         run: apps/mobile/.maestro/ci/visual-compare.sh "${{ matrix.target }}"
+      # F26 and A14: `xcrun simctl push` sends a sample payload and a tap on it must open the screen its kind names. One target is
+      # enough, the routing does not depend on the screen size. It runs after the capture because it resets the appearance.
+      - name: Check that a push opens the right screen
+        if: matrix.target == 'ios-small'
+        run: apps/mobile/.maestro/ci/ios-push-check.sh
       - name: Upload the shots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
