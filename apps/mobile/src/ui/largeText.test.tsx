@@ -50,7 +50,7 @@ describe("rows grow with the largest text size", () => {
 
   it("a centred bar title keeps clear of the wider side and ends in an ellipsis", async () => {
     await render(
-      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+      <TextScaleContext value={1}>
         <BackBar onBack={jest.fn()} title="Meeting up" trailing={<TextButton title="Safety" onPress={jest.fn()} testID="action" />} />
       </TextScaleContext>,
     );
@@ -68,7 +68,7 @@ describe("rows grow with the largest text size", () => {
     expect(screen.getByRole("header", { name: "Meeting up" }).props.numberOfLines).toBe(1);
   });
 
-  it("a bar title with no room between the sides goes on its own row instead of vanishing", async () => {
+  it("a bar title goes on its own row and wraps at a large text size instead of vanishing", async () => {
     await render(
       <TextScaleContext value={LARGEST_TEXT_SCALE}>
         <BackBar onBack={jest.fn()} title="Meet card" trailing={<TextButton title="Safety" onPress={jest.fn()} testID="action" />} />
@@ -88,8 +88,24 @@ describe("rows grow with the largest text size", () => {
     const box = screen.getByTestId("back-bar-title");
     expect(box.props.style?.paddingHorizontal).toBeUndefined();
     expect(box.props.className).not.toContain("absolute");
-    expect(screen.getByRole("header", { name: "Meet card" }).props.numberOfLines).toBe(2);
+    expect(screen.getByRole("header", { name: "Meet card" }).props.numberOfLines).toBeUndefined();
     expect((leading.parent as typeof leading).props.className).toContain("min-h-14");
+  });
+
+  it("the thread composer input grows with the text size and scrolls past four lines, so the send button stays on screen", async () => {
+    const Story = Conversation.render as () => React.ReactElement;
+    await render(
+      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+        <Story />
+      </TextScaleContext>,
+    );
+    const inputs = screen.getAllByTestId("thread-input");
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const input of inputs) {
+      const style = StyleSheet.flatten(input.props.style) as { maxHeight: number };
+      expect(style.maxHeight).toBe(scaledMetrics("body", LARGEST_TEXT_SCALE).lineHeight * 4 + 2 * spacing[3]);
+      expect(input.props.className).not.toMatch(/(^|\s)max-h-/);
+    }
   });
 
   it("a Home day heading wraps its date under the title instead of running off the screen", async () => {
@@ -104,7 +120,7 @@ describe("rows grow with the largest text size", () => {
     for (const day of days) expect(day.props.className).toMatch(/(^|\s)flex-wrap(\s|$)/);
   });
 
-  it("a poster title leaves room for the category line, which grows, so its top is not cut off", async () => {
+  it("a poster title leaves room for the category line, which grows to 1.3 and no further, so its top is not cut off", async () => {
     await render(
       <TextScaleContext value={LARGEST_TEXT_SCALE}>
         <Poster variant="featured" title="The Monsoon Theory" category="music" />
@@ -114,8 +130,8 @@ describe("rows grow with the largest text size", () => {
       nativeEvent: { layout: { x: 0, y: 0, width: 328, height: POSTER_HEIGHT.featured } },
     });
     const { fontSize } = StyleSheet.flatten(screen.getByText("The Monsoon Theory").props.style) as { fontSize: number };
-    // The scrim pads by 12 over the title, 4 between and 16 under the category line, which is 36 tall at the largest size.
-    const titleRoom = POSTER_HEIGHT.featured - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", LARGEST_TEXT_SCALE).lineHeight;
+    // The scrim pads by 12 over the title, 4 between and 16 under the category line, which stops growing at 1.3.
+    const titleRoom = POSTER_HEIGHT.featured - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", 1.3).lineHeight;
     expect(fontSize).toBe(fitDisplaySize("The Monsoon Theory", 328 - 2 * spacing[4], "display-poster", 3, titleRoom));
     expect(fontSize).toBeLessThan(displayFaces["display-poster"].maxFontSize);
   });

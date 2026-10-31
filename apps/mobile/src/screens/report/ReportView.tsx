@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "rea
 import { report as copy } from "@/copy/report";
 import { DETAILS_MAX_CHARS } from "@/model/report";
 import { BackBar } from "@/ui/BackBar";
+import { cn } from "@/ui/cn";
 import { EmergencyCall } from "@/ui/EmergencyCall";
 import { EmptyState } from "@/ui/EmptyState";
 import { ErrorState, type ErrorStateProps } from "@/ui/ErrorState";
@@ -14,6 +15,7 @@ import { Field } from "@/ui/primitives/Field";
 import { dimOnPress } from "@/ui/primitives/press";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
+import { isLargeText, useFontScale } from "@/ui/textScale";
 
 export interface ReportPerson {
   memberRef: string;
@@ -75,6 +77,7 @@ function Form({
   const [details, setDetails] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const reason = copy.reasons.find((entry) => entry.id === reasonId) ?? copy.reasons[0];
+  const large = isLargeText(useFontScale());
   return (
     <>
       <ScrollView className="flex-1" contentContainerClassName="px-4 pb-6 pt-4" keyboardShouldPersistTaps="handled" testID="report-scroll">
@@ -96,7 +99,7 @@ function Form({
                 accessibilityLabel={copy.whoLabel(person.firstName)}
                 accessibilityState={{ checked: picked }}
                 onPress={() => setMemberRef(person.memberRef)}
-                className="min-h-11 w-[62px] items-center"
+                className={cn("min-h-11 items-center", large ? "w-28" : "w-[62px]")}
                 style={dimOnPress}
                 testID={`report-person-${person.memberRef}`}
               >
@@ -106,12 +109,7 @@ function Form({
                 >
                   <PersonAvatar name={person.firstName} photoUrl={person.photoUrl} size="sm" memoryCacheKey={person.memoryCacheKey} />
                 </View>
-                <Text
-                  variant="meta"
-                  className={picked ? "mt-1.5 font-semibold" : "mt-1.5 text-muted"}
-                  numberOfLines={1}
-                  importantForAccessibility="no"
-                >
+                <Text variant="meta" className={picked ? "mt-1.5 font-semibold" : "mt-1.5 text-muted"} importantForAccessibility="no">
                   {person.firstName}
                 </Text>
               </Pressable>

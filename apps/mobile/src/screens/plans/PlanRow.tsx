@@ -38,7 +38,7 @@ export function PlanRow({ plan, onPress }: PlanRowProps) {
         <Poster variant="thumb" title={plan.show.title} category="other" />
       </View>
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text variant="control" numberOfLines={1} className="font-semibold">
+        <Text variant="control" className="font-semibold">
           {plan.show.title}
         </Text>
         <Text variant="meta" tabular className="text-muted">
