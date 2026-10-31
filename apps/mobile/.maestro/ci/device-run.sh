@@ -22,12 +22,13 @@ set_ios_text() { xcrun simctl ui booted content_size "$([ "$1" = largest ] && ec
 # Once the emulator dropped to "device offline" between the flows and the first capture, and adb gave up. Reconnect and wait before
 # each capture.
 # Demo mode does not always hold: after the theme or text size changed, the sheet stories showed the real clock again. So every wait,
-# which runs after those changes and before each capture, sets it again.
+# which runs after those changes and before each capture, sets it again. adb shell reads stdin, and the capture calls the wait inside
+# a loop that reads the story list, so the wait reads from /dev/null: once it ate the list and 49 stories were never shot.
 wait_android() {
   adb reconnect offline > /dev/null 2>&1 || true
   timeout 120 adb wait-for-device
   pin_android_status_bar
-}
+} < /dev/null
 pin_android_status_bar() {
   adb shell settings put global sysui_demo_allowed 1
   adb shell am broadcast -a com.android.systemui.demo -e command enter > /dev/null
@@ -163,7 +164,8 @@ for theme in light dark; do
       "wait_${platform}"
       maestro test --test-output-dir "$rerun" "$batch" < /dev/null || true
     done
-    jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
+    # The list comes in on fd 3, so a command in the loop that reads stdin cannot end the loop early.
+    while read -r folder <&3; do
       mkdir -p "$SHOT_DIR/$folder"
       shot="$(find_shot "$folder" "$out" "$rerun")"
       for attempt in 1 2; do
@@ -180,8 +182,18 @@ for theme in light dark; do
         exit 1
       fi
       mv "$shot" "$SHOT_DIR/$folder/$theme-$text.png"
-    done
+    done 3< <(jq -r '.[].folder' "$here/visual/stories.json")
   done
 done
+# Every story has a shot for every theme and text size, or the job fails here and not later as a compare that reads as a change.
+unshot="$(jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
+  for cell in light-default light-largest dark-default dark-largest; do
+    [ -f "$SHOT_DIR/$folder/$cell.png" ] || echo "$folder/$cell"
+  done
+done)"
+if [ -n "$unshot" ]; then
+  echo "the capture ended with no shot for: $(tr '\n' ' ' <<< "$unshot")" >&2
+  exit 1
+fi
 rm -rf "$batch"
 echo "::endgroup::"
