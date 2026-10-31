@@ -1,5 +1,5 @@
 import Expo, { type ExpoPushMessage, type ExpoPushReceipt, type ExpoPushTicket } from "expo-server-sdk";
-import type { PushReceiptResult, PushSender, PushSendResult } from "./push.js";
+import type { PushMessage, PushReceiptResult, PushSender, PushSendResult } from "./push.js";
 
 const GONE = "DeviceNotRegistered";
 
@@ -19,6 +19,24 @@ export function receiptResult(receipt: ExpoPushReceipt): PushReceiptResult {
 }
 
 /**
+ * One message as Expo takes it. A group key is the Android `tag`, so a newer thread push replaces the one on screen (the text is
+ * the same), and the iOS `threadId`, so iOS stacks them.
+ */
+export function wireMessage(m: PushMessage): ExpoPushMessage {
+  return {
+    to: m.token,
+    title: m.title,
+    body: m.body,
+    data: { ...m.data },
+    ttl: m.ttlSeconds,
+    priority: "high",
+    sound: "default",
+    channelId: m.channelId,
+    ...(m.groupKey === null ? {} : { tag: m.groupKey, threadId: m.groupKey }),
+  };
+}
+
+/**
  * Sends through Expo's push service (https://docs.expo.dev/push-notifications/sending-notifications/). Messages go out in the
  * chunks the SDK sizes, and each message's ticket is matched back by position. The access token is optional: it is needed only when
  * the Expo project turns on enhanced push security.
@@ -28,15 +46,7 @@ export function expoPushSender(accessToken: string | null): PushSender {
   return {
     async send(messages) {
       const results: PushSendResult[] = [];
-      const wire: ExpoPushMessage[] = messages.map((m) => ({
-        to: m.token,
-        title: m.title,
-        body: m.body,
-        data: { ...m.data },
-        ttl: m.ttlSeconds,
-        priority: "high",
-        sound: "default",
-      }));
+      const wire = messages.map(wireMessage);
       for (const chunk of client.chunkPushNotifications(wire)) {
         const tickets = await client.sendPushNotificationsAsync(chunk);
         for (let index = 0; index < chunk.length; index += 1) results.push(ticketResult(tickets[index]));

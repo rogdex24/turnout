@@ -37,6 +37,31 @@ export const NOTICE_PUSH_TEXT: Readonly<Record<NoticeKind, { title: string; body
   morning_after: { title: "Turnout", body: "How did it go?" },
 };
 
+/** The Android notification channels the app makes. `plans` is the default for a push that names no channel. */
+export const PUSH_CHANNELS = ["plans", "show-day", "thread"] as const;
+export type PushChannel = (typeof PUSH_CHANNELS)[number];
+
+/** The channel each kind goes to: the meet card and head over ring as show day, chat goes to thread, the rest to plans. */
+export const NOTICE_CHANNEL: Readonly<Record<NoticeKind, PushChannel>> = {
+  ticket_approved: "plans",
+  ticket_rejected: "plans",
+  handle_rejected: "plans",
+  group_confirmed: "plans",
+  group_changed: "plans",
+  group_smaller: "plans",
+  group_called_off: "plans",
+  no_group: "plans",
+  meet_card_live: "show-day",
+  head_over: "show-day",
+  thread_message: "thread",
+  morning_after: "plans",
+};
+
+/** Thread pushes of one plan share a key, so the phone shows them as one entry. Every other push stands alone. */
+export function pushGroupKey(kind: NoticeKind, planId: string | null): string | null {
+  return kind === "thread_message" && planId !== null ? `thread:${planId}` : null;
+}
+
 /** The push payload: ids and the kind, nothing else. The app fetches the notice and routes from it. */
 export const pushPayloadSchema = z.object({ kind: noticeKindSchema, noticeId: z.string(), planId: z.string().nullable() }).strict();
 export type PushPayload = z.infer<typeof pushPayloadSchema>;

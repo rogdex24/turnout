@@ -17,7 +17,12 @@ const TOKEN_B = "ExponentPushToken[bbbbbbbbbbbbbbbbbbbbbb]";
 
 const pass = (t: TestApp) => runTickerPass(t.app, "test-holder");
 
-function notice(t: TestApp, who: Session, kind: "ticket_approved" | "head_over" = "ticket_approved", planId: string | null = null): string {
+function notice(
+  t: TestApp,
+  who: Session,
+  kind: "ticket_approved" | "head_over" | "thread_message" = "ticket_approved",
+  planId: string | null = null,
+): string {
   t.clock.advance(5);
   const id = addNotice(t.db, {
     memberId: who.memberId,
@@ -69,6 +74,24 @@ describe("pushes", () => {
     t.clock.advance(MINUTE);
     await pass(t);
     expect(t.push.sent).toHaveLength(1);
+  });
+
+  test("a push names its Android channel, and thread pushes of one plan share a group", async () => {
+    const t = await testApp();
+    const a = await memberSession(t, 0);
+    await register(t, a, TOKEN_A);
+    seedShow(t.db, { id: "show-a" });
+    const plan = await makePlan(t, a, "show-a");
+    notice(t, a, "ticket_approved", plan.id);
+    notice(t, a, "head_over", plan.id);
+    notice(t, a, "thread_message", plan.id);
+    await pass(t);
+    const sent = Object.fromEntries(t.push.sent.map((m) => [m.data.kind, { channelId: m.channelId, groupKey: m.groupKey }]));
+    expect(sent).toEqual({
+      ticket_approved: { channelId: "plans", groupKey: null },
+      head_over: { channelId: "show-day", groupKey: null },
+      thread_message: { channelId: "thread", groupKey: `thread:${plan.id}` },
+    });
   });
 
   test("the push time to live is the notice's own, so a late push is never delivered after it went stale", async () => {

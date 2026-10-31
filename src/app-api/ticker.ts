@@ -1,4 +1,4 @@
-import { NOTICE_PUSH_TEXT } from "@turnout/contract/app/notices";
+import { NOTICE_CHANNEL, NOTICE_PUSH_TEXT, pushGroupKey } from "@turnout/contract/app/notices";
 import { closeFeedback } from "../social/feedback.js";
 import {
   expireReceipts,
@@ -47,6 +47,8 @@ async function sendPushes(app: AppContext, now: Date): Promise<void> {
         body: text.body,
         data: { kind: notice.kind, noticeId: notice.id, planId: notice.plan_id },
         ttlSeconds,
+        channelId: NOTICE_CHANNEL[notice.kind],
+        groupKey: pushGroupKey(notice.kind, notice.plan_id),
       });
       owners.push({ noticeId: notice.id, deviceId: device.id });
     }
