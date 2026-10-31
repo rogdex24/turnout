@@ -125,6 +125,16 @@ describe("EmptyState and ErrorState", () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
+  it("reads the title with the sentence and keeps the retry outside the group so VoiceOver can reach it", async () => {
+    await render(<ErrorState kind="server" onRetry={jest.fn()} />);
+    expect(screen.getByRole("alert", { name: "That didn't work. Something went wrong on our side. Try again in a moment." })).toBeTruthy();
+    let parent = screen.getByRole("button", { name: "Try again" }).parent;
+    while (parent) {
+      expect(parent.props.accessible).not.toBe(true);
+      parent = parent.parent;
+    }
+  });
+
   it("is not red", async () => {
     await render(<ErrorState kind="server" onRetry={() => undefined} />);
     expect(JSON.stringify(screen.toJSON())).not.toMatch(/danger|red-/);

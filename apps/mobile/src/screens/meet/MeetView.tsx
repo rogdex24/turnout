@@ -239,7 +239,8 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
   const venuePoint = toPoint(venue.lat, venue.lng);
   const walk = venueWalkMinutes(cafePoint, venuePoint);
   const showRow = copy.showRow(card.showTitle, istClock(card.startsAt)?.text ?? null);
-  const mapLabel = copy.map.label(cafe.name, venuePoint ? venue.name : null);
+  // The pin shows the venue as "Venue" when it has no name, so the label must say the same.
+  const mapLabel = copy.map.label(cafe.name, venuePoint ? (venue.name ?? copy.map.venue) : null);
   const done = card.members.some((member) => member.isYou && member.checkedIn);
   const button = hereButton(card.startsAt, props.now, checkInOpen(card.startsAt, props.now));
   const hint = hereHint(props.here, button, done);

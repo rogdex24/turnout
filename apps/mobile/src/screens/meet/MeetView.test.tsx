@@ -49,6 +49,11 @@ describe("MeetView", () => {
     expect(screen.queryByTestId("meet-map")).toBeNull();
   });
 
+  it("names the venue pin in the map label when the venue has no name", async () => {
+    await view({ realMap: false }, { venue: { name: null, lat: 17.4525, lng: 78.3811 } });
+    expect(screen.getByTestId("meet-map-static").props.accessibilityLabel).toBe(copy.map.label(card.cafe.name, copy.map.venue));
+  });
+
   it("shows the real map when the build has one", async () => {
     await view({ realMap: true });
     expect(screen.getByTestId("meet-map")).toBeOnTheScreen();
