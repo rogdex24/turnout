@@ -12,7 +12,12 @@ const noop = () => undefined;
 function frame(permission: NotificationsViewProps["permission"]) {
   return (
     <Matrix framed>
-      <NotificationsView permission={permission} onBack={noop} onOpenSettings={noop} />
+      <NotificationsView
+        permission={permission}
+        onBack={noop}
+        onOpenSettings={noop}
+        onAsk={permission === "undetermined" ? noop : undefined}
+      />
     </Matrix>
   );
 }

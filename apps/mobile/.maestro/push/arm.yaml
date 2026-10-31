@@ -1,6 +1,6 @@
 # First half of the iOS push check (ci/ios-push-check.sh runs it, then sends push/handle-rejected.json with `xcrun simctl push`, then runs
-# tap.yaml). Signs in a seeded member, lets the app show notifications and sends it to the home screen, so the push arrives as a
-# banner and waits in Notification Center. Not part of config.yaml: a push needs the script between the two halves.
+# tap.yaml). Signs in a seeded member, turns notifications on from the settings page and sends the app to the home screen, so
+# the push arrives as a banner and waits in Notification Center. Not part of config.yaml: a push needs the script between the two halves.
 # Written for CI; it has not run on a device yet.
 appId: com.turnout.app.e2e
 name: ios push arm
@@ -13,7 +13,8 @@ env:
       PHONE: ${MEMBER}
       SERVER_URL: ${SERVER_URL}
       TEST_TOKEN: ${TEST_TOKEN}
-# The app never asks for the notification permission before a first ticket is sent, so it is granted up front. The session stays.
+# iOS shows no push from an app that never asked, and `permissions` on launchApp cannot grant it without the system's question.
+# The notifications page asks it while it was never asked; the launch's `notifications: allow` tells Maestro to answer Allow.
 - launchApp:
     clearState: false
     permissions:
@@ -22,4 +23,33 @@ env:
     visible:
       id: home
     timeout: 20000
+- tapOn: "You"
+- scrollUntilVisible:
+    element:
+      id: you-notifications
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: you-notifications
+- extendedWaitUntil:
+    visible:
+      id: settings-notifications
+    timeout: 10000
+# A device run that already asked (the ticket page asks after a first ticket) has no button, and the status says what it got.
+- runFlow:
+    when:
+      visible:
+        id: notifications-ask
+    commands:
+      - tapOn:
+          id: notifications-ask
+      - runFlow:
+          when:
+            visible: "Allow"
+          commands:
+            - tapOn: "Allow"
+# The status is one element named "On this phone, On. ...", so "On" is matched as the second part of that name.
+- extendedWaitUntil:
+    visible: "On this phone, On. .*"
+    timeout: 10000
 - pressKey: home

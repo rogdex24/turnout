@@ -9,8 +9,9 @@ export const settings = {
     hint: {
       granted: "You can turn them off in your phone's settings.",
       denied: "Turn them on in your phone's settings to hear when your group is set.",
-      undetermined: "We'll ask when you first add a ticket.",
+      undetermined: "Turn them on here, or we'll ask when you first add a ticket.",
     },
+    ask: "Turn on notifications",
     openSettings: "Open phone settings",
     channelsTitle: "What you'll see",
   },

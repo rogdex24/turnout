@@ -13,10 +13,12 @@ export interface NotificationsViewProps {
   permission: PushPermission["status"] | null;
   onBack: () => void;
   onOpenSettings: () => void;
+  /** Asks the system's question. Only while it has never been asked. */
+  onAsk?: () => void;
 }
 
 /** Settings, notifications: whether this phone lets Turnout notify, what the three kinds are, and the way to the phone's own settings. */
-export function NotificationsView({ permission, onBack, onOpenSettings }: NotificationsViewProps) {
+export function NotificationsView({ permission, onBack, onOpenSettings, onAsk }: NotificationsViewProps) {
   return (
     <SettingsPage title={copy.title} lead={copy.lead} onBack={onBack} testID="settings-notifications">
       {permission ? (
@@ -54,6 +56,7 @@ export function NotificationsView({ permission, onBack, onOpenSettings }: Notifi
         ))}
       </View>
 
+      {onAsk ? <Button title={copy.ask} onPress={onAsk} testID="notifications-ask" /> : null}
       <Button variant="secondary" title={copy.openSettings} onPress={onOpenSettings} testID="notifications-open-settings" />
     </SettingsPage>
   );

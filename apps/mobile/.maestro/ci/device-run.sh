@@ -85,7 +85,7 @@ echo "::group::visual capture"
 # One Maestro run per theme and text size, not one per story. Every run starts Maestro and its driver, which took about 10 s on
 # Android and about 75 s on iOS, so the 40 single-story runs spent about 7 and 50 minutes on start-up. Each story is written out
 # as its own flow with its own shot name, next to flows/ so the story flow's ../subflows path still resolves. The stories share
-# no state (each launches with clearState), so a story with no shot after its batch is captured again on its own, up to twice.
+# no state (each renders fixed data after a fresh launch), so a story with no shot after its batch is captured again on its own, up to twice.
 # A story still without a shot fails the job; a shot is never taken from another run.
 batch="$here/visual-run"
 app_id="$(sed -n 's/^appId: //p' "$here/visual/capture-story.yaml")"
