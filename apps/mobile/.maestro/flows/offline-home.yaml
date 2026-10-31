@@ -28,18 +28,21 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
       ONLINE: "false"
 - retry:
-    maxRetries: 2
+    maxRetries: 3
     commands:
+      # A slow pull: the 400 ms default ran past the refresh control on a loaded emulator.
       - swipe:
           start: 50%, 35%
           end: 50%, 85%
+          duration: 900
       - extendedWaitUntil:
           visible: "You're offline. Showing what we saved."
-          timeout: 10000
+          timeout: 15000
 - assertVisible:
     id: "show-card-.*"
 
-# A cold start reads the shows from the disk cache. The first request fails, so the notice comes back.
+# A cold start reads the shows from the disk cache. The restored list is fresh for five minutes, so the app asks for nothing on its
+# own; a pull to refresh fails in the transport and the notice comes back.
 - stopApp
 - launchApp:
     clearState: false
@@ -49,9 +52,18 @@ env:
     timeout: 20000
 - assertVisible:
     id: "show-card-.*"
-- extendedWaitUntil:
-    visible: "You're offline. Showing what we saved."
-    timeout: 15000
+- retry:
+    maxRetries: 3
+    commands:
+      - swipe:
+          start: 50%, 35%
+          end: 50%, 85%
+          duration: 900
+      - extendedWaitUntil:
+          visible: "You're offline. Showing what we saved."
+          timeout: 15000
+- assertVisible:
+    id: "show-card-.*"
 
 # The connection comes back. The refresh runs again until a request gets through.
 - runScript:
@@ -63,9 +75,11 @@ env:
 - retry:
     maxRetries: 3
     commands:
+      # A slow pull: the 400 ms default ran past the refresh control on a loaded emulator.
       - swipe:
           start: 50%, 35%
           end: 50%, 85%
+          duration: 900
       - extendedWaitUntil:
           notVisible: "You're offline. Showing what we saved."
           timeout: 10000

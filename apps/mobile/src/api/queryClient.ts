@@ -12,10 +12,15 @@ export function shouldRetry(failureCount: number, error: unknown): boolean {
   return isApiError(error) && (error.kind === "server" || error.kind === "offline");
 }
 
+/**
+ * A query sends its first request even while the client says offline, and only its retries wait for the network. The online
+ * state comes only from the API client's last answer, so a query that never sent would never tell the app it is back. Screens
+ * still see `paused` after that first failure. Mutations wait for an answer.
+ */
 export function createAppQueryClient(): QueryClient {
   const client = new QueryClient({
     defaultOptions: {
-      queries: { gcTime: CACHE_MAX_AGE_MS, retry: shouldRetry, refetchOnReconnect: true },
+      queries: { gcTime: CACHE_MAX_AGE_MS, retry: shouldRetry, refetchOnReconnect: true, networkMode: "offlineFirst" },
       mutations: { gcTime: CACHE_MAX_AGE_MS, retry: 0 },
     },
   });

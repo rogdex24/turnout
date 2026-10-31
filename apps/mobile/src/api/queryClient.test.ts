@@ -38,4 +38,25 @@ describe("followConnectivity", () => {
     connectivity.report(false);
     expect(onlineManager.isOnline()).toBe(true);
   });
+
+  // offline-home on a device: after one failed call the client said offline, a pull to refresh sent nothing, and the bar never went.
+  it("still sends a refresh while offline, so the first answer can bring the app back online", async () => {
+    const connectivity = createConnectivity();
+    const client = testQueryClient();
+    const stop = followConnectivity(connectivity, client);
+    connectivity.report(false);
+    let calls = 0;
+    const data = await client.fetchQuery({
+      queryKey: ["shows", "list", "probe"],
+      queryFn: () => {
+        calls += 1;
+        connectivity.report(true);
+        return "answer";
+      },
+    });
+    expect(data).toBe("answer");
+    expect(calls).toBe(1);
+    expect(onlineManager.isOnline()).toBe(true);
+    stop();
+  });
 });

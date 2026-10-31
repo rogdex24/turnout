@@ -249,8 +249,10 @@ describe("PlanScreen", () => {
     });
 
     it("says it is offline, not loading forever, for a plan never seen", async () => {
-      await open(planFixture({ id: "plan-unseen" }), {}, BEFORE_REVEAL, false, (app) => app.deps.connectivity.report(false));
-      expect(await screen.findByText(common.errorOffline)).toBeOnTheScreen();
+      const routes = { "GET /plans/plan-unseen": new Error("no network") };
+      await open(planFixture({ id: "plan-unseen" }), routes, BEFORE_REVEAL, false, (app) => app.deps.connectivity.report(false));
+      // The first request still goes out; its retry waits a second, then pauses for the network.
+      expect(await screen.findByText(common.errorOffline, {}, { timeout: 4000 })).toBeOnTheScreen();
     });
 
     it("shows a plain error with a retry", async () => {
