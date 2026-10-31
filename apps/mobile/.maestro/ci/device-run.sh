@@ -49,19 +49,29 @@ echo "::group::flows"
 # One pass, with no re-run inside the job. Many flows change the seeded members, plans and groups, so a second pass on the same
 # server checks different data. A flaky device job is re-run whole, which starts a fresh server.
 # The one exception is a device drop: the Android emulator has gone "device offline" mid run, and the flow running then fails at
-# once. After a reconnect the run goes on from that flow, so each flow still runs to the end once. A failure that is not a
-# device drop, or a second drop, fails the job.
+# once. After a reconnect the run goes on from that flow, so each flow still runs to the end once. In run 41202152196 the
+# android-small emulator dropped twice, so the run goes on after up to three drops. A failure that is not a device drop, or a
+# fourth drop, fails the job.
 flows_out="$debug/flows"
 resume_config="$here/resume-config.yaml"
+max_drops=3
 dropped() {
-  find "$flows_out" -path "*/$1/*" -name maestro.log -exec grep -qE 'device offline|DeviceServerDiedException' {} + 2> /dev/null
+  find "$1" -path "*/$2/*" -name maestro.log -exec grep -qE 'device offline|DeviceServerDiedException' {} + 2> /dev/null
 }
 mkdir -p "$flows_out"
-if ! maestro test --test-output-dir "$flows_out" -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here" < /dev/null |
-  tee "$flows_out/summary.txt"; then
-  failed="$(sed -n 's/^\[Failed\] \([a-z0-9-]*\) .*/\1/p' "$flows_out/summary.txt" | head -n 1)"
-  if [ "$platform" != android ] || [ -z "$failed" ] || ! dropped "$failed"; then exit 1; fi
-  echo "::warning::flows: the device dropped during $failed, it is reconnected and the run goes on from $failed"
+out="$flows_out"
+config=()
+drops=0
+# The ${config[@]+...} form keeps an empty list safe under set -u in the bash 3.2 that macOS ships.
+while ! maestro test ${config[@]+"${config[@]}"} --test-output-dir "$out" -e "SERVER_URL=$SERVER_URL" -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here" \
+  < /dev/null | tee "$out.txt"; do
+  failed="$(sed -n 's/^\[Failed\] \([a-z0-9-]*\) .*/\1/p' "$out.txt" | head -n 1)"
+  if [ "$platform" != android ] || [ -z "$failed" ] || ! dropped "$out" "$failed" || [ "$drops" -ge "$max_drops" ]; then
+    rm -f "$resume_config"
+    exit 1
+  fi
+  drops=$((drops + 1))
+  echo "::warning::flows: the device dropped during $failed (drop $drops of $max_drops), it is reconnected and the run goes on from $failed"
   rest="$(sed -n '/^  flowsOrder:$/,$p' "$here/config.yaml" | sed -n 's/^    - //p' | sed -n "/^$failed\$/,\$p")"
   {
     echo "# Written by ci/device-run.sh to go on after a device drop; deleted when the run ends."
@@ -73,12 +83,10 @@ if ! maestro test --test-output-dir "$flows_out" -e "SERVER_URL=$SERVER_URL" -e 
     while read -r flow; do echo "    - $flow"; done <<< "$rest"
   } > "$resume_config"
   wait_android
-  status=0
-  maestro test --config "$resume_config" --test-output-dir "$flows_out-resume" -e "SERVER_URL=$SERVER_URL" \
-    -e "TEST_TOKEN=${TEST_TOKEN:-}" "$here" < /dev/null || status=$?
-  rm -f "$resume_config"
-  [ "$status" -eq 0 ] || exit "$status"
-fi
+  out="$flows_out-resume$drops"
+  config=(--config "$resume_config")
+done
+rm -f "$resume_config"
 echo "::endgroup::"
 
 echo "::group::visual capture"
