@@ -160,13 +160,13 @@ typography:
     fontWeight: 500
     lineHeight: 20px
   display-hero:
-    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontFamily: '"Big Shoulders", "Inter Variable", sans-serif'
     fontSize: 116px
     fontWeight: 900
     lineHeight: 90px
     letterSpacing: -0.01em
   display-band:
-    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontFamily: '"Big Shoulders", "Inter Variable", sans-serif'
     fontSize: 28px
     fontWeight: 800
     lineHeight: 28px
@@ -1076,10 +1076,10 @@ Type. The app takes its scale from the Typography table, with these additions an
 | `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes |
 | `app-control` (the app's `control`) | Inter | 15 / 20 / 500 | yes |
 | `meta`, `label`, `badge` | Inter | as above | `label` and `badge` up to 1.3 |
-| `display-hero` | Big Shoulders Display | 116 / 90 / 900 | no, fixed (the meet time) |
-| `display-band` | Big Shoulders Display | 28 / 28 / 800, caps | no, fixed (the marquee) |
-| `display-poster` | Big Shoulders Display | 30 to 70, 800, caps | no, fixed boxes |
-| `display-numeral` | Big Shoulders Display | 24 to 36, 800 | no (price, count, code digits) |
+| `display-hero` | Big Shoulders | 116 / 90 / 900 | no, fixed (the meet time) |
+| `display-band` | Big Shoulders | 28 / 28 / 800, caps | no, fixed (the marquee) |
+| `display-poster` | Big Shoulders | 30 to 70, 800, caps | no, fixed boxes |
+| `display-numeral` | Big Shoulders | 24 to 36, 800 | no (price, count, code digits) |
 
 `design.md` types take one size, so the two ranges (`display-poster`, `display-numeral`) and the scaling caps live in
 `packages/design-tokens/native.ts`. The display face is for the wordmark, poster titles, the marquee, the meet time and single

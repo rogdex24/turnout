@@ -132,7 +132,7 @@ describe("type scale", () => {
     expect([t["title-large"]?.fontSize, t["title-large"]?.lineHeight, t["title-large"]?.fontWeight]).toEqual(["22px", "28px", 600]);
     expect(t["display-hero"]?.fontSize).toBe("116px");
     expect(t["display-band"]?.fontSize).toBe("28px");
-    expect(t["display-hero"]?.fontFamily).toStartWith('"Big Shoulders Display"');
+    expect(t["display-hero"]?.fontFamily).toStartWith('"Big Shoulders"');
     // The web scale is unchanged.
     expect([t.title?.fontSize, t.body?.fontSize, t.control?.fontSize]).toEqual(["18px", "16px", "14px"]);
   });
