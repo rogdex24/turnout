@@ -148,6 +148,26 @@ describe("Maestro flows", () => {
     expect(text).not.toMatch(/^(\w+) \|\| \1$/m);
   });
 
+  // A device that drops during takeScreenshot leaves a cut-off PNG. In run 41193468137 one counted as a shot, so the story was not
+  // captured again and odiff could not read it. find_shot skips a file without the PNG end chunk.
+  test("the visual capture counts only a whole PNG as a shot", async () => {
+    const text = await Bun.file(`${root}/ci/device-run.sh`).text();
+    const findShot = text.match(/^find_shot\(\) \{\n[\s\S]*?^\}$/m)?.[0];
+    expect(findShot).toBeDefined();
+    const dir = (await Bun.$`mktemp -d`.text()).trim();
+    // A 1x1 PNG: signature, IHDR, IDAT and IEND.
+    const whole = Buffer.from(
+      "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8cfc0f01f0005000201a5b3b1a10000000049454e44ae426082",
+      "hex",
+    );
+    await Bun.write(`${dir}/cut/home.png`, whole.subarray(0, 40));
+    await Bun.write(`${dir}/whole/home.png`, whole);
+    const run = (folders: string) => Bun.$`bash -c ${`${findShot}\nfind_shot home ${folders}`}`.quiet().nothrow().text();
+    expect((await run(`${dir}/cut ${dir}/whole`)).trim()).toBe(`${dir}/whole/home.png`);
+    expect((await run(`${dir}/cut`)).trim()).toBe("");
+    await Bun.$`rm -rf ${dir}`;
+  });
+
   // The capture writes one flow per story from capture-story.yaml. It may run the batch once more after a device drop and a
   // story again on its own; it never runs a flow from flows/.
   test("the visual capture runs only the story flows it writes, again only one story at a time", async () => {

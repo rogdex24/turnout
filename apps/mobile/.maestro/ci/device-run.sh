@@ -88,6 +88,16 @@ echo "::group::visual capture"
 # no state (each renders fixed data after a fresh launch), so a story with no shot after its batch is captured again on its own, up to twice.
 # A story still without a shot fails the job; a shot is never taken from another run.
 batch="$here/visual-run"
+# The first whole PNG named <folder>.png under the given folders. A shot counts only if it ends with the PNG end chunk: a device that
+# drops in the middle of takeScreenshot leaves a cut-off file, which odiff cannot read, and that story is captured again instead.
+find_shot() {
+  local folder="$1" file
+  shift
+  while read -r file; do
+    [ "$(tail -c 8 "$file" | od -An -tx1 | tr -d ' \n')" = 49454e44ae426082 ] && { echo "$file"; return; }
+    echo "::warning::$file is not a whole PNG, so it does not count as a shot" >&2
+  done < <(find "$@" -type f -name "$folder.png")
+}
 app_id="$(sed -n 's/^appId: //p' "$here/visual/capture-story.yaml")"
 write_story_flow() {
   local story="$1" folder
@@ -125,7 +135,7 @@ for theme in light dark; do
       missing=0
       while read -r folder; do
         total=$((total + 1))
-        [ -n "$(find "$out" "$rerun" -type f -name "$folder.png" | head -n 1)" ] || missing=$((missing + 1))
+        [ -n "$(find_shot "$folder" "$out" "$rerun" 2> /dev/null)" ] || missing=$((missing + 1))
       done < <(jq -r '.[].folder' "$here/visual/stories.json")
       [ $((missing * 2)) -le "$total" ] && break
       if [ "$pass" = second ]; then
@@ -138,7 +148,7 @@ for theme in light dark; do
     done
     jq -r '.[].folder' "$here/visual/stories.json" | while read -r folder; do
       mkdir -p "$SHOT_DIR/$folder"
-      shot="$(find "$out" "$rerun" -type f -name "$folder.png" | head -n 1)"
+      shot="$(find_shot "$folder" "$out" "$rerun")"
       for attempt in 1 2; do
         [ -n "$shot" ] && break
         echo "::warning::visual capture $folder/$theme-$text: no shot yet, capture on its own (try $attempt of 2)"
@@ -146,7 +156,7 @@ for theme in light dark; do
         mkdir -p "$retry"
         "wait_${platform}"
         maestro test --test-output-dir "$retry" "$batch/$folder.yaml" < /dev/null || true
-        shot="$(find "$retry" -type f -name "$folder.png" | head -n 1)"
+        shot="$(find_shot "$folder" "$retry")"
       done
       if [ -z "$shot" ]; then
         echo "no $folder.png for $folder/$theme-$text after the batch and two tries on its own" >&2
