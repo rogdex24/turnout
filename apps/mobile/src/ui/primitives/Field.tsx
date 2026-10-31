@@ -19,20 +19,22 @@ export interface FieldProps extends Omit<TextInputProps, "style"> {
   error?: string | null;
   /** Content before the input, such as the +91 prefix. */
   prefix?: ReactNode;
+  /** Keep the input on one line at every text size, for a short value such as a phone number. */
+  singleLine?: boolean;
   /** The text input itself, for a screen that moves focus to it. */
   inputRef?: Ref<FieldInput>;
   className?: string;
 }
 
 /** A 56 dp text field: label above, outline border, help or error below. */
-export function Field({ label, help, error, prefix, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
+export function Field({ label, help, error, prefix, singleLine = false, inputRef, className, onFocus, onBlur, ...input }: FieldProps) {
   const colors = useColors();
   const [focused, setFocused] = useState(false);
   const focusAllowed = useContext(AutoFocusContext);
   const below = error ?? help;
   // A single line cuts a long placeholder or value off at a large text size, so there the input wraps like a multiline one but
-  // still submits on the return key.
-  const wraps = isLargeText(useFontScale()) && !input.multiline;
+  // still submits on the return key. A wrapping input is taller than one line, so a short value opts out with `singleLine`.
+  const wraps = isLargeText(useFontScale()) && !input.multiline && !singleLine;
   return (
     <View className={className}>
       <Text variant="control" className="mb-2 font-semibold">

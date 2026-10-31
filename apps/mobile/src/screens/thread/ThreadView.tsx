@@ -207,6 +207,9 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null
   );
 }
 
+/** The header subtitle stops growing with the title, so at the largest text size it does not push the messages off the screen. */
+const SUBTITLE_MAX_SCALE = 1.6;
+
 function Header({ title, subtitle, onBack }: { title: string; subtitle: string | null; onBack: () => void }) {
   return (
     <View className="min-h-14 flex-row items-center px-2 py-1">
@@ -216,7 +219,13 @@ function Header({ title, subtitle, onBack }: { title: string; subtitle: string |
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="meta" tabular className="text-muted" testID="thread-subtitle">
+          <Text
+            variant="meta"
+            tabular
+            maxFontSizeMultiplier={SUBTITLE_MAX_SCALE}
+            className="text-center text-muted"
+            testID="thread-subtitle"
+          >
             {subtitle}
           </Text>
         ) : null}

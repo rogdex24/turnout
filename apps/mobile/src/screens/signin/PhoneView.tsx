@@ -48,6 +48,7 @@ export function PhoneView({ value, onChangeText, onSend, sending = false, error 
                 </View>
               )
             }
+            singleLine
             value={value}
             onChangeText={onChangeText}
             keyboardType="phone-pad"
