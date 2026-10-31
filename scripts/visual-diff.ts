@@ -1,9 +1,10 @@
 /**
- * `bun scripts/visual-diff.ts <baseline-dir> <candidate-dir> [--report <dir>] [--threshold 0.1]`
+ * `bun scripts/visual-diff.ts <baseline-dir> <candidate-dir> [--report <dir>] [--threshold 0.1] [--ignore x1,y1,x2,y2]...`
  *
  * Compares two folders of PNGs with odiff, file by file, matched on the path relative to each folder. Writes `report.json`, `report.md`
  * and a diff image per changed file into the report folder (default `visual-diff-report`). Exits 0 when every shot matches, 1 when any
  * shot changed, is missing from the candidate, has no baseline or changed size, and 2 on a usage error or when there is nothing to compare.
+ * Each `--ignore` box (pixels, corners included) is left out of every comparison, for system chrome the app does not draw.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -13,12 +14,15 @@ import { compare } from "odiff-bin";
 export const DEFAULT_THRESHOLD = 0.1;
 export const DEFAULT_REPORT_DIR = "visual-diff-report";
 
+/** A box in pixels, both corners included, as odiff takes it. */
+export type Region = { x1: number; y1: number; x2: number; y2: number };
 export type ShotStatus = "same" | "changed" | "layout-changed" | "missing" | "new";
 export type ShotResult = { file: string; status: ShotStatus; diffCount?: number; diffPercentage?: number; diffImage?: string };
 export type DiffReport = {
   baselineDir: string;
   candidateDir: string;
   threshold: number;
+  ignore: Region[];
   counts: Record<ShotStatus, number>;
   ok: boolean;
   shots: ShotResult[];
@@ -42,10 +46,11 @@ function listPngs(dir: string): string[] {
 export async function compareFolders(
   baselineDir: string,
   candidateDir: string,
-  options: { reportDir?: string; threshold?: number } = {},
+  options: { reportDir?: string; threshold?: number; ignore?: Region[] } = {},
 ): Promise<DiffReport> {
   const reportDir = options.reportDir ?? DEFAULT_REPORT_DIR;
   const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+  const ignore = options.ignore ?? [];
   for (const dir of [baselineDir, candidateDir]) {
     if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error(`${dir} is not a folder`);
   }
@@ -69,6 +74,7 @@ export async function compareFolders(
       threshold,
       failOnLayoutDiff: true,
       noFailOnFsErrors: true,
+      ...(ignore.length > 0 ? { ignoreRegions: ignore } : {}),
     });
     if (result.match) shots.push({ file, status: "same" });
     else if (result.reason === "pixel-diff") {
@@ -82,7 +88,7 @@ export async function compareFolders(
 
   const counts: Record<ShotStatus, number> = { same: 0, changed: 0, "layout-changed": 0, missing: 0, new: 0 };
   for (const shot of shots) counts[shot.status] += 1;
-  const report: DiffReport = { baselineDir, candidateDir, threshold, counts, ok: counts.same === shots.length, shots };
+  const report: DiffReport = { baselineDir, candidateDir, threshold, ignore, counts, ok: counts.same === shots.length, shots };
 
   fs.writeFileSync(path.join(reportDir, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   fs.writeFileSync(path.join(reportDir, "report.md"), renderMarkdown(report));
@@ -102,7 +108,7 @@ function renderMarkdown(report: DiffReport): string {
   const lines = [
     `# Visual diff: ${report.ok ? "no differences" : "differences found"}`,
     "",
-    `Baseline \`${report.baselineDir}\`, candidate \`${report.candidateDir}\`, odiff threshold ${report.threshold}.`,
+    `Baseline \`${report.baselineDir}\`, candidate \`${report.candidateDir}\`, odiff threshold ${report.threshold}.${report.ignore.map((r) => ` Box ${r.x1},${r.y1} to ${r.x2},${r.y2} is not compared.`).join("")}`,
     "",
     `${report.shots.length} shots: ${counts.same} same, ${counts.changed} changed, ${counts["layout-changed"]} changed size, ${counts.missing} missing, ${counts.new} new.`,
   ];
@@ -126,19 +132,32 @@ function readFlag(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
+/** `x1,y1,x2,y2` as a Region, or undefined when it is not four whole numbers with each corner at or after the first. */
+export function parseRegion(value: string): Region | undefined {
+  const parts = value.split(",");
+  if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) return undefined;
+  const [x1, y1, x2, y2] = parts.map(Number) as [number, number, number, number];
+  return x2 >= x1 && y2 >= y1 ? { x1, y1, x2, y2 } : undefined;
+}
+
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
-  const flagValues = new Set(["--report", "--threshold"].flatMap((flag) => (args.includes(flag) ? [args[args.indexOf(flag) + 1]] : [])));
-  const positional = args.filter((arg) => !arg.startsWith("--") && !flagValues.has(arg));
+  const valueIndexes = new Set(args.flatMap((arg, index) => (["--report", "--threshold", "--ignore"].includes(arg) ? [index + 1] : [])));
+  const ignoreValues = args.filter((_, index) => index > 0 && args[index - 1] === "--ignore");
+  const ignore = ignoreValues.map(parseRegion);
+  const positional = args.filter((arg, index) => !arg.startsWith("--") && !valueIndexes.has(index));
   const [baselineDir, candidateDir] = positional;
   const threshold = Number(readFlag(args, "--threshold") ?? DEFAULT_THRESHOLD);
-  if (!baselineDir || !candidateDir || positional.length > 2 || !(threshold >= 0 && threshold <= 1)) {
-    console.error("Usage: bun scripts/visual-diff.ts <baseline-dir> <candidate-dir> [--report <dir>] [--threshold 0.1]");
+  const regions = ignore.filter((region) => region !== undefined);
+  if (!baselineDir || !candidateDir || positional.length > 2 || !(threshold >= 0 && threshold <= 1) || regions.length < ignore.length) {
+    console.error(
+      "Usage: bun scripts/visual-diff.ts <baseline-dir> <candidate-dir> [--report <dir>] [--threshold 0.1] [--ignore x1,y1,x2,y2]...",
+    );
     return 2;
   }
   try {
     const reportDir = readFlag(args, "--report") ?? DEFAULT_REPORT_DIR;
-    const report = await compareFolders(baselineDir, candidateDir, { reportDir, threshold });
+    const report = await compareFolders(baselineDir, candidateDir, { reportDir, threshold, ignore: regions });
     for (const shot of report.shots) if (shot.status !== "same") console.log(`${shot.status.padEnd(14)} ${shot.file}`);
     const { counts } = report;
     console.log(

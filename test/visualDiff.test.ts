@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import zlib from "node:zlib";
-import { compareFolders } from "../scripts/visual-diff.js";
+import { compareFolders, parseRegion } from "../scripts/visual-diff.js";
 
 /** A solid-colour PNG, with an optional filled square, written with node:zlib so the test needs no image library. */
 function png(
@@ -120,4 +120,31 @@ test("the command exits 1 on a difference and 0 when the shots match", async () 
   expect(await run()).toBe(0);
   write(cand, "a.png", png(10, 10, black));
   expect(await run()).toBe(1);
+});
+
+test("a change inside an ignored box passes, and one outside it still fails", async () => {
+  const { base, cand, report } = dirs();
+  write(base, "a.png", png(20, 20, white));
+  write(cand, "a.png", png(20, 20, white, { size: 5, color: black }));
+  const inside = await compareFolders(base, cand, { reportDir: report, ignore: [{ x1: 0, y1: 0, x2: 4, y2: 4 }] });
+  expect(inside.ok).toBe(true);
+  expect(fs.readFileSync(path.join(report, "report.md"), "utf8")).toContain("Box 0,0 to 4,4 is not compared.");
+  expect((await compareFolders(base, cand, { reportDir: report, ignore: [{ x1: 0, y1: 0, x2: 3, y2: 3 }] })).ok).toBe(false);
+});
+
+test("an ignore box is four whole numbers with the second corner at or after the first", () => {
+  expect(parseRegion("240,1480,480,1510")).toEqual({ x1: 240, y1: 1480, x2: 480, y2: 1510 });
+  for (const bad of ["1,2,3", "1,2,3,4,5", "a,2,3,4", "-1,2,3,4", "5,0,4,0", "0,5,0,4"]) expect(parseRegion(bad)).toBeUndefined();
+});
+
+test("the command takes --ignore and refuses a bad box", async () => {
+  const { base, cand, report } = dirs();
+  write(base, "a.png", png(20, 20, white));
+  write(cand, "a.png", png(20, 20, white, { size: 5, color: black }));
+  const run = async (...extra: string[]) =>
+    Bun.spawn([process.execPath, "scripts/visual-diff.ts", base, cand, "--report", report, ...extra], { stdout: "pipe", stderr: "pipe" })
+      .exited;
+  expect(await run()).toBe(1);
+  expect(await run("--ignore", "0,0,4,4")).toBe(0);
+  expect(await run("--ignore", "0,0,4")).toBe(2);
 });
