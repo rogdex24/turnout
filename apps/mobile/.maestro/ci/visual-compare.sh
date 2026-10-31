@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Compares one target's fresh shots with its LFS baselines through scripts/visual-diff.ts. Run from the repo root.
 #   visual-compare.sh <target>   SHOT_DIR is the folder device-run.sh wrote the shots to
-# With no baseline committed for the target yet, there is nothing to compare: the step says so and passes, and the shots still go up
-# as the visual-shots-<target> artifact for scripts/visual-accept.ts. Once one baseline is accepted, every shot must match.
+# Every target has committed baselines, so a target without any is an error: a missing folder would let every change through.
+# The shots still go up as the visual-shots-<target> artifact, so scripts/visual-accept.ts can accept a run for a new target.
 set -euo pipefail
 target="${1:?usage: visual-compare.sh <target>}"
 : "${SHOT_DIR:?SHOT_DIR is not set}"
@@ -23,5 +23,6 @@ if compgen -G "$baselines/*/*.png" > /dev/null; then
   esac
   bun scripts/visual-diff.ts "$baselines" "$SHOT_DIR" --report "visual-diff-report/$target" ${ignore[@]+"${ignore[@]}"}
 else
-  echo "::notice::No baselines for $target yet, so the shots were not compared. Accept a run with scripts/visual-accept.ts to start."
+  echo "::error::No baselines for $target in $baselines. Accept a run with scripts/visual-accept.ts and commit the files."
+  exit 1
 fi
