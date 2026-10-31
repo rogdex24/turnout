@@ -98,14 +98,14 @@ export const typography = {
     fontVariant: ["tabular-nums"],
   },
   "display-hero": {
-    fontFamily: "Big Shoulders Display",
+    fontFamily: "Big Shoulders",
     fontSize: 116,
     lineHeight: 90,
     fontWeight: "900",
     letterSpacing: -1.16,
   },
   "display-band": {
-    fontFamily: "Big Shoulders Display",
+    fontFamily: "Big Shoulders",
     fontSize: 28,
     lineHeight: 28,
     fontWeight: "800",
