@@ -192,6 +192,25 @@ describe("Maestro flows", () => {
     for (const { folder } of stories) expect(folder).toMatch(/^[a-z0-9-]+$/);
   });
 
+  // The theme and text size changes dropped the demo clock, so the sheet stories showed the real time. Every capture is preceded by
+  // a wait, and the Android wait sets demo mode again; each batch also waits after setting the theme and the text size.
+  test("the Android wait pins the status bar after the theme and text size are set", async () => {
+    const text = await Bun.file(`${root}/ci/device-run.sh`).text();
+    const wait = text.slice(text.indexOf("wait_android() {"), text.indexOf("\n}\n", text.indexOf("wait_android() {")));
+    expect(wait).toContain("pin_android_status_bar");
+    expect(text).toMatch(/pin_android_status_bar\(\) \{[^}]*command enter[^}]*hhmm 0941/);
+    const batch = text.slice(text.indexOf("for theme in light dark; do"));
+    expect(batch).toMatch(/"set_\$\{platform\}_text" "\$text"[\s\S]*?"wait_\$\{platform\}"[\s\S]*?maestro test/);
+  });
+
+  // Android colours the gesture handle from what is behind it, a moment late, so the compare leaves the handle out on Android.
+  test("the compare leaves out the gesture handle on both Android targets and nothing on iOS", async () => {
+    const text = await Bun.file(`${root}/ci/visual-compare.sh`).text();
+    for (const target of ["android-small", "android-large"])
+      expect(text).toMatch(new RegExp(`${target}\\) ignore=\\(--ignore \\d+,\\d+,\\d+,\\d+\\)`));
+    expect(text).not.toContain("ios-");
+  });
+
   // Maestro runs the longest prefix of flowsOrder that it can and treats every later flow as unordered, which still runs after the
   // sequence aborts. after-show moves the server clock past every show, so running it early leaves the later flows no shows.
   test("every flow in flowsOrder runs, so after-show stays inside the ordered sequence", async () => {

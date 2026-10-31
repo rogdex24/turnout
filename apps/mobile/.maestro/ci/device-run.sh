@@ -21,7 +21,18 @@ set_ios_theme() { xcrun simctl ui booted appearance "$1"; }
 set_ios_text() { xcrun simctl ui booted content_size "$([ "$1" = largest ] && echo accessibility-extra-extra-extra-large || echo large)"; }
 # Once the emulator dropped to "device offline" between the flows and the first capture, and adb gave up. Reconnect and wait before
 # each capture.
-wait_android() { adb reconnect offline > /dev/null 2>&1 || true; timeout 120 adb wait-for-device; }
+# Demo mode does not always hold: after the theme or text size changed, the sheet stories showed the real clock again. So every wait,
+# which runs after those changes and before each capture, sets it again.
+wait_android() {
+  adb reconnect offline > /dev/null 2>&1 || true
+  timeout 120 adb wait-for-device
+  pin_android_status_bar
+}
+pin_android_status_bar() {
+  adb shell settings put global sysui_demo_allowed 1
+  adb shell am broadcast -a com.android.systemui.demo -e command enter > /dev/null
+  adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941 > /dev/null
+}
 wait_ios() { :; }
 
 # Same pixels on every run: the clock, the animations and the screen size are pinned before anything is shot.
@@ -31,9 +42,7 @@ if [ "$platform" = android ]; then
   done
   # A cold emulator can raise an ANR dialog for the launcher over the app; the dialog is not part of what we test.
   adb shell settings put global hide_error_dialogs 1
-  adb shell settings put global sysui_demo_allowed 1
-  adb shell am broadcast -a com.android.systemui.demo -e command enter > /dev/null
-  adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941 > /dev/null
+  pin_android_status_bar
   if [ "$target" = android-small ]; then
     adb shell wm size 720x1520
     adb shell wm density 320
