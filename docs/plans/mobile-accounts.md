@@ -139,7 +139,7 @@ to need fixes. Do these in order, on a branch, and fix what fails before relying
 
 1. Open a pull request that touches `apps/mobile`. `mobile-health`, `build-android` and `build-ios` should pass. `build-ios` is the longest and the likeliest to need an Xcode or runtime change; the runner image is `macos-26` and the simulator runtime is pinned as iOS 26.2.
 2. The four device jobs (`android-small`, `android-large`, `ios-small`, `ios-large`) then run the launch and smoke flows. The Android jobs need KVM; GitHub's standard Linux runners provide it.
-3. Run the visual capture once and read the artifact `visual-shots-<target>`. Accept the first set with `bun scripts/visual-accept.ts <run-id>` and commit the Git LFS files it writes. Until then `visual-compare.sh` prints a notice and passes. No baseline exists, and none could be made without an emulator.
+3. Run the visual capture once and read the artifact `visual-shots-<target>`. Accept the first set with `bun scripts/visual-accept.ts <run-id>` and commit the Git LFS files it writes. Done: the baselines for all four targets are committed, and `visual-compare.sh` fails a target that has none.
 4. Start `mobile-canary.yml` by hand once (it also runs on Mondays at 03:00 UTC) and check that it passes.
 5. After the first green run, record the wall time of each job in `docs/plans/mobile-ci-budget.md`.
 

@@ -53,14 +53,14 @@ For example `apps/mobile/.maestro/visual/baselines/android-small/events-list/dar
 `apps/mobile` exists now, but the `baselines` folder is still created by the first accepted
 snapshot, because no emulator was available when F20 was written. The path is fixed in three
 places that must change together: `.gitattributes`, `.lfsconfig` and `DEFAULT_BASELINES_DIR` in
-`scripts/visual-accept.ts`. No PNG is committed yet.
+`scripts/visual-accept.ts`. The baselines for every target are committed.
 
 The capture side is in the app. `apps/mobile/.maestro/visual/stories.json` lists the stories to
 shoot (`folder`, Storybook `id`, and the text that shows when the story is ready),
 `apps/mobile/.maestro/visual/capture-story.yaml` takes one shot, and
 `apps/mobile/.maestro/ci/device-run.sh <target>` loops the themes and text sizes and leaves
-`<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` passes with a
-notice while a target has no baseline. The Home story is `screens-home--loaded`
+`<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` fails a target
+that has no baseline. The Home story is `screens-home--loaded`
 (folder `home`).
 
 ### Git LFS
