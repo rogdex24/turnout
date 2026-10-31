@@ -8,8 +8,10 @@ executionOrder:
     - launch
     - smoke
     - onboarding
+    - nav-guards
     - otp-errors
     - browse
+    - offline-home
     - deeplink-show
     - push-routing
     # loop-meet, thread and report use the seed's live group, whose show starts 75 minutes after the server does. They run early,
