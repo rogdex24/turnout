@@ -1,5 +1,5 @@
 import type { Gender } from "@turnout/contract/profile";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { profile } from "@/copy/profile";
 import { type ProfileDraft, womenOnlyAvailable } from "@/model/profileForm";
 import { BackBar } from "@/ui/BackBar";
@@ -8,9 +8,9 @@ import { Button } from "@/ui/primitives/Button";
 import { Chip } from "@/ui/primitives/Chip";
 import { Field } from "@/ui/primitives/Field";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
+import { Switch } from "@/ui/primitives/Switch";
 import { Text } from "@/ui/primitives/Text";
 import { TextButton } from "@/ui/primitives/TextButton";
-import { useColors } from "@/ui/theme";
 
 /** Where the photo is: none yet, being drawn again after a pick, waiting to save, or going up. */
 export type PhotoStatus = "idle" | "picking" | "picked" | "uploading";
@@ -76,7 +76,6 @@ export function ProfileView({
   onChangePhoto,
   onSave,
 }: ProfileViewProps) {
-  const colors = useColors();
   const note = photoNote(photoStatus, uploadFraction);
   const busyPhoto = photoStatus === "picking" || photoStatus === "uploading";
   const womenOnly = draft.groupPref === "women_only";
@@ -209,9 +208,6 @@ export function ProfileView({
                   onValueChange={onWomenOnly}
                   disabled={saving}
                   accessibilityLabel={profile.womenOnly.title}
-                  trackColor={{ false: colors.surfaceRaised, true: colors.ink }}
-                  thumbColor={womenOnly ? colors.bg : colors.muted}
-                  ios_backgroundColor={colors.surfaceRaised}
                   testID="women-only"
                 />
               </View>
