@@ -1,0 +1,78 @@
+# The route guards: a signed-out phone stays in onboarding even when a show link opens the app, a signed-in member lands on Home
+# with the three tabs, a pushed screen goes back to the tab it came from, and a cold start skips onboarding. Written for CI.
+appId: com.turnout.app.e2e
+name: nav-guards
+tags:
+  - navigation
+env:
+  MATCHABLE_MEMBER: "+12025550104"
+  SHOW_ID: seed-show-t2d
+---
+# Signed out, a show link does not open the show. The app stays at Welcome.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: welcome
+    timeout: 30000
+- runFlow:
+    file: ../subflows/open-link.yaml
+    env:
+      LINK: turnout-e2e://show/${SHOW_ID}
+# Nothing should move, so there is no screen to wait for. The flow lets the link settle and checks that Welcome is still in front.
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible:
+    id: welcome
+- assertNotVisible:
+    id: show
+- assertNotVisible:
+    id: home
+
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MATCHABLE_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+# The three tabs, each on its own screen.
+- tapOn: "Plans"
+- extendedWaitUntil:
+    visible:
+      id: plans
+    timeout: 10000
+- tapOn: "You"
+- extendedWaitUntil:
+    visible:
+      id: you
+    timeout: 10000
+- tapOn: "Shows"
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 10000
+
+# A show is pushed over Shows, and Back returns to the list.
+- tapOn:
+    id: "show-card-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: show
+    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: home
+
+# A cold start with a session opens Home, not Welcome.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 20000
+- assertNotVisible:
+    id: welcome
