@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test";
-import { createHmac } from "node:crypto";
+import { describe, expect, spyOn, test } from "bun:test";
+import { createHmac, createSecretKey } from "node:crypto";
 import { tokenPairSchema } from "@turnout/contract/app/auth";
 import { errorBodySchema } from "@turnout/contract/app/errors";
+import { SignJWT } from "jose";
 import { checkOtpSpend, OTP_SENDS_KEY } from "../src/app-api/alerts.js";
+import { clientIp } from "../src/app-api/http.js";
 import { generateCode } from "../src/app-api/otp.js";
 import { windowFor } from "../src/app-api/rateLimit.js";
 import { hashRefreshToken } from "../src/app-api/tokens.js";
@@ -46,6 +48,21 @@ describe("code request", () => {
       seen.add(code[0] as string);
     }
     expect(seen.size).toBeGreaterThan(5);
+  });
+
+  test("a random value past the last whole multiple of a million is thrown away, not folded onto a digit", () => {
+    const limit = Math.floor(2 ** 32 / 1_000_000) * 1_000_000;
+    const draws = [limit, 2 ** 32 - 1, limit - 1];
+    const spy = spyOn(crypto, "getRandomValues").mockImplementation(((array: Uint32Array) => {
+      array[0] = draws.shift() as number;
+      return array;
+    }) as typeof crypto.getRandomValues);
+    try {
+      expect(generateCode()).toBe(String((limit - 1) % 1_000_000).padStart(6, "0"));
+      expect(draws).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("a +91 mobile and an allowlisted number are accepted; a landline, a foreign number and junk are bad_phone", async () => {
@@ -354,6 +371,15 @@ describe("sessions", () => {
     expect((await t.call("GET", "/me", { token: tokens.accessToken })).status).toBe(401);
   });
 
+  test("a banned member cannot refresh, and the session is closed", async () => {
+    const t = await testApp();
+    const tokens = await t.signIn(PHONES[0] as string);
+    t.db.query("UPDATE member SET status = 'banned'").run();
+    expect((await t.call("POST", "/auth/refresh", { body: { refreshToken: tokens.refreshToken } })).status).toBe(401);
+    const row = t.db.query("SELECT revoked_at FROM auth_session").get() as { revoked_at: string | null };
+    expect(row.revoked_at).not.toBeNull();
+  });
+
   test("the refresh token is stored only as a hash", async () => {
     const t = await testApp();
     const tokens = await t.signIn(PHONES[0] as string);
@@ -486,6 +512,31 @@ describe("sessions", () => {
     expect((await t.call("GET", "/me", { headers: { authorization: "Basic abc" } })).status).toBe(401);
   });
 
+  test("a token with the right key but the wrong issuer, audience or algorithm is 401", async () => {
+    const t = await testApp();
+    await t.signIn(PHONES[0] as string);
+    const member = t.db.query("SELECT id FROM member").get() as { id: string };
+    const session = t.db.query("SELECT id FROM auth_session").get() as { id: string };
+    const nowSeconds = Math.floor(t.clock().getTime() / 1000);
+    const mint = (alg: string, issuer: string, audience: string, key: Parameters<SignJWT["sign"]>[0]) =>
+      new SignJWT({ sid: session.id })
+        .setProtectedHeader({ alg, kid: t.app.config.jwt.kid })
+        .setSubject(member.id)
+        .setIssuer(issuer)
+        .setAudience(audience)
+        .setIssuedAt(nowSeconds)
+        .setExpirationTime(nowSeconds + 600)
+        .sign(key);
+    const key = t.app.config.jwt.privateKey;
+    // The control: the same claims, signed the same way, are accepted.
+    expect((await t.call("GET", "/me", { token: await mint("ES256", "turnout", "turnout-app", key) })).status).toBe(200);
+    expect((await t.call("GET", "/me", { token: await mint("ES256", "someone-else", "turnout-app", key) })).status).toBe(401);
+    expect((await t.call("GET", "/me", { token: await mint("ES256", "turnout", "another-app", key) })).status).toBe(401);
+    // A token with a different algorithm is refused, even with the right claims.
+    const secret = createSecretKey(Buffer.from("not-the-signing-key-but-long-enough-0123"));
+    expect((await t.call("GET", "/me", { token: await mint("HS256", "turnout", "turnout-app", secret) })).status).toBe(401);
+  });
+
   test("the previous public key still verifies tokens until it is removed", async () => {
     const { generateKeyPair, exportPKCS8, exportSPKI } = await import("jose");
     const oldPair = await generateKeyPair("ES256", { extractable: true });
@@ -591,5 +642,27 @@ describe("spend alerts", () => {
       .query("INSERT INTO rate_bucket (bucket_key, window_start, window_seconds, count) VALUES (?, ?, 86400, 3677)")
       .run(OTP_SENDS_KEY, nextStart);
     expect(await checkOtpSpend(t.db, t.clock(), t.alerts, t.app.config.tunables)).toEqual([500]);
+  });
+});
+
+describe("clientIp", () => {
+  const request = (value?: string): Request =>
+    new Request("http://x.test/", value === undefined ? {} : { headers: { "x-forwarded-for": value } });
+
+  test("with no proxy header configured, the header is ignored and the socket address is used", () => {
+    expect(clientIp(request("203.0.113.9"), null, "198.51.100.1")).toBe("198.51.100.1");
+    expect(clientIp(request(), null, null)).toBe("unknown");
+  });
+
+  test("behind a proxy the last entry counts, so a client cannot choose its own address", () => {
+    expect(clientIp(request("203.0.113.9"), "x-forwarded-for", "198.51.100.1")).toBe("203.0.113.9");
+    expect(clientIp(request("6.6.6.6, 203.0.113.9"), "x-forwarded-for", "198.51.100.1")).toBe("203.0.113.9");
+    expect(clientIp(request("6.6.6.6,203.0.113.9 "), "x-forwarded-for", null)).toBe("203.0.113.9");
+  });
+
+  test("a missing or empty header falls back to the socket address", () => {
+    expect(clientIp(request(), "x-forwarded-for", "198.51.100.1")).toBe("198.51.100.1");
+    expect(clientIp(request(""), "x-forwarded-for", "198.51.100.1")).toBe("198.51.100.1");
+    expect(clientIp(request(" , "), "x-forwarded-for", null)).toBe("unknown");
   });
 });
