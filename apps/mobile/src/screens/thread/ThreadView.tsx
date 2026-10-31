@@ -21,6 +21,7 @@ import { Sheet } from "@/ui/primitives/Sheet";
 import { Text } from "@/ui/primitives/Text";
 import { scaledMetrics, useFontScale } from "@/ui/textScale";
 import { useColors } from "@/ui/theme";
+import { scalingFor } from "@/ui/typography";
 
 export interface ThreadReady {
   /** The show's title. */
@@ -180,7 +181,7 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null
           }}
           multiline
           maxLength={MESSAGE_MAX_CHARS}
-          allowFontScaling
+          {...scalingFor("body")}
           dataDetectorTypes="none"
           returnKeyType="default"
           className="min-h-12 flex-1 rounded-field border border-outline bg-surface px-4 py-2.5 font-sans text-body text-ink"

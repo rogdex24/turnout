@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
-import { displayFaces, spacing } from "@turnout/design-tokens";
+import { displayFaces, fontScaling, spacing } from "@turnout/design-tokens";
 import { PixelRatio, StyleSheet } from "react-native";
 import { Loaded } from "@/screens/home/HomeView.stories";
 import { Early } from "@/screens/meet/MeetView.stories";
@@ -75,6 +75,20 @@ describe("rows grow with the largest text size", () => {
     const inputs = screen.getAllByTestId("phone-input");
     expect(inputs.length).toBeGreaterThan(0);
     for (const input of inputs) expect(input.props.multiline).toBeFalsy();
+  });
+
+  it.each([
+    ["the message composer", Conversation, "thread-input", "body"],
+    ["the phone number field", PhoneEmpty, "phone-input", "title"],
+  ] as const)("%s stops growing at its type style's cap, like the text around it", async (_name, story, testID, token) => {
+    const Story = story.render as () => React.ReactElement;
+    await render(<Story />);
+    const inputs = screen.getAllByTestId(testID);
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const input of inputs) {
+      expect(input.props.allowFontScaling).toBe(true);
+      expect(input.props.maxFontSizeMultiplier).toBe(fontScaling[token].maxFontSizeMultiplier);
+    }
   });
 
   it("the report people become rows, so a name sits beside its avatar instead of breaking inside the word", async () => {
