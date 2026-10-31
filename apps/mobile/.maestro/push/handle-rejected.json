@@ -1,0 +1,14 @@
+{
+  "aps": {
+    "alert": {
+      "title": "Push routing check",
+      "body": "Sample payload for the iOS simulator"
+    },
+    "sound": "default"
+  },
+  "body": {
+    "kind": "handle_rejected",
+    "noticeId": "n-ios-push",
+    "planId": null
+  }
+}

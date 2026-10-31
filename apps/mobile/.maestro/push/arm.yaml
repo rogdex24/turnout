@@ -1,0 +1,25 @@
+# First half of the iOS push check (ci/ios-push-check.sh runs it, then sends push/handle-rejected.json with `xcrun simctl push`, then runs
+# tap.yaml). Signs in a seeded member, lets the app show notifications and sends it to the home screen, so the push arrives as a
+# banner and waits in Notification Center. Not part of config.yaml: a push needs the script between the two halves.
+# Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: ios push arm
+env:
+  MEMBER: "+12025550104"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+# The app never asks for the notification permission before a first ticket is sent, so it is granted up front. The session stays.
+- launchApp:
+    clearState: false
+    permissions:
+      notifications: allow
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 20000
+- pressKey: home
