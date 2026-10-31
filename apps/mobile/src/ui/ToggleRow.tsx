@@ -1,10 +1,10 @@
 import { sizes } from "@turnout/design-tokens";
 import type { Icon as PhosphorIcon } from "phosphor-react-native";
-import { Switch, View } from "react-native";
+import { View } from "react-native";
 import { cn } from "./cn";
 import { Icon } from "./primitives/Icon";
+import { Switch } from "./primitives/Switch";
 import { Text } from "./primitives/Text";
-import { useColors } from "./theme";
 
 export interface ToggleRowProps {
   title: string;
@@ -23,7 +23,6 @@ export interface ToggleRowProps {
 
 /** A settings row with a switch at the end. The switch carries the name and the sub line, so a screen reader says both. */
 export function ToggleRow({ title, sub, icon, value, onValueChange, disabled = false, error, className, testID }: ToggleRowProps) {
-  const colors = useColors();
   return (
     <View className={className}>
       <View className="flex-row items-center gap-3 px-4 py-2" style={{ minHeight: sizes.row }}>
@@ -43,9 +42,6 @@ export function ToggleRow({ title, sub, icon, value, onValueChange, disabled = f
           onValueChange={onValueChange}
           disabled={disabled}
           accessibilityLabel={sub ? `${title}, ${sub}` : title}
-          trackColor={{ false: colors.surfaceRaised, true: colors.ink }}
-          thumbColor={value ? colors.bg : colors.muted}
-          ios_backgroundColor={colors.surfaceRaised}
           testID={testID}
         />
       </View>
