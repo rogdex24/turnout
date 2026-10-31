@@ -134,15 +134,20 @@ describe("Maestro flows", () => {
   });
 
   // Flows change the seeded plans and groups, so a second pass on the same server checks different data. After a device drop on
-  // Android the run goes on from the flow that dropped, with a config that lists only that flow and the ones after it.
+  // Android the run goes on from the flow that dropped, with a config that lists only that flow and the ones after it. In run
+  // 41202152196 the emulator dropped twice, so the run goes on after up to three drops.
   test("the device job runs the flows once, going on after a device drop", async () => {
     const text = await Bun.file(`${root}/ci/device-run.sh`).text();
     const flows = text.slice(text.indexOf('echo "::group::flows"'), text.indexOf('echo "::group::visual capture"'));
     const runs = [...flows.matchAll(/maestro test (.*)$/gm)].map((m) => m[1] ?? "");
-    expect(runs).toHaveLength(2);
-    expect(runs[0]).not.toContain("--config");
-    expect(runs[1]).toContain('--config "$resume_config"');
-    expect(flows).toMatch(/\[ "\$platform" != android \] \|\| \[ -z "\$failed" \] \|\| ! dropped "\$failed"; then exit 1; fi/);
+    expect(runs).toHaveLength(1);
+    // The first pass has no config; each resume sets it to the resume list.
+    expect(flows).toContain("config=()");
+    expect(flows).toContain('config=(--config "$resume_config")');
+    expect(flows).toContain("max_drops=3");
+    expect(flows).toMatch(
+      /\[ "\$platform" != android \] \|\| \[ -z "\$failed" \] \|\| ! dropped "\$out" "\$failed" \|\| \[ "\$drops" -ge "\$max_drops" \]; then/,
+    );
     // The resume list starts at the failed flow, so the flows before it never run twice.
     expect(flows).toContain('sed -n "/^$failed\\$/,\\$p"');
     expect(text).not.toMatch(/^(\w+) \|\| \1$/m);
