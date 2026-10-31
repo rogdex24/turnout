@@ -99,7 +99,9 @@ export function buildUrl(origin: string, root: "app" | "origin", path: string, q
  */
 export function createApiClient({ origin, session, connectivity, transport = fetchTransport }: ClientDeps): ApiClient {
   async function send(options: RequestOptions<unknown>, token: string | null): Promise<RawResponse> {
-    const headers: Record<string, string> = { accept: "application/json", ...options.headers };
+    // The public routes send max-age, and the Android HTTP cache would answer a pull to refresh without asking the server, which
+    // also hides that the network is gone. React Query is the app's cache.
+    const headers: Record<string, string> = { accept: "application/json", "cache-control": "no-cache", ...options.headers };
     let body: string | Blob | null = null;
     if (options.body instanceof Blob) {
       body = options.body;

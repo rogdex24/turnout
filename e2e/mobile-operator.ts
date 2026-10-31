@@ -12,6 +12,7 @@
  *   POST /operator/say       { phone, eventId, text }                                      the member posts to their group's thread
  *   POST /operator/after     { eventId }                                                   the clock moves to an hour past the morning after the show, then one ticker pass
  *   POST /operator/plan      { phone, eventId }                                            answers the member's plan on the show and its meet card notice, for a push link
+ *   POST /operator/network   { online }                                                    turns the app's connection to the server off or on (e2e/mobile-gate.ts)
  *
  * The time they act at is the server's own clock (`POST /__test/clock` moves it), so a leaver after the lock is a leaver after the lock.
  */
@@ -45,6 +46,9 @@ const bodies = {
   after: z.strictObject({ eventId: z.string() }),
   plan: z.strictObject({ phone, eventId: z.string() }),
 };
+
+/** The network route acts on the gate in front of the server, not on the database, so it is not one of `bodies`. */
+const networkBody = z.strictObject({ online: z.boolean() });
 
 /** Every route's body, with the fields a route does not take left out of its own check. */
 type Body = {
@@ -219,6 +223,8 @@ export function startOperator(options: {
   serverNow: () => Promise<Date>;
   /** Sets the server's clock to this time and runs one ticker pass. */
   setClock: (to: Date) => Promise<void>;
+  /** Lets the app reach the server, or cuts it off. */
+  setOnline: (online: boolean) => void;
 }): Operator {
   const db = openDb(options.dbPath);
   const store = diskStore({ dir: path.resolve(options.filesDir), link: () => "" });
@@ -228,11 +234,25 @@ export function startOperator(options: {
     port: options.port,
     async fetch(request) {
       const url = new URL(request.url);
-      const name = url.pathname.replace(/^\/operator\//, "") as keyof typeof bodies;
-      if (request.method !== "POST" || request.headers.get(TOKEN_HEADER) !== options.token || !Object.hasOwn(bodies, name))
+      const name = url.pathname.replace(/^\/operator\//, "");
+      if (request.method !== "POST" || request.headers.get(TOKEN_HEADER) !== options.token)
         return new Response("not found", { status: 404 });
+      if (name === "network") {
+        const body = networkBody.safeParse(await request.json().catch(() => ({})));
+        if (!body.success) return Response.json({ error: body.error.message }, { status: 400 });
+        options.setOnline(body.data.online);
+        return Response.json({ online: body.data.online });
+      }
+      if (!Object.hasOwn(bodies, name)) return new Response("not found", { status: 404 });
       try {
-        const answer = await perform(db, store, name, await request.json().catch(() => ({})), await options.serverNow(), options.setClock);
+        const answer = await perform(
+          db,
+          store,
+          name as keyof typeof bodies,
+          await request.json().catch(() => ({})),
+          await options.serverNow(),
+          options.setClock,
+        );
         return Response.json(answer);
       } catch (error) {
         if (error instanceof Refusal) return Response.json({ error: error.message }, { status: error.status });

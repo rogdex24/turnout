@@ -30,6 +30,33 @@ test("stop removes the temp database", async () => {
   expect(fs.existsSync(other.dbPath)).toBe(false);
 }, 90_000);
 
+test("the network route cuts the app's connection to the server and gives it back, and needs the token", async () => {
+  const other = await startMobileServer();
+  try {
+    const network = (online: unknown, token = other.testToken) =>
+      fetch(`${other.operatorUrl}/operator/network`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-staging-test-token": token },
+        body: JSON.stringify({ online }),
+      });
+    const events = () => fetch(`${other.url}/api/events?limit=1`);
+    expect((await events()).status).toBe(200);
+
+    expect((await network(false, "wrong")).status).toBe(404);
+    expect((await network("no")).status).toBe(400);
+    expect((await events()).status).toBe(200);
+
+    // Off: the request fails in the transport, the way it does on a phone with no network, not with an HTTP status.
+    expect((await network(false)).status).toBe(200);
+    await expect(events()).rejects.toThrow();
+
+    expect((await network(true)).status).toBe(200);
+    expect((await events()).status).toBe(200);
+  } finally {
+    await other.stop();
+  }
+}, 90_000);
+
 test("it is a staging server: seeded members sign in with the code the test route reads, and the test routes need the token", async () => {
   const other = await startMobileServer();
   try {

@@ -26,6 +26,13 @@ describe("Maestro flows", () => {
       expect(text).not.toMatch(/^\s*- back\s*$/m);
     });
 
+    // Airplane mode does not cut the emulator off from the host at 10.0.2.2, and Maestro cannot turn it on in the iOS simulator, so a
+    // flow cuts the connection at the server with scripts/network.js.
+    test(`${file} does not use airplane mode`, async () => {
+      const text = await Bun.file(`${root}/${file}`).text();
+      expect(text).not.toMatch(/setAirplaneMode|toggleAirplaneMode/);
+    });
+
     // On iOS a system gesture took the tap on Back more than once and the screen stayed open, so every Back goes through the subflow
     // that taps again when the screen before it does not come.
     if (file !== "subflows/back-to.yaml") {
