@@ -92,25 +92,25 @@ export const pressed = {
 
 export interface FontScaling {
   allowFontScaling: boolean;
-  /** Absent means the text follows the system size with no cap. */
+  /** Absent only on a fixed style, which does not scale. */
   maxFontSizeMultiplier?: number;
 }
 
 const capped = (maxFontSizeMultiplier: number): FontScaling => ({ allowFontScaling: true, maxFontSizeMultiplier });
-const uncapped: FontScaling = { allowFontScaling: true };
 const fixed: FontScaling = { allowFontScaling: false };
 
 /**
  * Font scaling per type style. Inter text scales: `display` and `title-large` up to 1.6, `label` and `badge` up to 1.3,
- * `control` up to 1.6 so buttons and chips keep their shape, the rest with no cap. Display-face styles are fixed (`allowFontScaling={false}`) inside fixed boxes; their labels scale.
+ * `control` up to 1.6 so buttons and chips keep their shape, the rest up to 2 (200 percent, the most Android gives; the largest iOS
+ * size goes past 3). Display-face styles are fixed (`allowFontScaling={false}`) inside fixed boxes; their labels scale.
  */
 export const fontScaling: Record<TypographyToken | keyof typeof displayFaces, FontScaling> = {
   display: capped(1.6),
   "title-large": capped(1.6),
-  title: uncapped,
-  body: uncapped,
+  title: capped(2),
+  body: capped(2),
   control: capped(1.6),
-  meta: uncapped,
+  meta: capped(2),
   label: capped(1.3),
   badge: capped(1.3),
   "display-hero": fixed,

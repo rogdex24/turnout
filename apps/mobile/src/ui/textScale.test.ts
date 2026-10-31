@@ -9,6 +9,14 @@ describe("scaleFor", () => {
     expect(scaleFor("label", 2)).toBe(1.3);
   });
 
+  // The largest iOS text size is about 3.1 for body text. Past 2 one message filled the thread and the phone field hid its +91.
+  it("stops every style at 2, the largest text size the stories check", () => {
+    for (const token of ["title", "body", "meta", "control", "display"] as const) {
+      expect(scaleFor(token, 3.1)).toBeLessThanOrEqual(LARGEST_TEXT_SCALE);
+    }
+    expect(scaleFor("body", 3.1)).toBe(2);
+  });
+
   it("holds the display faces still", () => {
     expect(scaleFor("display-hero", 2)).toBe(1);
     expect(scaleFor("display-band", 2)).toBe(1);

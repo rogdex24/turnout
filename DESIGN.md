@@ -1072,10 +1072,10 @@ Type. The app takes its scale from the Typography table, with these additions an
 |---|---|---|---|
 | `display` | Inter | 28 / 34 / 600 | yes, up to 1.6 |
 | `title-large` | Inter | 22 / 28 / 600 | yes, up to 1.6 |
-| `app-title` (the app's `title`) | Inter | 17 / 24 / 600 | yes |
-| `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes |
+| `app-title` (the app's `title`) | Inter | 17 / 24 / 600 | yes, up to 2 |
+| `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes, up to 2 |
 | `app-control` (the app's `control`) | Inter | 15 / 20 / 500 | yes |
-| `meta`, `label`, `badge` | Inter | as above | `label` and `badge` up to 1.3 |
+| `meta`, `label`, `badge` | Inter | as above | `meta` up to 2, `label` and `badge` up to 1.3 |
 | `display-hero` | Big Shoulders | 116 / 90 / 900 | no, fixed (the meet time) |
 | `display-band` | Big Shoulders | 28 / 28 / 800, caps | no, fixed (the marquee) |
 | `display-poster` | Big Shoulders | 30 to 70, 800, caps | no, fixed boxes |
@@ -1084,7 +1084,9 @@ Type. The app takes its scale from the Typography table, with these additions an
 `design.md` types take one size, so the two ranges (`display-poster`, `display-numeral`) and the scaling caps live in
 `packages/design-tokens/native.ts`. The display face is for the wordmark, poster titles, the marquee, the meet time and single
 data numerals; everything else is Inter. Section heads are sentence case; no eyebrows, no all-caps labels. Times, dates, prices,
-counts and codes use tabular figures. A poster title takes the largest `display-poster` size at which it fits the box in both
+counts and codes use tabular figures. No style grows past 2 times its size: that is 200 percent (WCAG 1.4.4), the most Android
+gives, and the size the stories and tests check. The largest iOS size goes past 3 for body text, where one message filled the thread
+and the phone field hid its +91. A poster title takes the largest `display-poster` size at which it fits the box in both
 directions: at most three lines (four on the show hero) across, and above the category line, which scales, down. The meet time
 stays on one line: where the hour has two digits and the phone is narrow, it shrinks to fit and never wraps. At a text size
 of 1.3 or more the layout takes its large-text form: the countdown goes on its own row under the meet time, so the time keeps
