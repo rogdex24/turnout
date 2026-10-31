@@ -12,6 +12,7 @@ import path from "node:path";
 import { SEED_PHONES, seedStaging, UNDELIVERABLE_PHONE } from "../scripts/seed-staging.js";
 import { diskStore } from "../src/utils/objectStore.js";
 import { openDb } from "../src/utils/openDb.js";
+import { type Gate, startGate } from "./mobile-gate.js";
 import { startOperator } from "./mobile-operator.js";
 import { seed } from "./server.js";
 
@@ -85,19 +86,25 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
 
   const testToken = Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString("base64url");
   const port = options.port ?? freePort();
-  const child = Bun.spawn([process.execPath, "src/cli.ts", "serve", "--db", dbPath, "--port", String(port), ...SERVE_FLAGS], {
+  // `serve` listens on a port of its own; the app's port is the gate in front of it (e2e/mobile-gate.ts), which the flows can cut.
+  let servePort = freePort();
+  while (Math.abs(servePort - port) < 2) servePort = freePort();
+  const child = Bun.spawn([process.execPath, "src/cli.ts", "serve", "--db", dbPath, "--port", String(servePort), ...SERVE_FLAGS], {
     env: { ...process.env, ...serveEnv(dir, testToken) },
     stdio: ["ignore", "inherit", "inherit"],
   });
   let operator: ReturnType<typeof startOperator> | undefined;
+  let gate: Gate | undefined;
   const stop = async () => {
     operator?.stop();
+    await gate?.stop();
     child.kill();
     await child.exited;
     fs.rmSync(dir, { recursive: true, force: true });
   };
 
   const url = `http://localhost:${port}`;
+  const serveUrl = `http://localhost:${servePort}`;
   const deadline = Date.now() + (options.timeoutMs ?? 60_000);
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
@@ -105,14 +112,17 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
       throw new Error(`serve exited with code ${child.exitCode} before it answered`);
     }
     try {
-      if ((await fetch(`${url}/api/events?limit=1`)).ok) {
+      if ((await fetch(`${serveUrl}/api/events?limit=1`)).ok) {
+        gate = await startGate(port, servePort);
+        const opened = gate;
         operator = startOperator({
           dbPath,
           filesDir: path.join(dir, "files"),
           token: testToken,
           port: port + 1,
+          setOnline: (online) => opened.setOnline(online),
           serverNow: async () => {
-            const response = await fetch(`${url}/api/app/v1/__test/clock`, {
+            const response = await fetch(`${serveUrl}/api/app/v1/__test/clock`, {
               method: "POST",
               headers: { "content-type": "application/json", "x-staging-test-token": testToken },
               body: "{}",
@@ -120,7 +130,7 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
             return new Date(((await response.json()) as { now: string }).now);
           },
           setClock: async (to) => {
-            await fetch(`${url}/api/app/v1/__test/clock`, {
+            await fetch(`${serveUrl}/api/app/v1/__test/clock`, {
               method: "POST",
               headers: { "content-type": "application/json", "x-staging-test-token": testToken },
               body: JSON.stringify({ set: to.toISOString(), tick: true }),
