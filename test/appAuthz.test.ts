@@ -99,6 +99,12 @@ const ROWS: Row[] = [
   { method: "POST", pattern: "/__test/otp", path: "/__test/otp", auth: "none", anonymous: 404 },
   { method: "POST", pattern: "/__test/clock", path: "/__test/clock", auth: "none", anonymous: 404 },
   { method: "POST", pattern: "/__test/limits", path: "/__test/limits", auth: "none", anonymous: 404 },
+  // The capture routes take the e2e build's project key instead of the token, so a post without it is 404 too.
+  { method: "POST", pattern: "/__test/posthog/batch", path: "/__test/posthog/batch", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/capture", path: "/__test/posthog/capture", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/e", path: "/__test/posthog/e", auth: "none", anonymous: 404 },
+  { method: "GET", pattern: "/__test/posthog/events", path: "/__test/posthog/events", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/reset", path: "/__test/posthog/reset", auth: "none", anonymous: 404 },
 ];
 
 const errorOf = async (response: Response) => errorBodySchema.parse(await response.json()).error;
