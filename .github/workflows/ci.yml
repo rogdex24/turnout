@@ -13,9 +13,16 @@ name: ci
 #   - PR label `ci:fail-fast`: cancel the other device job of a platform as soon as one fails.
 #   - A manual run (Actions, ci, Run workflow) takes the same three choices as inputs.
 # Labels are read when the run starts, so after adding one, push or re-run all jobs.
+#
+# When CI runs. Feature branches merge into an integration branch with their tests run locally, and CI runs on a whole chunk:
+#   - Only PRs into main run CI. A PR into any other branch runs nothing.
+#   - A draft PR into main runs nothing. Marking it ready for review starts the run, and pushes after that run as usual.
+#   - A manual run (Actions, ci, Run workflow) on any branch runs everything, for a check before a chunk is ready.
 
 on:
   pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -54,6 +61,8 @@ env:
 
 jobs:
   changes:
+    # A draft PR runs nothing. The other jobs need one of these three, so they are skipped with them.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -138,6 +147,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -151,6 +161,7 @@ jobs:
       - run: bun run check
 
   secrets:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -551,7 +562,7 @@ jobs:
   # (failure, cancelled). `if: always()` makes it run, and report, even when a needed job failed.
   ci-gate:
     needs: [changes, check, secrets, e2e-web, mobile-health, build-android, build-ios, android-device, ios-device]
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
