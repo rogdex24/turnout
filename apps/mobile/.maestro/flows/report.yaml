@@ -40,11 +40,17 @@ env:
       LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
       SCREEN: meet
 
-# The Safety sheet has Call 112 first, then Report someone.
-- tapOn:
-    id: meet-safety
-- assertVisible:
-    id: safety-call
+# The Safety sheet has Call 112 first, then Report someone. On iOS the tap on Safety can land and the sheet not open (run
+# 41213665995 here, run 41042127207 in loop-meet.yaml), so the tap goes again when the sheet does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: meet-safety
+      - extendedWaitUntil:
+          visible:
+            id: safety-call
+          timeout: 10000
 - assertVisible:
     id: safety-report
 - tapOn:
