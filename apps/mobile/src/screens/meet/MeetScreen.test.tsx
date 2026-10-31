@@ -238,7 +238,7 @@ describe("MeetScreen", () => {
   it("opens the cafe in the maps app", async () => {
     await open();
     await fireEvent.press(await screen.findByTestId("meet-open-maps"));
-    expect(openURL).toHaveBeenCalledWith(expect.stringMatching(/^geo:17\.4435,78\.3772\?q=/));
+    expect(openURL).toHaveBeenCalledWith("https://www.google.com/maps/search/?api=1&query=17.4435%2C78.3772");
   });
 
   it("opens the show from the show row", async () => {
