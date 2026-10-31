@@ -12,10 +12,15 @@ export const TEST_USER = "member-1";
 
 /** A complete member: name, gender, photo and a handle waiting for review. Pass what differs. */
 export function meFixture(
-  over: { profile?: Partial<MeResponse["profile"]>; handle?: Partial<MeResponse["handle"]>; consent?: boolean } = {},
+  over: {
+    status?: MeResponse["status"];
+    profile?: Partial<MeResponse["profile"]>;
+    handle?: Partial<MeResponse["handle"]>;
+    consent?: boolean;
+  } = {},
 ): MeResponse {
   return {
-    status: "active",
+    status: over.status ?? "active",
     phoneLast4: "0123",
     profile: {
       firstName: "Ananya",
