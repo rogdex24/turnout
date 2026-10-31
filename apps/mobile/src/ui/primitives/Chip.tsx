@@ -26,7 +26,7 @@ export function Chip({ label, selected = false, className, style, ...rest }: Chi
       style={(state) => [{ minHeight: sizes.hitMin }, scaleOnPress(state), resolveStyle(style, state)]}
       {...rest}
     >
-      <Text variant="control" className={selected ? "text-bg" : "text-ink"}>
+      <Text variant="control" className={selected ? "text-center text-bg" : "text-center text-ink"}>
         {label}
       </Text>
     </Pressable>

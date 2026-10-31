@@ -1,5 +1,5 @@
 import { WarningCircle, WifiSlash } from "phosphor-react-native";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { common } from "@/copy/common";
 import { Button } from "./primitives/Button";
 import { Icon } from "./primitives/Icon";
@@ -25,7 +25,7 @@ const MESSAGE = {
 export function ErrorState({ kind = "other", message, onRetry }: ErrorStateProps) {
   const text = message ?? MESSAGE[kind];
   return (
-    <View className="items-center px-6 py-8">
+    <ScrollView contentContainerClassName="grow items-center justify-center px-6 py-8">
       <View className="items-center" accessibilityRole="alert" accessible accessibilityLabel={`${common.errorTitle}. ${text}`}>
         <Icon icon={kind === "offline" ? WifiSlash : WarningCircle} tone="muted" />
         <Text variant="title-large" className="mt-3 text-center">
@@ -36,6 +36,6 @@ export function ErrorState({ kind = "other", message, onRetry }: ErrorStateProps
         </Text>
       </View>
       {onRetry ? <Button variant="secondary" className="mt-6" title={common.retry} onPress={onRetry} /> : null}
-    </View>
+    </ScrollView>
   );
 }

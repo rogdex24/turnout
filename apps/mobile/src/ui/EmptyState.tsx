@@ -1,5 +1,5 @@
 import type { Icon as PhosphorIcon } from "phosphor-react-native";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { Button } from "./primitives/Button";
 import { Icon } from "./primitives/Icon";
 import { Text } from "./primitives/Text";
@@ -15,7 +15,7 @@ export interface EmptyStateProps {
  * outside that group, because iOS hides every child of an accessible view from VoiceOver. */
 export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
-    <View className="items-center px-6 py-8">
+    <ScrollView contentContainerClassName="grow items-center justify-center px-6 py-8">
       <View className="items-center" accessible accessibilityLabel={body ? `${title}. ${body}` : title}>
         <Icon icon={icon} tone="muted" />
         <Text variant="title-large" className="mt-3 text-center">
@@ -28,6 +28,6 @@ export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
         ) : null}
       </View>
       {action ? <Button variant="secondary" className="mt-6" title={action.title} onPress={action.onPress} /> : null}
-    </View>
+    </ScrollView>
   );
 }

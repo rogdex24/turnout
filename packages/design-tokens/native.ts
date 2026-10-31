@@ -102,14 +102,14 @@ const fixed: FontScaling = { allowFontScaling: false };
 
 /**
  * Font scaling per type style. Inter text scales: `display` and `title-large` up to 1.6, `label` and `badge` up to 1.3,
- * the rest with no cap. Display-face styles are fixed (`allowFontScaling={false}`) inside fixed boxes; their labels scale.
+ * `control` up to 1.6 so buttons and chips keep their shape, the rest with no cap. Display-face styles are fixed (`allowFontScaling={false}`) inside fixed boxes; their labels scale.
  */
 export const fontScaling: Record<TypographyToken | keyof typeof displayFaces, FontScaling> = {
   display: capped(1.6),
   "title-large": capped(1.6),
   title: uncapped,
   body: uncapped,
-  control: uncapped,
+  control: capped(1.6),
   meta: uncapped,
   label: capped(1.3),
   badge: capped(1.3),
