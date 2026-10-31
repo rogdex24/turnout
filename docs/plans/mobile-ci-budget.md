@@ -54,10 +54,10 @@ What goes in LFS: the visual baselines under `apps/mobile/.maestro/visual/baseli
 
 | Number | Value | How it is reached |
 |---|---|---|
-| Size of one full set of baselines | about 96 MB | Measured on 2026-10-31: 800 PNGs (50 stories, 2 themes, 2 text sizes, 4 targets). `android-small` 18 MB, `android-large` 39 MB, `ios-small` 16.5 MB, `ios-large` about 22 MB |
-| Storage | 96 MB per set against 10 GiB (10,240 MB) | A new set after a change only adds the shots that changed, so storage grows slower than one set per change |
+| Size of one full set of baselines | about 120 MB | Measured on 2026-11-01 from the LFS pointers: 800 PNGs (50 stories, 2 themes, 2 text sizes, 4 targets). `android-small` 19.2 MB, `android-large` 42.1 MB, `ios-small` 19.2 MB, `ios-large` 39.1 MB |
+| Storage | 120 MB per set against 10 GiB (10,240 MB) | A new set after a change only adds the shots that changed, so storage grows slower than one set per change |
 | Bandwidth | about 2 GB a month | The plan's estimate across the PR jobs |
-| Per device job | 16.5 to 39 MB | One target's folder: `.lfsconfig` skips the baselines on checkout and each device job fetches only its own `<target>` folder |
+| Per device job | 19 to 42 MB | One target's folder: `.lfsconfig` skips the baselines on checkout and each device job fetches only its own `<target>` folder |
 | 70 percent of storage | 7 GiB | Fallback trigger |
 | 70 percent of bandwidth | 7 GiB a month | Fallback trigger |
 
