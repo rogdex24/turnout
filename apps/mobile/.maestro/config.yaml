@@ -14,11 +14,12 @@ executionOrder:
     - offline-home
     - deeplink-show
     - push-routing
-    # loop-meet, thread and report use the seed's live group, whose show starts 75 minutes after the server does. They run early,
+    # loop-meet, thread, report and funnel use the seed's live group, whose show starts 75 minutes after the server does. They run early,
     # before any flow moves the server's clock past the check-in window.
     - loop-meet
     - thread
     - report
+    - funnel
     - loop-join
     - ticket-rejected
     - cancel
