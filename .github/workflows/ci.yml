@@ -384,7 +384,9 @@ jobs:
     # before the builds do, so it adds no wait to a green run.
     needs: [changes, check, build-android]
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # android-large in run 41166247790 passed every flow in 40 min, then hit 60 during the 200 captures (50 stories in 4 cells,
+    # about 9 s each).
+    timeout-minutes: 120
     strategy:
       fail-fast: ${{ needs.changes.outputs.fail-fast == 'true' }}
       matrix:
@@ -476,8 +478,9 @@ jobs:
     needs: [changes, check, build-ios]
     runs-on: macos-26
     # ios-large took 76 min in run 40878741323 (the flows, then 40 captures) and hit the old 75.
-    # In run 40990335334 it passed every flow and 38 of 40 captures, then hit 90 at 91 min.
-    timeout-minutes: 120
+    # In run 40990335334 it passed every flow and 38 of 40 captures, then hit 90 at 91 min. stories.json now has 50 stories, so
+    # 200 captures.
+    timeout-minutes: 180
     strategy:
       fail-fast: ${{ needs.changes.outputs.fail-fast == 'true' }}
       matrix:
