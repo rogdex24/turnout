@@ -1,3 +1,4 @@
+import type { PushChannel } from "@turnout/contract/app/notices";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -43,22 +44,16 @@ export const nativePush: PushNative = {
   async setUpChannels() {
     if (Platform.OS !== "android") return;
     const { channels } = notifications;
-    // `plans` is the default for pushes that name no channel, so it is made first.
-    await Notifications.setNotificationChannelAsync("plans", {
-      name: channels.plans.name,
-      description: channels.plans.description,
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-    await Notifications.setNotificationChannelAsync("show-day", {
-      name: channels.showDay.name,
-      description: channels.showDay.description,
-      importance: Notifications.AndroidImportance.HIGH,
-    });
-    await Notifications.setNotificationChannelAsync("thread", {
-      name: channels.thread.name,
-      description: channels.thread.description,
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
+    // One entry per contract channel, so the server never names a channel the phone lacks. `plans` is the default for pushes
+    // that name no channel, so it is made first.
+    const setup: Record<PushChannel, { copy: { name: string; description: string }; importance: Notifications.AndroidImportance }> = {
+      plans: { copy: channels.plans, importance: Notifications.AndroidImportance.DEFAULT },
+      "show-day": { copy: channels.showDay, importance: Notifications.AndroidImportance.HIGH },
+      thread: { copy: channels.thread, importance: Notifications.AndroidImportance.DEFAULT },
+    };
+    for (const [id, { copy, importance }] of Object.entries(setup)) {
+      await Notifications.setNotificationChannelAsync(id, { name: copy.name, description: copy.description, importance });
+    }
   },
 };
 

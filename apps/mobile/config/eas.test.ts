@@ -38,3 +38,7 @@ test("production is an AAB for the internal track and preview is an APK on the p
   expect(eas.build.preview?.android?.buildType).toBe("apk");
   expect(eas.build.preview?.channel).toBe("preview");
 });
+
+test("every profile opens groups, so the Go button reaches the go sheet in tester and store builds", () => {
+  for (const name of Object.keys(eas.build)) expect(envOf(name).EXPO_PUBLIC_GROUPS_ENABLED).toBe("1");
+});

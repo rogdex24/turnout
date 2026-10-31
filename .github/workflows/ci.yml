@@ -245,6 +245,7 @@ jobs:
         env:
           APP_VARIANT: production
           EXPO_PUBLIC_STORYBOOK: "0"
+          EXPO_PUBLIC_GROUPS_ENABLED: "1"
           EXPO_PUBLIC_API_URL: https://api.turnout.example
           GOOGLE_MAPS_ANDROID_API_KEY: ci-placeholder
         run: |
