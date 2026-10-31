@@ -5,6 +5,7 @@ import { AutoFocusContext } from "../autoFocus";
 import { cn } from "../cn";
 import { isLargeText, useFontScale } from "../textScale";
 import { useColors } from "../theme";
+import { scalingFor } from "../typography";
 import { Text } from "./Text";
 
 /** What a ref to the field's input holds: `focus()`, `blur()` and the rest. */
@@ -52,7 +53,7 @@ export function Field({ label, help, error, prefix, singleLine = false, inputRef
           placeholderTextColor={colors.muted}
           selectionColor={colors.ink}
           cursorColor={colors.ink}
-          allowFontScaling
+          {...scalingFor("title")}
           {...(wraps ? { multiline: true, submitBehavior: "blurAndSubmit" as const } : null)}
           className="flex-1 py-2 font-sans text-title text-ink"
           onFocus={(event) => {
