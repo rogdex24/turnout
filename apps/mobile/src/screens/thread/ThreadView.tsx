@@ -242,7 +242,7 @@ function Messages({
 }) {
   if (ready.items.length === 0) {
     return (
-      <View className="flex-1 justify-center">
+      <View className="flex-1">
         <EmptyState icon={ChatCircle} title={copy.empty.title} body={copy.empty.body} />
       </View>
     );
