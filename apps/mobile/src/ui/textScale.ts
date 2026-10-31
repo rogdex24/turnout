@@ -36,8 +36,11 @@ export function scaledMetrics(token: TypographyToken, scale: number): { fontSize
   return { fontSize: fontSize * k, lineHeight: lineHeight * k };
 }
 
-/** Rough width of a Big Shoulders Display glyph as a share of its size. The face is condensed, so this is well under 1. */
-const GLYPH_WIDTH = 0.42;
+/**
+ * Width of a Big Shoulders Display glyph as a share of its size, measured on uppercase poster titles at 800 weight. The face is
+ * condensed, so this is well under 1. Too small a value says a title fits when it wraps onto an extra line and is cut off.
+ */
+const GLYPH_WIDTH = 0.58;
 
 /**
  * The size for a display-face string inside a fixed box: the largest size in the face's range for which the text wraps to at most
@@ -73,12 +76,15 @@ function linesNeeded(words: string[], boxWidth: number, size: number): number {
   let lines = 1;
   let used = 0;
   for (const word of words) {
-    if (word.length > perLine) return Number.POSITIVE_INFINITY;
     const needed = used === 0 ? word.length : used + 1 + word.length;
     if (needed <= perLine) used = needed;
-    else {
+    else if (word.length <= perLine) {
       lines += 1;
       used = word.length;
+    } else {
+      // A word wider than the box breaks across lines, so it costs as many as its length needs.
+      lines += used === 0 ? Math.ceil(word.length / perLine) - 1 : Math.ceil(word.length / perLine);
+      used = word.length % perLine || perLine;
     }
   }
   return lines;

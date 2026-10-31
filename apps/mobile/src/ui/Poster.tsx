@@ -1,15 +1,17 @@
 import { displayFaces, gutter, spacing } from "@turnout/design-tokens";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { type LayoutChangeEvent, useWindowDimensions, View } from "react-native";
 import { common } from "@/copy/common";
 import { CategoryIcon } from "./CategoryIcon";
 import { cn } from "./cn";
 import { Text } from "./primitives/Text";
-import { fitDisplaySize, scaledMetrics, useFontScale } from "./textScale";
+import { fitDisplaySize, scaledMetrics, TextScaleContext, useFontScale } from "./textScale";
 
 /** Poster box heights in dp from the design spec section 3. The box never changes with the image or the text, so the list does not shift as images arrive. */
 export const POSTER_HEIGHT = { featured: 180, tile: 196, hero: 336, thumb: 40 } as const;
+/** The line under the title stops growing here, so the fixed box keeps room for the title at the largest text size. */
+const SUB_LINE_MAX_SCALE = 1.3;
 /** The most lines the title may take before the type shrinks. */
 const TITLE_LINES = { featured: 3, tile: 3, hero: 4 } as const;
 
@@ -47,6 +49,7 @@ export interface PosterProps {
 export function Poster({ variant, title, category, subLine, imageUrl = null, className }: PosterProps) {
   const window = useWindowDimensions();
   const fontScale = useFontScale();
+  const forcedScale = useContext(TextScaleContext);
   const [measured, setMeasured] = useState<number | null>(null);
   const height = POSTER_HEIGHT[variant];
   const tone = posterTone(category);
@@ -69,7 +72,8 @@ export function Poster({ variant, title, category, subLine, imageUrl = null, cla
 
   const width = (measured ?? window.width - 2 * gutter.page) - 2 * gutter.page; // the box less the title's own side padding
   // The title sits above the category line, which grows with the text size, inside the scrim's padding (pt-3, mt-1, pb-4).
-  const titleHeight = height - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", fontScale).lineHeight;
+  const titleHeight =
+    height - spacing[3] - spacing[1] - spacing[4] - scaledMetrics("meta", Math.min(fontScale, SUB_LINE_MAX_SCALE)).lineHeight;
   const size = fitDisplaySize(title, width, "display-poster", TITLE_LINES[variant], titleHeight);
   return (
     <View
@@ -102,9 +106,12 @@ export function Poster({ variant, title, category, subLine, imageUrl = null, cla
         >
           {title}
         </Text>
-        <Text variant="meta" className="mt-1 font-medium text-on-photo" numberOfLines={1}>
-          {subLine ?? categoryLine(category)}
-        </Text>
+        {/* A story or test that forces a text size sets it by context, which the prop below does not reach. */}
+        <TextScaleContext value={forcedScale === null ? null : Math.min(forcedScale, SUB_LINE_MAX_SCALE)}>
+          <Text variant="meta" maxFontSizeMultiplier={SUB_LINE_MAX_SCALE} className="mt-1 font-medium text-on-photo" numberOfLines={1}>
+            {subLine ?? categoryLine(category)}
+          </Text>
+        </TextScaleContext>
       </View>
     </View>
   );

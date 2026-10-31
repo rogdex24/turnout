@@ -248,7 +248,7 @@ function ReadyShow({ show, ...props }: ShowViewProps & { show: ApiEvent }) {
           testID="show-go"
         />
         {eligible ? null : (
-          <Text variant="meta" className="mt-2 text-center text-muted" testID="show-go-reason">
+          <Text variant="meta" maxFontSizeMultiplier={1.6} className="mt-2 text-center text-muted" testID="show-go-reason">
             {copy.goOff.notEligible}
           </Text>
         )}

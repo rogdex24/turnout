@@ -131,7 +131,7 @@ function Ready({ data, ...props }: AfterViewProps & { data: AfterData }) {
   return (
     <>
       <ScrollView contentContainerClassName="gap-4 px-4 pb-8 pt-1" testID="after-scroll">
-        <Text variant="meta" className="min-h-11 text-muted" numberOfLines={1} testID="after-show">
+        <Text variant="meta" className="min-h-11 text-muted" testID="after-show">
           {copy.lead(data.showTitle)}
         </Text>
         <View testID="after-default">

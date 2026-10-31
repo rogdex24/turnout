@@ -63,7 +63,7 @@ export function HomeView(props: HomeViewProps) {
         <Text variant="display" className="font-display font-black uppercase" accessibilityRole="header">
           {home.wordmark}
         </Text>
-        <View className="flex-row items-center gap-1.5" accessible accessibilityLabel={home.city}>
+        <View className="shrink flex-row items-center gap-1.5" accessible accessibilityLabel={home.city}>
           <Icon icon={MapPin} size="sm" tone="muted" weight="fill" />
           <Text variant="control">{home.city}</Text>
         </View>

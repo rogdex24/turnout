@@ -256,13 +256,13 @@ function Ready({ card, ...props }: MeetViewProps & { card: MeetCardData }) {
             style={dimOnPress}
             testID="meet-show"
           >
-            <Text variant="meta" tabular className="text-muted" numberOfLines={1} importantForAccessibility="no">
+            <Text variant="meta" tabular className="text-muted" importantForAccessibility="no">
               {showRow}
             </Text>
           </Pressable>
         ) : (
           <View className="min-h-11 justify-center" testID="meet-show">
-            <Text variant="meta" tabular className="text-muted" numberOfLines={1}>
+            <Text variant="meta" tabular className="text-muted">
               {showRow}
             </Text>
           </View>

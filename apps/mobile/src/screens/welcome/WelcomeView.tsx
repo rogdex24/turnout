@@ -78,8 +78,17 @@ export function WelcomeView({ onDone, initialIndex = 0 }: WelcomeViewProps) {
             style={{ width }}
             testID={`welcome-card-${i + 1}`}
           >
-            <View className={cn("flex-1 justify-end px-5 pb-5", TONES[i])}>
-              <Text variant="display-hero" className="uppercase text-on-photo" accessibilityElementsHidden importantForAccessibility="no">
+            <View className={cn("min-h-28 flex-1 justify-end px-5 pb-5", TONES[i])}>
+              {/* The word is fixed at 116 dp, so when the text below takes the card the box keeps a floor and the word shrinks into it. */}
+              <Text
+                variant="display-hero"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+                className="uppercase text-on-photo"
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              >
                 {welcome.wordmark}
               </Text>
             </View>

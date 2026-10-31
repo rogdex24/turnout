@@ -5,6 +5,7 @@ import { type LayoutChangeEvent, View } from "react-native";
 import { common } from "@/copy/common";
 import { IconButton } from "./primitives/IconButton";
 import { Text } from "./primitives/Text";
+import { isLargeText, useFontScale } from "./textScale";
 
 export interface BackBarProps {
   onBack: () => void;
@@ -20,10 +21,11 @@ const MIN_TITLE_WIDTH = spacing[8] * 3;
 /**
  * The top bar of a pushed screen: a round back button at the left, an optional action at the right and an optional centred title.
  * The title keeps clear of both sides by the wider of the two, so it stays centred and ends in an ellipsis instead of running
- * under the back button or the action. When the sides leave it less than MIN_TITLE_WIDTH, as a long action does at the largest
- * text size, the title goes on its own row under the bar instead of shrinking to nothing.
+ * under the back button or the action. When the sides leave it less than MIN_TITLE_WIDTH, and always at a large text size, the
+ * title goes on its own row under the bar and wraps there instead of shrinking to nothing or ending in an ellipsis.
  */
 export function BackBar({ onBack, title, trailing }: BackBarProps) {
+  const large = isLargeText(useFontScale());
   const [bar, setBar] = useState(0);
   const [leading, setLeading] = useState(0);
   const [trailingWidth, setTrailingWidth] = useState(0);
@@ -31,9 +33,9 @@ export function BackBar({ onBack, title, trailing }: BackBarProps) {
   // The title box spans the whole bar, so it clears the bar's own padding, the wider side and a gap.
   const inset = spacing[2] + Math.max(leading, trailingWidth) + spacing[2];
   // Before the first layout the bar width is unknown, so the title starts centred.
-  const centred = bar === 0 || bar - 2 * inset >= MIN_TITLE_WIDTH;
+  const centred = !large && (bar === 0 || bar - 2 * inset >= MIN_TITLE_WIDTH);
   const heading = (
-    <Text variant="control" className="font-semibold" accessibilityRole="header" numberOfLines={centred ? 1 : 2}>
+    <Text variant="control" className="font-semibold" accessibilityRole="header" numberOfLines={centred ? 1 : undefined}>
       {title}
     </Text>
   );

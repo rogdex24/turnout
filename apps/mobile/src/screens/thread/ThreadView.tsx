@@ -19,6 +19,7 @@ import { Row } from "@/ui/primitives/Row";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Sheet } from "@/ui/primitives/Sheet";
 import { Text } from "@/ui/primitives/Text";
+import { scaledMetrics, useFontScale } from "@/ui/textScale";
 import { useColors } from "@/ui/theme";
 
 export interface ThreadReady {
@@ -140,6 +141,8 @@ function Message({
 
 function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null; onQuick: (text: string) => void }) {
   const colors = useColors();
+  // The input grows with the text to about four lines, then scrolls inside itself, so the send button never leaves the screen.
+  const maxInputHeight = scaledMetrics("body", useFontScale()).lineHeight * 4 + 2 * spacing[3];
   const [draft, setDraft] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const ready = draft.trim().length > 0;
@@ -163,7 +166,7 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null
           <Chip key={text} label={text} onPress={() => onQuick(text)} testID={`thread-quick-${text}`} />
         ))}
       </ScrollView>
-      <View className="mt-2 flex-row items-center gap-2 pl-4 pr-3">
+      <View className="mt-2 flex-row items-end gap-2 pl-4 pr-3">
         <TextInput
           accessibilityLabel={copy.composer.label}
           placeholder={copy.composer.placeholder}
@@ -180,12 +183,14 @@ function Composer({ onSend, onQuick }: { onSend: (body: string) => string | null
           allowFontScaling
           dataDetectorTypes="none"
           returnKeyType="default"
-          className="min-h-12 max-h-32 flex-1 rounded-field border border-outline bg-surface px-4 py-2.5 font-sans text-body text-ink"
+          className="min-h-12 flex-1 rounded-field border border-outline bg-surface px-4 py-2.5 font-sans text-body text-ink"
+          style={{ maxHeight: maxInputHeight }}
           testID="thread-input"
         />
         <IconButton
           icon={PaperPlaneRight}
           label={copy.composer.send}
+          className="mb-0.5"
           ring
           disabled={!ready}
           onPress={send}
@@ -207,11 +212,11 @@ function Header({ title, subtitle, onBack }: { title: string; subtitle: string |
     <View className="min-h-14 flex-row items-center px-2 py-1">
       <IconButton icon={CaretLeft} label={common.back} onPress={onBack} testID="back" />
       <View className="flex-1 items-center px-2">
-        <Text variant="control" className="font-semibold" numberOfLines={1} accessibilityRole="header" testID="thread-title">
+        <Text variant="control" className="font-semibold" accessibilityRole="header" testID="thread-title">
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="meta" tabular className="text-muted" numberOfLines={1} testID="thread-subtitle">
+          <Text variant="meta" tabular className="text-muted" testID="thread-subtitle">
             {subtitle}
           </Text>
         ) : null}
