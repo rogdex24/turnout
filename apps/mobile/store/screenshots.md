@@ -10,9 +10,8 @@ real person, a real ticket or a real phone number.
 `bun scripts/visual-accept.ts <run-id>` commits them (`docs/plans/mobile-visual-testing.md`). Use the `android-large` target,
 `light-default.png` for the listing (the phone-sized, default text, light theme shot).
 
-State of the baselines on 2026-10-29: **no baseline is committed yet.** `stories.json` now lists every screen below, and
-`src/visualStories.test.tsx` checks that each listed story exists and shows its ready text. The next accepted device run
-captures them all.
+State of the baselines on 2026-10-31: every target has a file for each story in `stories.json`, theme and text size (200
+per target). `docs/release-gate.md`, item 2, names the device runs they came from.
 
 ## The list, in the order Play shows them
 
