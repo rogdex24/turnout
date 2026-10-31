@@ -16,5 +16,5 @@ The device jobs run `ci/device-run.sh <target>`, which sets the theme and the te
 
 The events list replaces the `home` entry when it lands in M2. `home` stands in until then, so the pipeline has a shot to compare.
 
-No baseline is committed yet. Baselines come from a CI device run (`scripts/visual-accept.ts <run-id>`), because the pixels have to
+Every target has baselines for every story in `stories.json`, and `visual-compare.sh` fails a target that has none. Baselines come from a CI device run (`scripts/visual-accept.ts <run-id>`), because the pixels have to
 come from the pinned emulator and simulator images, not from a developer machine.
