@@ -203,11 +203,15 @@ describe("Maestro flows", () => {
     expect(batch).toMatch(/"set_\$\{platform\}_text" "\$text"[\s\S]*?"wait_\$\{platform\}"[\s\S]*?maestro test/);
   });
 
-  // Android colours the gesture handle from what is behind it, a moment late, so the compare leaves the handle out on Android.
-  test("the compare leaves out the gesture handle on both Android targets and nothing on iOS", async () => {
+  // Android colours the gesture handle from what is behind it, a moment late, and the status bar over a sheet moved its icons and its
+  // clock between runs even in demo mode, so the compare leaves both out on Android. iOS pins its status bar with simctl.
+  test("the compare leaves out the status bar and the gesture handle on both Android targets and nothing on iOS", async () => {
     const text = await Bun.file(`${root}/ci/visual-compare.sh`).text();
-    for (const target of ["android-small", "android-large"])
-      expect(text).toMatch(new RegExp(`${target}\\) ignore=\\(--ignore \\d+,\\d+,\\d+,\\d+\\)`));
+    for (const [target, width] of [
+      ["android-small", 720],
+      ["android-large", 1440],
+    ] as const)
+      expect(text).toMatch(new RegExp(`${target}\\) ignore=\\(--ignore 0,0,${width - 1},\\d+ --ignore \\d+,\\d+,\\d+,\\d+\\)`));
     expect(text).not.toContain("ios-");
   });
 
