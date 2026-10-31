@@ -4,6 +4,7 @@ import { PixelRatio, StyleSheet } from "react-native";
 import { Loaded } from "@/screens/home/HomeView.stories";
 import { Early } from "@/screens/meet/MeetView.stories";
 import { GroupConfirmed } from "@/screens/plan/PlanView.stories";
+import { Empty as PhoneEmpty } from "@/screens/signin/PhoneView.stories";
 import { Conversation } from "@/screens/thread/ThreadView.stories";
 import { BackBar } from "./BackBar";
 import { POSTER_HEIGHT, Poster } from "./Poster";
@@ -46,6 +47,33 @@ describe("rows grow with the largest text size", () => {
       expect(className).toContain("min-h-14");
       expect(className).not.toMatch(fixedHeight);
     }
+  });
+
+  it("the thread header subtitle stops growing at 1.6 and is centred under the title", async () => {
+    const Story = Conversation.render as () => React.ReactElement;
+    await render(
+      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+        <Story />
+      </TextScaleContext>,
+    );
+    const subtitles = screen.getAllByTestId("thread-subtitle");
+    expect(subtitles.length).toBeGreaterThan(0);
+    for (const subtitle of subtitles) {
+      expect(subtitle.props.maxFontSizeMultiplier).toBe(1.6);
+      expect(subtitle.props.className).toContain("text-center");
+    }
+  });
+
+  it("the phone number input stays on one line, so the +91 prefix stays beside it in a one-line field", async () => {
+    const Story = PhoneEmpty.render as () => React.ReactElement;
+    await render(
+      <TextScaleContext value={LARGEST_TEXT_SCALE}>
+        <Story />
+      </TextScaleContext>,
+    );
+    const inputs = screen.getAllByTestId("phone-input");
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const input of inputs) expect(input.props.multiline).toBeFalsy();
   });
 
   it("a centred bar title keeps clear of the wider side and ends in an ellipsis", async () => {
