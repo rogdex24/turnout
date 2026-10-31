@@ -80,6 +80,10 @@ export function CodeEntry({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         underlineColorAndroid="transparent"
+        // The field only collects digits for the boxes above. At the largest text size Android drew its value through the
+        // boxes: NativeWind's text-transparent did not reach the native text color, so the style sets it and the size stays fixed.
+        allowFontScaling={false}
+        style={{ color: "transparent" }}
         // See-through rather than at zero opacity: iOS and Android leave a view at alpha 0 out of the accessibility tree, so
         // VoiceOver, TalkBack and the Maestro flows could not reach the field.
         className="absolute inset-0 bg-transparent text-transparent"
