@@ -154,6 +154,23 @@ describe("Text", () => {
     expect(screen.getByText("Hello").props.allowFontScaling).toBe(false);
   });
 
+  it("on iOS moves display-face glyphs down with padding that negative margins take back", async () => {
+    await render(
+      <View>
+        <Text variant="display-hero">6:00</Text>
+        <Text variant="body" className="font-display font-extrabold" style={{ fontSize: 40, lineHeight: 36 }}>
+          Poster
+        </Text>
+        <Text variant="body">Plain</Text>
+      </View>,
+    );
+    const hero = StyleSheet.flatten(screen.getByText("6:00").props.style);
+    expect(hero.paddingTop).toBeGreaterThan(0);
+    expect(hero.paddingTop + hero.marginTop + hero.marginBottom).toBeCloseTo(0, 5);
+    expect(StyleSheet.flatten(screen.getByText("Poster").props.style).paddingTop).toBeGreaterThan(0);
+    expect(StyleSheet.flatten(screen.getByText("Plain").props.style)?.paddingTop).toBeUndefined();
+  });
+
   it("follows the system when nothing is forced", async () => {
     await render(
       <View>
