@@ -92,10 +92,12 @@ env:
     env:
       SCREEN: you
 
-# Notifications: where the phone's permission stands.
+# Notifications: where the phone's permission stands. The row sits above Blocked and Safety, so on a small screen it is
+# already scrolled off the top here.
 - scrollUntilVisible:
     element:
       id: you-notifications
+    direction: UP
     centerElement: true
 - tapOn:
     id: you-notifications
