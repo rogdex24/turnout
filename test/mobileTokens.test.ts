@@ -159,7 +159,9 @@ describe("native.ts", () => {
     expect(fontScaling.badge).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.3 });
     expect(fontScaling.label).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.3 });
     expect(fontScaling.control).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.6 });
-    for (const name of ["title", "body", "meta"] as const) expect(fontScaling[name]).toEqual({ allowFontScaling: true });
+    for (const name of ["title", "body", "meta"] as const) {
+      expect(fontScaling[name]).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 2 });
+    }
     for (const name of ["display-hero", "display-band", "display-poster", "display-numeral"] as const) {
       expect(fontScaling[name]).toEqual({ allowFontScaling: false });
     }
