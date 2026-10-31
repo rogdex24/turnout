@@ -25,6 +25,7 @@ export const you = {
   },
   notifications: "Notifications",
   blocked: { title: "Blocked people", sub: "People you chose not to meet again" },
+  safety: "Safety and 112",
   howMatching: "How matching works",
   privacy: { title: "Privacy notice", sub: (version: string) => `Version ${version}` },
   grievance: "Grievance officer",

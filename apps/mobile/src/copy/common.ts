@@ -9,6 +9,12 @@ export const common = {
   done: "Done",
   loading: "Loading",
   offlineBar: "You're offline. Showing what we saved.",
+  /** The 112 strip on the report form and the safety page. */
+  emergency: {
+    text: "In danger now? Call 112",
+    button: "Call 112",
+    label: "Call 112, emergency, opens your phone",
+  },
   errorTitle: "That didn't work",
   errorOffline: "You're offline. Check your connection and try again.",
   errorServer: "Something went wrong on our side. Try again in a moment.",

@@ -206,6 +206,7 @@ describe("signed in", () => {
     for (const [row, page, path] of [
       ["you-notifications", "settings-notifications", "/settings/notifications"],
       ["you-blocked", "settings-blocked", "/settings/blocked"],
+      ["you-safety", "settings-safety", "/settings/safety"],
       ["you-how-matching", "settings-how-matching", "/settings/how-matching-works"],
       ["you-privacy", "settings-privacy", "/settings/privacy"],
       ["you-grievance", "settings-grievance", "/settings/grievance"],

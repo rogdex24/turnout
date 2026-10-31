@@ -74,6 +74,24 @@ env:
     env:
       SCREEN: you
 
+# Safety and 112: the 112 button comes first. The flow does not tap it, so nothing dials.
+- scrollUntilVisible:
+    element:
+      id: you-safety
+    centerElement: true
+- tapOn:
+    id: you-safety
+- extendedWaitUntil:
+    visible:
+      id: settings-safety
+    timeout: 10000
+- assertVisible:
+    id: safety-call-112
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: you
+
 # Notifications: where the phone's permission stands.
 - scrollUntilVisible:
     element:
