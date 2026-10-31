@@ -43,8 +43,16 @@ describe("Maestro flows", () => {
     }
 
     // The iOS simulator asks before it opens a custom-scheme link and waits for an answer, so every link goes through the subflow
-    // that answers it.
-    if (file !== "subflows/open-link.yaml") {
+    // that answers it. The visual capture answers it inside its own retry, without the subflow's 10 s wait, since it runs 200 times.
+    if (file === "visual/capture-story.yaml") {
+      test(`${file} answers the Open prompt inside the retry that waits for the story`, async () => {
+        const text = await Bun.file(`${root}/${file}`).text();
+        const retry = text.indexOf("- retry:");
+        expect(retry).toBeGreaterThan(text.indexOf("- openLink:"));
+        expect(text.indexOf('visible: "Open in .Turnout.*"', retry)).toBeGreaterThan(retry);
+        expect(text.indexOf("${READY_TEXT}", retry)).toBeGreaterThan(retry);
+      });
+    } else if (file !== "subflows/open-link.yaml") {
       test(`${file} opens links through subflows/open-link.yaml`, async () => {
         const text = await Bun.file(`${root}/${file}`).text();
         expect(text).not.toMatch(/^\s*- openLink:/m);
