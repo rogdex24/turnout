@@ -15,6 +15,8 @@ export const common = {
     button: "Call 112",
     label: "Call 112, emergency, opens your phone",
   },
+  /** Said to a member the stop rule has caught, on the Go sheet and the You tab. Sign-in, browsing, settings and delete still work. */
+  groupingStopped: "Grouping has stopped for your account. You can still browse shows.",
   errorTitle: "That didn't work",
   errorOffline: "You're offline. Check your connection and try again.",
   errorServer: "Something went wrong on our side. Try again in a moment.",

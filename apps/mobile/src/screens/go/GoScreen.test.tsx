@@ -3,6 +3,7 @@ import type { MeResponse } from "@turnout/contract/app/me";
 import { queryKeys } from "@/api/keys";
 import { goExplained } from "@/api/prefs";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
+import { common } from "@/copy/common";
 import { go } from "@/copy/go";
 import { planFixture } from "@/model/planFixtures";
 import { AppProviders } from "@/providers/AppProviders";
@@ -122,5 +123,23 @@ describe("GoScreen", () => {
     await fireEvent.press(screen.getByTestId("go-not-now"));
     expect(app.onClose).toHaveBeenCalled();
     expect(app.transport.callsTo("POST /plans")).toHaveLength(0);
+  });
+
+  it("tells a stopped member that grouping has stopped, instead of offering Go", async () => {
+    const stopped = meFixture({ status: "stopped" });
+    const app = await open({ ...stopped, matchable: { ok: false, missing: ["account"] } });
+    expect(screen.getByText(common.groupingStopped)).toBeOnTheScreen();
+    expect(screen.queryByTestId("go-next")).toBeNull();
+    expect(screen.queryByTestId("go-open")).toBeNull();
+    expect(screen.queryByText(go.explain)).toBeNull();
+    expect(screen.queryByText(go.missing.items.account, { exact: false })).toBeNull();
+    await fireEvent.press(screen.getByTestId("go-not-now"));
+    expect(app.onClose).toHaveBeenCalled();
+    expect(app.transport.callsTo("POST /plans")).toHaveLength(0);
+  });
+
+  it("does not show the stopped line to an active member", async () => {
+    await open(meFixture());
+    expect(screen.queryByText(common.groupingStopped)).toBeNull();
   });
 });

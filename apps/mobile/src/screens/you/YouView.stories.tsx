@@ -38,3 +38,4 @@ export const WomenOnlyFailed: Story = {
 export const NoWomenOnlyForAMan: Story = { render: () => frame({ womenOnly: { available: false, value: false } }) };
 export const HandleBeingChecked: Story = { render: () => frame({ handleState: "pending", usageData: false }) };
 export const HandleTurnedDown: Story = { render: () => frame({ handleState: "rejected" }) };
+export const Stopped: Story = { render: () => frame({ stopped: true }) };

@@ -3,6 +3,7 @@ import type { MeResponse } from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
 import { PREF_KEYS } from "@/api/prefs";
 import { clearTestClients, json, type RouteReply } from "@/api/testing";
+import { common } from "@/copy/common";
 import { you } from "@/copy/you";
 import { AppProviders } from "@/providers/AppProviders";
 import { createTestApp, meFixture } from "@/providers/testing";
@@ -82,5 +83,21 @@ describe("YouScreen", () => {
     expect(mockSetConsent).toHaveBeenLastCalledWith(false);
     await fireEvent(screen.getByTestId("you-usage"), "valueChange", true);
     expect(mockSetConsent).toHaveBeenLastCalledWith(true);
+  });
+
+  it("tells a stopped member that grouping has stopped, and keeps every row working", async () => {
+    const app = await open(meFixture({ status: "stopped" }));
+    expect(screen.getByText(common.groupingStopped)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("you-profile"));
+    expect(app.onOpen).toHaveBeenCalledWith("profile");
+    await fireEvent.press(screen.getByTestId("you-delete-account"));
+    expect(app.onOpen).toHaveBeenCalledWith("deleteAccount");
+    await fireEvent.press(screen.getByTestId("you-sign-out"));
+    expect(app.onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show the stopped line to an active member", async () => {
+    await open(meFixture());
+    expect(screen.queryByText(common.groupingStopped)).toBeNull();
   });
 });

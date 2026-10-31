@@ -62,6 +62,7 @@ export function GoScreen({ publicId, onClose, onPlan, onFinish }: GoScreenProps)
       groupType={groupType}
       womenOnlyOffered={womenOnlyOffered(me)}
       explain={explain}
+      stopped={me?.status === "stopped"}
       busy={make.isPending}
       issue={issue}
       onGroupType={(type) => {

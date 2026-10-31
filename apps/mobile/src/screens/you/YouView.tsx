@@ -12,10 +12,13 @@ import {
   Trash,
   UserCircle,
   UserMinus,
+  WarningCircle,
 } from "phosphor-react-native";
 import type { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
+import { common } from "@/copy/common";
 import { you } from "@/copy/you";
+import { Note } from "@/ui/primitives/Note";
 import { Row } from "@/ui/primitives/Row";
 import { SafeAreaView } from "@/ui/primitives/SafeAreaView";
 import { Text } from "@/ui/primitives/Text";
@@ -39,6 +42,8 @@ export interface YouViewProps {
   handleState: HandleState | "missing";
   /** The women-only switch is offered to women and non-binary people only. */
   womenOnly: { available: boolean; value: boolean; saving?: boolean; error?: string | null };
+  /** The stop rule has caught this account: a line at the top says so. */
+  stopped?: boolean;
   /** "Share usage data" is on. */
   usageData: boolean;
   /** The notice version this account agreed to. */
@@ -54,6 +59,7 @@ export function YouView({
   firstName,
   handleState,
   womenOnly,
+  stopped = false,
   usageData,
   noticeVersion,
   onOpen,
@@ -67,6 +73,12 @@ export function YouView({
         <Text variant="title-large" className="px-4 pt-4" accessibilityRole="header">
           {you.title}
         </Text>
+
+        {stopped ? (
+          <View className="px-4 pt-4" testID="you-stopped">
+            <Note icon={WarningCircle}>{common.groupingStopped}</Note>
+          </View>
+        ) : null}
 
         <Section title={you.sections.account}>
           <Row

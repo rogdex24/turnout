@@ -58,6 +58,7 @@ export function YouScreen({ onOpen, onSignOut }: { onOpen: (target: YouTarget) =
       firstName={me?.profile.firstName ?? null}
       handleState={me?.handle.state ?? "missing"}
       womenOnly={{ available: womenOnlyAvailable(draft), value: draft.groupPref === "women_only", saving, error }}
+      stopped={me?.status === "stopped"}
       usageData={usageData}
       noticeVersion={me?.consent.noticeVersion ?? NOTICE_VERSION}
       onOpen={onOpen}
