@@ -54,15 +54,14 @@ What goes in LFS: the visual baselines under `apps/mobile/.maestro/visual/baseli
 
 | Number | Value | How it is reached |
 |---|---|---|
-| Size of one full set of baselines | about 168 MB | The plan's estimate for 16 shots per state across the stories |
-| Storage | 168 MB per set against 10 GiB (10,240 MB) | A new set after a change only adds the shots that changed, so storage grows slower than one set per change |
+| Size of one full set of baselines | about 120 MB | Measured on 2026-11-01 from the LFS pointers: 800 PNGs (50 stories, 2 themes, 2 text sizes, 4 targets). `android-small` 19.2 MB, `android-large` 42.1 MB, `ios-small` 19.2 MB, `ios-large` 39.1 MB |
+| Storage | 120 MB per set against 10 GiB (10,240 MB) | A new set after a change only adds the shots that changed, so storage grows slower than one set per change |
 | Bandwidth | about 2 GB a month | The plan's estimate across the PR jobs |
-| Per device job | about 42 MB | One quarter of a set: `.lfsconfig` skips the baselines on checkout and each device job fetches only its own `<target>` folder |
+| Per device job | 19 to 42 MB | One target's folder: `.lfsconfig` skips the baselines on checkout and each device job fetches only its own `<target>` folder |
 | 70 percent of storage | 7 GiB | Fallback trigger |
 | 70 percent of bandwidth | 7 GiB a month | Fallback trigger |
 
-The 42 MB figure is the 168 MB estimate divided by the four targets, not a measurement. The
-first snapshot on Mon 11-02 gives the real size; replace the estimates here then.
+The set and per-job sizes are measured from the accepted baselines. Bandwidth is still the plan's estimate.
 
 Orphan-branch fallback: at 70 percent of either storage or bandwidth, the baselines move out of
 LFS to an orphan branch that holds only the PNGs, and the device jobs fetch them from there.
@@ -84,6 +83,6 @@ The repo is public, so standard runners are free. The limits that matter:
 | Runners | Standard only (`ubuntu-latest` with KVM for Android, `macos-latest` for iOS) | No larger runners, which are billed |
 
 Controls from F19 and F20: caches for native builds by fingerprint, `fetchexclude` for LFS,
-one automatic re-run only, and a flow that is flaky more than 1 run in 10 in a week is fixed
+no automatic re-run of the flows inside a device job (a failed job is re-run whole, on a fresh server; a visual capture with no shot is taken again on its own, up to twice, because the stories read no seeded data), and a flow that is flaky more than 1 run in 10 in a week is fixed
 or quarantined that week. Software emulation on Linux and required device jobs can block
 merges, which is why `ci-gate` is the single required check and the fix-or-quarantine rule exists.

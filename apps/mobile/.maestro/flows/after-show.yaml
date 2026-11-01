@@ -1,0 +1,90 @@
+# After the show. The server's clock passes 10:00 IST the morning after Dev's show (the operator route `after`), the group and the plan
+# become done, and the plan page offers "How did it go?". The page says in words that doing nothing is fine, shows the others in the
+# group as a first name and a photo, and "I didn't feel comfortable" asks first, then marks one person privately. Each person also
+# has a Report entry. The server's clock does not go back, so this runs last, after group-shrinks (Dev's group of four, now two others).
+#
+# It decides by the server (the group's state is done), not by the phone's clock. Screen capture is blocked on a release build and
+# allowed in the e2e build (EXPO_PUBLIC_ALLOW_CAPTURE=1), so a screenshot flow can still run; that is not checked here. The Report
+# screen is another task's; this flow only checks the entry is there. Written for CI; it has not run on a device yet.
+appId: com.turnout.app.e2e
+name: after-show
+tags:
+  - plans
+env:
+  MEMBER: "+12025550105"
+  SHOW_ID: seed-show-t2d
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: after
+      PHONE: ""
+      EVENT_ID: ${SHOW_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: ""
+
+# The plan page asks the server once a minute, so it can take that long to say the show is over.
+- tapOn: "Plans"
+- extendedWaitUntil:
+    visible:
+      id: plans
+    timeout: 10000
+- tapOn:
+    id: "plan-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: plan-open-after
+    timeout: 80000
+- tapOn:
+    id: plan-open-after
+- extendedWaitUntil:
+    visible:
+      id: after
+    timeout: 15000
+
+# Doing nothing is the default, and the page says so first. The others in the group show a first name and a photo, and nothing else.
+- assertVisible: ".*You don't have to do anything.*"
+- assertVisible:
+    id: after-default
+- assertVisible: ".*Esha.*"
+- assertVisible: ".*Farid.*"
+- assertNotVisible: ".*@.*"
+- assertNotVisible: ".*\\+\\d{6,}.*"
+- assertVisible:
+    id: after-window
+- assertVisible:
+    id: "after-report-.*"
+
+# "I didn't feel comfortable" asks first. Not now keeps it as it was; Yes, mark them marks the person, privately.
+- tapOn: ".*I didn't feel comfortable.*"
+- extendedWaitUntil:
+    visible:
+      id: after-confirm
+    timeout: 5000
+- assertVisible: ".*private.*"
+- tapOn:
+    id: after-cancel
+- assertNotVisible:
+    id: "after-marked-.*"
+- tapOn: ".*I didn't feel comfortable.*"
+- extendedWaitUntil:
+    visible:
+      id: after-confirm
+    timeout: 5000
+- tapOn:
+    id: after-confirm
+# Waits on the id: on iOS the row's name is its label ("You marked <name>, privately"), not the "Marked, privately" text.
+- extendedWaitUntil:
+    visible:
+      id: "after-marked-.*"
+    timeout: 10000

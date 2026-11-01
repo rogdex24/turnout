@@ -238,6 +238,31 @@ describe("production settings", () => {
     expect(config.objectStore).toBe("disk");
   });
 
+  test("production lets the one reviewer number in and no other test phone, and refuses a reviewer that is real-shaped or half set", async () => {
+    const base = await fullProductionEnv();
+    const reviewer = { REVIEWER_PHONE: "+12125550123", REVIEWER_OTP: "123456" };
+
+    const ok = await loadAppConfig({ ...base, ...reviewer, TEST_PHONE_ALLOWLIST: reviewer.REVIEWER_PHONE });
+    expect(ok.reviewer).toEqual({ phone: reviewer.REVIEWER_PHONE, code: reviewer.REVIEWER_OTP });
+    expect(ok.phoneAllowlist).toEqual([reviewer.REVIEWER_PHONE]);
+
+    const refused = async (env: Record<string, string>, text: string) => {
+      const error = (await loadAppConfig({ ...base, ...env }).catch((e: unknown) => e)) as Error;
+      expect(error).toBeInstanceOf(ConfigError);
+      expect(error.message).toContain(text);
+      expect(error.message).not.toContain(reviewer.REVIEWER_OTP);
+    };
+    await refused({ TEST_PHONE_ALLOWLIST: "+12025550150" }, "TEST_PHONE_ALLOWLIST may hold only the reviewer number in production");
+    await refused({ ...reviewer, TEST_PHONE_ALLOWLIST: `${reviewer.REVIEWER_PHONE},+12125550124` }, "may hold only the reviewer number");
+    await refused({ REVIEWER_PHONE: reviewer.REVIEWER_PHONE }, "REVIEWER_PHONE and REVIEWER_OTP go together");
+    await refused({ REVIEWER_OTP: reviewer.REVIEWER_OTP }, "REVIEWER_PHONE and REVIEWER_OTP go together");
+    await refused(
+      { REVIEWER_PHONE: "+12125551234", REVIEWER_OTP: reviewer.REVIEWER_OTP },
+      "REVIEWER_PHONE must be a +1 <area> 555-01xx number",
+    );
+    await refused({ REVIEWER_PHONE: reviewer.REVIEWER_PHONE, REVIEWER_OTP: "12345" }, "REVIEWER_OTP must be 6 digits");
+  });
+
   test("outside production a missing secret is filled for the run and listed by name only", async () => {
     const config = await loadAppConfig({ TURNOUT_ENV: "development" });
     expect(config.ephemeral).toEqual(expect.arrayContaining(["OTP_PEPPER", "FILE_LINK_SECRET", "AUTH_JWT_PRIVATE_KEY"]));
@@ -251,6 +276,7 @@ describe("production settings", () => {
     const asProduction = { ...t.app, config: { ...t.app.config, env: "production" as const } };
     expect(patterns(asProduction)).not.toContain("/__test/otp");
     expect(patterns(asProduction)).not.toContain("/__test/clock");
+    expect(patterns(asProduction)).not.toContain("/__test/limits");
     const config = await loadAppConfig({ TURNOUT_ENV: "production", STAGING_TEST_TOKEN: "x" }).catch(() => null);
     expect(config).toBeNull();
   });
@@ -277,6 +303,16 @@ describe("staging test routes", () => {
     const reviewer = await t.call("POST", "/__test/otp", { body: { phone: REVIEWER_PHONE }, headers: header });
     expect(((await reviewer.json()) as { code: string }).code).toBe(REVIEWER_CODE);
     expect((await t.call("POST", "/__test/otp", { body: { phone: PHONES[5] }, headers: header })).status).toBe(404);
+  });
+
+  test("/__test/limits empties the rate limits, so a re-run of the device flows can ask for codes again", async () => {
+    const t = await testApp();
+    const ask = () => t.call("POST", "/auth/otp", { body: { phone: PHONES[0], purpose: "sign_in" } });
+    for (let i = 0; i < 3; i++) expect((await ask()).status).toBe(200);
+    expect((await ask()).status).toBe(429);
+    expect((await t.call("POST", "/__test/limits", { body: {} })).status).toBe(404);
+    expect((await t.call("POST", "/__test/limits", { body: {}, headers: header })).status).toBe(200);
+    expect((await ask()).status).toBe(200);
   });
 
   test("/__test/clock moves a staging server's clock; a fixed test clock is left alone", async () => {

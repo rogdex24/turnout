@@ -19,7 +19,8 @@ env:
       TEST_TOKEN: ${TEST_TOKEN}
 
 # A new plan needs its ticket, and says so with one button.
-- assertVisible: "Seed comedy night"
+# On iOS the poster is one element named "<title>, <category>", so the title is matched as the start of the name.
+- assertVisible: "Seed comedy night.*"
 - assertVisible: ".*Add your ticket.*"
 - assertVisible:
     id: plan-add-ticket
@@ -36,6 +37,7 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""
 - extendedWaitUntil:
@@ -55,22 +57,27 @@ env:
       EVENT_ID: ${SHOW_ID}
       DECISION: approve
       PHONES: ""
+      TEXT: ""
       REASON: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
     timeout: 80000
 - assertVisible: ".*No group yet.*"
 - assertVisible: ".*Groups are set by.*"
+# At the real type sizes this is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: plan-leave
+    direction: DOWN
+    centerElement: true
 - assertVisible:
     id: plan-leave
 
 # The Plans tab says the same thing.
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: plans
-    timeout: 10000
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: plans
 - assertVisible: ".*Finding your group.*"
 
 # Ends the plan, so the flows after this one start with nothing waiting.
@@ -83,5 +90,6 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""

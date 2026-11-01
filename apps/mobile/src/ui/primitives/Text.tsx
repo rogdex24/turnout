@@ -1,9 +1,9 @@
-import type { TypographyToken } from "@turnout/design-tokens";
+import { type TypographyToken, typography } from "@turnout/design-tokens";
 import { useContext } from "react";
-import { Text as RNText, type TextProps, type TextStyle } from "react-native";
+import { Platform, Text as RNText, StyleSheet, type TextProps, type TextStyle } from "react-native";
 import { cn } from "../cn";
 import { scaledMetrics, TextScaleContext } from "../textScale";
-import { fontVariantFor, scalingFor, textClass } from "../typography";
+import { displayLeadingFix, fontVariantFor, scalingFor, textClass } from "../typography";
 
 export interface AppTextProps extends TextProps {
   /** A type token from DESIGN.md. Body text by default. */
@@ -18,13 +18,31 @@ export function Text({ variant = "body", tabular = false, className, style, ...r
   const forcedScale = useContext(TextScaleContext);
   const fontVariant: TextStyle["fontVariant"] = tabular ? ["tabular-nums"] : fontVariantFor(variant);
   const forced = forcedScale === null ? null : scaledMetrics(variant, forcedScale);
+  const display = displayMetrics(variant, className, style);
+  // Sets the top and bottom margins on iOS, so a display-face Text takes its spacing from a wrapping View, not mt- or mb- classes.
+  const leading = display ? displayLeadingFix(Platform.OS, display.fontSize, display.lineHeight) : null;
   return (
     <RNText
       {...scalingFor(variant)}
       {...(forced ? { allowFontScaling: false } : null)}
       className={cn(textClass[variant], "text-ink", className)}
-      style={[fontVariant ? { fontVariant } : null, forced, style]}
+      style={[fontVariant ? { fontVariant } : null, forced, leading, style]}
       {...rest}
     />
   );
+}
+
+/** Size and line height of text in the display face: a display token, or `font-display` with both set in `style`. */
+function displayMetrics(
+  variant: TypographyToken,
+  className: string | undefined,
+  style: TextProps["style"],
+): { fontSize: number; lineHeight: number } | null {
+  const flat = StyleSheet.flatten(style) ?? {};
+  if (variant === "display-hero" || variant === "display-band") {
+    const token = typography[variant];
+    return { fontSize: flat.fontSize ?? token.fontSize, lineHeight: flat.lineHeight ?? token.lineHeight };
+  }
+  if (!className?.split(" ").includes("font-display") || flat.fontSize === undefined || flat.lineHeight === undefined) return null;
+  return { fontSize: flat.fontSize, lineHeight: flat.lineHeight };
 }

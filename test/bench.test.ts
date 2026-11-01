@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "../src/migrate.js";
@@ -24,8 +24,13 @@ test("dedupe evaluation loads the committed catalog implementation and rejects a
   }
 });
 
+// The test checks which journal mode each case used and that every row landed, not how fast the disk is. The plain case
+// syncs once per row, about 1,600 fsyncs, which took 21 of the 46 s of `bun test` on disk. A RAM-backed /dev/shm, where
+// there is one, makes it take well under a second.
+const writeTestRoot = existsSync("/dev/shm") ? "/dev/shm" : tmpdir();
+
 test("write benchmark actually uses DELETE for plain and transaction cases", () => {
-  const dir = mkdtempSync(join(tmpdir(), "hydsocial-write-test-"));
+  const dir = mkdtempSync(join(writeTestRoot, "hydsocial-write-test-"));
   try {
     const result = Bun.spawnSync([process.execPath, "run", "bench/write-path.ts"], { env: { ...process.env, TMPDIR: dir } });
     expect(result.exitCode).toBe(0);

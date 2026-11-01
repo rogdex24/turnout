@@ -104,6 +104,14 @@ describe("app contrast (DESIGN.md, Mobile app)", () => {
         expect(contrast(role("dark", "app-muted"), role(theme, "app-marquee"))).toBeGreaterThanOrEqual(4.5);
       });
 
+      test("photo text and icons are 4.5:1 on the scrim even over a white photo, the worst case", () => {
+        expect(contrast(role(theme, "app-on-photo"), role(theme, "app-scrim"), "#ffffff")).toBeGreaterThanOrEqual(4.5);
+      });
+
+      test("the selected chip's label (bg on ink) is 4.5:1", () => {
+        expect(contrast(role(theme, "app-bg"), role(theme, "app-ink"))).toBeGreaterThanOrEqual(4.5);
+      });
+
       test("control borders and the signal dot are 3:1 on the page", () => {
         expect(contrast(role(theme, "app-outline"), role(theme, "app-bg"))).toBeGreaterThanOrEqual(3);
         expect(contrast(role(theme, "app-signal"), role(theme, "app-bg"))).toBeGreaterThanOrEqual(3);
@@ -124,7 +132,7 @@ describe("type scale", () => {
     expect([t["title-large"]?.fontSize, t["title-large"]?.lineHeight, t["title-large"]?.fontWeight]).toEqual(["22px", "28px", 600]);
     expect(t["display-hero"]?.fontSize).toBe("116px");
     expect(t["display-band"]?.fontSize).toBe("28px");
-    expect(t["display-hero"]?.fontFamily).toStartWith('"Big Shoulders Display"');
+    expect(t["display-hero"]?.fontFamily).toStartWith('"Big Shoulders"');
     // The web scale is unchanged.
     expect([t.title?.fontSize, t.body?.fontSize, t.control?.fontSize]).toEqual(["18px", "16px", "14px"]);
   });
@@ -150,7 +158,10 @@ describe("native.ts", () => {
     expect(fontScaling["title-large"]).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.6 });
     expect(fontScaling.badge).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.3 });
     expect(fontScaling.label).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.3 });
-    for (const name of ["title", "body", "control", "meta"] as const) expect(fontScaling[name]).toEqual({ allowFontScaling: true });
+    expect(fontScaling.control).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 1.6 });
+    for (const name of ["title", "body", "meta"] as const) {
+      expect(fontScaling[name]).toEqual({ allowFontScaling: true, maxFontSizeMultiplier: 2 });
+    }
     for (const name of ["display-hero", "display-band", "display-poster", "display-numeral"] as const) {
       expect(fontScaling[name]).toEqual({ allowFontScaling: false });
     }

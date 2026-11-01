@@ -1,0 +1,87 @@
+# A signed-in member loses the connection: Home keeps the shows it saved and says it is offline, a cold start without a connection
+# opens on the saved shows, and a refresh after the connection comes back clears the notice. Written for CI.
+# The connection is cut at the server (scripts/network.js), not with airplane mode: the emulator still reaches the host with airplane
+# mode on, and Maestro cannot turn it on in the iOS simulator. So the whole flow runs on both platforms.
+appId: com.turnout.app.e2e
+name: offline-home
+tags:
+  - offline
+env:
+  MATCHABLE_MEMBER: "+12025550104"
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MATCHABLE_MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+
+- assertVisible:
+    id: "show-card-.*"
+- assertNotVisible: "You're offline. Showing what we saved."
+
+# A pull to refresh with no connection fails in the transport, so the app marks itself offline and keeps the saved list.
+- runScript:
+    file: ../scripts/network.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ONLINE: "false"
+- retry:
+    maxRetries: 3
+    commands:
+      # A slow pull: the 400 ms default ran past the refresh control on a loaded emulator.
+      - swipe:
+          start: 50%, 35%
+          end: 50%, 85%
+          duration: 900
+      - extendedWaitUntil:
+          visible: "You're offline. Showing what we saved."
+          timeout: 15000
+- assertVisible:
+    id: "show-card-.*"
+
+# A cold start reads the shows from the disk cache. The restored list is fresh for five minutes, so the app asks for nothing on its
+# own; a pull to refresh fails in the transport and the notice comes back.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: home
+    timeout: 20000
+- assertVisible:
+    id: "show-card-.*"
+- retry:
+    maxRetries: 3
+    commands:
+      - swipe:
+          start: 50%, 35%
+          end: 50%, 85%
+          duration: 900
+      - extendedWaitUntil:
+          visible: "You're offline. Showing what we saved."
+          timeout: 15000
+- assertVisible:
+    id: "show-card-.*"
+
+# The connection comes back. The refresh runs again until a request gets through.
+- runScript:
+    file: ../scripts/network.js
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ONLINE: "true"
+- retry:
+    maxRetries: 3
+    commands:
+      # A slow pull: the 400 ms default ran past the refresh control on a loaded emulator.
+      - swipe:
+          start: 50%, 35%
+          end: 50%, 85%
+          duration: 900
+      - extendedWaitUntil:
+          notVisible: "You're offline. Showing what we saved."
+          timeout: 10000
+- assertVisible:
+    id: "show-card-.*"

@@ -2,7 +2,7 @@
    fails when they drift. Colors are not here: they are generated into theme.generated.css. */
 @theme {
   --font-sans: "Inter";
-  --font-display: "Big Shoulders Display";
+  --font-display: "Big Shoulders";
 
   --text-display: 28px;
   --text-display--line-height: 34px;

@@ -24,11 +24,18 @@ export function fetchPlan(api: ApiClient, planId: string): Promise<Plan> {
 
 /**
  * One plan. Until its own answer is in, the copy in the plan list stands in for it: the list is kept on the phone, so a plan seen in
- * the list opens offline even if its page was never opened.
+ * the list opens offline even if its page was never opened. Each answer also replaces that plan in the cached list, so going back
+ * to the Plans tab never shows an older state than the page did.
  */
 export const planDetailQuery = (api: ApiClient, planId: string, queryClient?: QueryClient) => ({
   queryKey: queryKeys.planDetail(planId),
-  queryFn: () => fetchPlan(api, planId),
+  queryFn: async () => {
+    const plan = await fetchPlan(api, planId);
+    queryClient?.setQueryData<PlanListResponse>(queryKeys.plansList(), (list) =>
+      list ? { ...list, plans: list.plans.map((p) => (p.id === plan.id ? plan : p)) } : list,
+    );
+    return plan;
+  },
   placeholderData: () => queryClient?.getQueryData<PlanListResponse>(queryKeys.plansList())?.plans.find((p) => p.id === planId),
 });
 

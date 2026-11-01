@@ -1,8 +1,7 @@
-import { ApiError } from "@/model/apiError";
 import { createApiClient } from "./client";
 import { createConnectivity } from "./connectivity";
 import { groupBeforeRevealFixture, groupFixture, MEMBERS, planFixture } from "./groupFixtures";
-import { fetchMeetContext, isRevealed, markCheckedIn, planOfGroup, retryCheckin, sendCheckin } from "./groups";
+import { fetchMeetContext, isRevealed, markCheckedIn, planOfGroup, sendCheckin } from "./groups";
 import { showDetailFixture } from "./showFixtures";
 import { clearTestClients, json, routedTransport } from "./testing";
 
@@ -102,18 +101,5 @@ describe("sendCheckin", () => {
     await sendCheckin(api)({ clientId: "c1", payload: { groupId: "g1" } });
     expect(net.calls[0]?.method).toBe("POST");
     expect(JSON.parse(String(net.calls[0]?.body))).toEqual({});
-  });
-});
-
-describe("retryCheckin", () => {
-  it("tries again after a bad connection or a busy server, up to three times", () => {
-    expect(retryCheckin(0, new ApiError("offline", null, null))).toBe(true);
-    expect(retryCheckin(1, new ApiError("server", 503, null))).toBe(true);
-    expect(retryCheckin(3, new ApiError("server", 503, null))).toBe(false);
-  });
-
-  it("does not try again after a refusal", () => {
-    expect(retryCheckin(0, new ApiError("validation", 409, "outside_checkin_window"))).toBe(false);
-    expect(retryCheckin(0, new ApiError("not_found", 404, null))).toBe(false);
   });
 });

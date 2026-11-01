@@ -64,8 +64,12 @@ function fromScheme(input: string, rest: string, ctx: LinkContext): string | nul
   const [path = "", query = ""] = body.split("#")[0]?.split("?", 2) ?? [];
   if (path === "" || path === "/") return "/";
   if (path === "storybook") {
-    const story = /^story=(.*)$/.exec(query)?.[1];
-    return story !== undefined && STORY_ID.test(story) ? `/storybook?story=${story}` : "/storybook";
+    // Split by hand: React Native's URLSearchParams does not implement get on every version we ship.
+    const params = new Map(query.split("&").map((pair) => pair.split("=", 2) as [string, string | undefined]));
+    const story = params.get("story");
+    if (story === undefined || !STORY_ID.test(story)) return "/storybook";
+    // device=1 comes from the visual capture link: the story follows the device theme and text size.
+    return params.get("device") === "1" ? `/storybook?story=${story}&device=1` : `/storybook?story=${story}`;
   }
   if (path === "push" && ctx.pushHook) return pushHookRoute(query);
   const match = SCHEME_PATH.exec(path);

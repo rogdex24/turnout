@@ -12,6 +12,7 @@ export default function PlanDetail() {
       onBack={leave}
       onAddTicket={() => router.push({ pathname: "/plans/[planId]/ticket", params: { planId } })}
       onOpenMeetCard={(groupId) => router.push(`/groups/${groupId}/meet`)}
+      onOpenAfter={(groupId) => router.push(`/groups/${groupId}/after`)}
       onLeave={() => router.push({ pathname: "/plans/[planId]/cancel", params: { planId } })}
       onFindShow={() => router.navigate("/")}
       onChangeHandle={() => router.push("/settings/social")}

@@ -14,8 +14,8 @@ export interface LocalFlags {
   subscribe(listener: () => void): () => void;
   markWelcomeSeen(): void;
   acceptNotice(version: string): void;
-  /** Sign-out: the next person on this phone reads the notice again. The welcome cards stay seen. */
-  forgetNotice(): void;
+  /** The store was changed from outside (the wipe at sign-out): read it again and tell the router. */
+  refresh(): void;
 }
 
 export function createLocalFlags(prefs: KeyValueStore): LocalFlags {
@@ -42,9 +42,6 @@ export function createLocalFlags(prefs: KeyValueStore): LocalFlags {
       prefs.set(PREF_KEYS.acceptedNotice, version);
       changed();
     },
-    forgetNotice() {
-      prefs.remove(PREF_KEYS.acceptedNotice);
-      changed();
-    },
+    refresh: changed,
   };
 }

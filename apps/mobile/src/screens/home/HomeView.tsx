@@ -63,7 +63,7 @@ export function HomeView(props: HomeViewProps) {
         <Text variant="display" className="font-display font-black uppercase" accessibilityRole="header">
           {home.wordmark}
         </Text>
-        <View className="flex-row items-center gap-1.5" accessible accessibilityLabel={home.city}>
+        <View className="shrink flex-row items-center gap-1.5" accessible accessibilityLabel={home.city}>
           <Icon icon={MapPin} size="sm" tone="muted" weight="fill" />
           <Text variant="control">{home.city}</Text>
         </View>
@@ -88,6 +88,7 @@ export function HomeView(props: HomeViewProps) {
       {list.status === "ready" ? (
         <FlashList<ListItem>
           data={list.items}
+          contentInsetAdjustmentBehavior="automatic"
           keyExtractor={(item) => item.key}
           getItemType={(item) => item.kind}
           ListHeaderComponent={header}
@@ -98,7 +99,8 @@ export function HomeView(props: HomeViewProps) {
           renderItem={({ item }) => {
             if (item.kind === "day") {
               return (
-                <View className="flex-row items-baseline justify-between px-4 pb-3 pt-5">
+                // At the largest text sizes the title and the date do not fit on one line, so the date wraps under the title.
+                <View className="flex-row flex-wrap items-baseline justify-between gap-x-3 px-4 pb-3 pt-5" testID="home-day">
                   <Text variant="title-large" accessibilityRole="header">
                     {dayTitle(item)}
                   </Text>

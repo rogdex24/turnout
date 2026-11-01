@@ -2,23 +2,33 @@
 # The visual capture flow in visual/ is run by path, one story at a time (see visual/README.md).
 flows:
   - "flows/*.yaml"
-# loop-meet needs the seed's meet_card_live plan and group rows, which M3 adds. Remove this line when they are in.
-excludeTags:
-  - needs-group-seed
 executionOrder:
   continueOnFailure: false
   flowsOrder:
     - launch
     - smoke
     - onboarding
+    - nav-guards
     - otp-errors
     - browse
+    - offline-home
     - deeplink-show
     - push-routing
+    # loop-meet, thread, report and funnel use the seed's live group, whose show starts 75 minutes after the server does. They run early,
+    # before any flow moves the server's clock past the check-in window.
+    - loop-meet
+    - thread
+    - report
+    - funnel
     - loop-join
     - ticket-rejected
     - cancel
     - profile-check
+    - settings
+    - delete-account
     - loop-group
     - loop-no-group
     - group-shrinks
+    # Maestro ends the ordered run at the first listed flow it does not run, so an excluded flow in this list would split after-show
+    # off into a flow that runs even when the sequence aborts (test/maestroFlows.test.ts checks this).
+    - after-show

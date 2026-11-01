@@ -4,3 +4,7 @@ export APP_VARIANT=e2e
 export EXPO_PUBLIC_STORYBOOK=1
 export EXPO_PUBLIC_ALLOW_CAPTURE=1
 export EXPO_PUBLIC_GROUPS_ENABLED=1
+# PostHog goes to the seeded server's capture sink (src/app-api/posthogSink.ts), not to PostHog: the host is a path, which the app
+# puts on the API address for the platform. The key is the one the sink takes. JS only: nothing here reaches the native fingerprint.
+export EXPO_PUBLIC_POSTHOG_KEY=phc_e2e_capture_sink
+export EXPO_PUBLIC_POSTHOG_HOST=/api/app/v1/__test/posthog

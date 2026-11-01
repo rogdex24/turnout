@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import { groupFixture, MEET_AT, MEMBERS, SHOW_STARTS_AT } from "@/api/groupFixtures";
 import { meet as copy } from "@/copy/meet";
 import { type MeetCardData, MeetView, type MeetViewProps } from "./MeetView";
@@ -32,8 +32,11 @@ function view(over: Partial<MeetViewProps> = {}, cardOver: Partial<MeetCardData>
       onOpenSettings={noop}
       onHere={noop}
       onCall={noop}
+      onOpenThread={noop}
+      onReport={noop}
       onLeave={noop}
       onClosed={noop}
+      onOpenAfter={null}
       {...over}
     />,
   );
@@ -46,6 +49,11 @@ describe("MeetView", () => {
     expect(screen.queryByTestId("meet-map")).toBeNull();
   });
 
+  it("names the venue pin in the map label when the venue has no name", async () => {
+    await view({ realMap: false }, { venue: { name: null, lat: 17.4525, lng: 78.3811 } });
+    expect(screen.getByTestId("meet-map-static").props.accessibilityLabel).toBe(copy.map.label(card.cafe.name, copy.map.venue));
+  });
+
   it("shows the real map when the build has one", async () => {
     await view({ realMap: true });
     expect(screen.getByTestId("meet-map")).toBeOnTheScreen();
@@ -54,6 +62,14 @@ describe("MeetView", () => {
   it("counts down to the meet time", async () => {
     await view();
     expect(screen.getByLabelText("Meet at 6:00 PM, in 48 min")).toBeOnTheScreen();
+  });
+
+  it("keeps a four-digit meet time on one line, shrinking it on a narrow phone", async () => {
+    // At 116 dp, 11:53 and the AM column are wider than an iPhone SE, and the time wrapped to a second line.
+    await view();
+    const digits = screen.getByTestId("meet-time-digits");
+    expect(digits.props.numberOfLines).toBe(1);
+    expect(digits.props.adjustsFontSizeToFit).toBe(true);
   });
 
   it("shows the smaller-group note", async () => {
@@ -84,6 +100,21 @@ describe("MeetView", () => {
   it("shows the offline bar", async () => {
     await view({ offline: true });
     expect(screen.getByRole("alert")).toBeOnTheScreen();
+  });
+
+  it("opens the group chat from the card", async () => {
+    const onOpenThread = jest.fn();
+    await view({ onOpenThread });
+    await fireEvent.press(screen.getByTestId("meet-thread"));
+    expect(onOpenThread).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the report form from the Safety sheet and closes the sheet", async () => {
+    const onReport = jest.fn();
+    await view({ onReport });
+    await fireEvent.press(screen.getByTestId("meet-safety"));
+    await fireEvent.press(screen.getByTestId("safety-report"));
+    expect(onReport).toHaveBeenCalledTimes(1);
   });
 
   it("hides Leave in the Safety sheet while the plan is not known", async () => {

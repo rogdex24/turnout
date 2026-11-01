@@ -70,6 +70,14 @@ describe("PersonAvatar", () => {
     expect(screen.getByText("A")).toBeTruthy();
     expect(screen.getByLabelText("asha").props.className).toContain("border-signal");
   });
+
+  it("keeps a photo in the memory cache only, under one key, when asked", async () => {
+    await render(<PersonAvatar name="asha" photoUrl="https://photos.example/a.jpg?sig=1" memoryCacheKey="g1:m1" />);
+    const tile = screen.toJSON() as { children: { props: Record<string, unknown> }[] };
+    const image = tile.children[0]?.props;
+    expect(image?.cachePolicy).toBe("memory");
+    expect(image?.source).toEqual([{ uri: "https://photos.example/a.jpg?sig=1", cacheKey: "g1:m1" }]);
+  });
 });
 
 describe("StatusStep", () => {
@@ -97,12 +105,34 @@ describe("EmptyState and ErrorState", () => {
     expect(onPress).toHaveBeenCalled();
   });
 
+  it("keeps the action outside the grouped text so VoiceOver can reach it", async () => {
+    await render(
+      <EmptyState icon={CalendarCheck} title="No plans yet" body="Join a show." action={{ title: "Browse shows", onPress: jest.fn() }} />,
+    );
+    expect(screen.getByLabelText("No plans yet. Join a show.")).toBeTruthy();
+    let parent = screen.getByRole("button", { name: "Browse shows" }).parent;
+    while (parent) {
+      expect(parent.props.accessible).not.toBe(true);
+      parent = parent.parent;
+    }
+  });
+
   it("offers a retry and reads as an alert", async () => {
     const onRetry = jest.fn();
     await render(<ErrorState kind="offline" onRetry={onRetry} />);
     expect(screen.getByRole("alert")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalled();
+  });
+
+  it("reads the title with the sentence and keeps the retry outside the group so VoiceOver can reach it", async () => {
+    await render(<ErrorState kind="server" onRetry={jest.fn()} />);
+    expect(screen.getByRole("alert", { name: "That didn't work. Something went wrong on our side. Try again in a moment." })).toBeTruthy();
+    let parent = screen.getByRole("button", { name: "Try again" }).parent;
+    while (parent) {
+      expect(parent.props.accessible).not.toBe(true);
+      parent = parent.parent;
+    }
   });
 
   it("is not red", async () => {

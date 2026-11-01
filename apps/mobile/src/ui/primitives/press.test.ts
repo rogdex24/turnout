@@ -1,8 +1,8 @@
 import { pressed } from "@turnout/design-tokens";
 import { dimOnPress, resolveStyle, scaleOnPress } from "./press";
 
-const down = { pressed: true };
-const up = { pressed: false };
+const down = { pressed: true, hovered: false };
+const up = { pressed: false, hovered: false };
 
 test("buttons, chips and icon buttons scale while pressed", () => {
   expect(scaleOnPress(down)).toEqual({ transform: [{ scale: pressed.scale }] });

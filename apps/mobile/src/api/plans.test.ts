@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { isApiError } from "../model/apiError";
 import { groupBeforeRevealFixture, groupRevealedFixture, memberShowFixture, PLANS, planFixture } from "../model/planFixtures";
 import { createApiClient } from "./client";
@@ -58,6 +59,18 @@ describe("reads", () => {
     expect(before.belowPlan).toBe(true);
     const after = await fetchGroup(api, "g2");
     expect("members" in after && after.members.length).toBe(3);
+  });
+
+  it("writes a fresh plan into the cached plan list, so the Plans tab never shows an older state than the plan page", async () => {
+    const before = planFixture({ id: "plan-4" });
+    const other = planFixture({ id: "plan-9" });
+    const { api } = setup({ "GET /plans/plan-4": json(200, PLANS.finding_group) });
+    // No garbage collection timer, so Jest can exit.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY } } });
+    queryClient.setQueryData(queryKeys.plansList(), { plans: [other, before] });
+    await queryClient.fetchQuery(planDetailQuery(api, "plan-4", queryClient));
+    expect(queryClient.getQueryData(queryKeys.plansList())).toEqual({ plans: [other, PLANS.finding_group] });
+    queryClient.clear();
   });
 
   it("keeps each query under the key the cache and the disk allowlist know", () => {

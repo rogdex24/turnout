@@ -1,0 +1,17 @@
+# Opens LINK and waits for the screen with the id SCREEN. Run with runFlow and LINK and SCREEN.
+appId: com.turnout.app.e2e
+name: open link to
+---
+# Once on iOS the simulator took the tap on Open and closed its prompt, but the app never got the link and stayed on Home. The link
+# opens again when the screen does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - runFlow:
+          file: open-link.yaml
+          env:
+            LINK: ${LINK}
+      - extendedWaitUntil:
+          visible:
+            id: ${SCREEN}
+          timeout: 15000

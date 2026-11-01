@@ -32,6 +32,8 @@ export const meet = {
     here: (here: number, of: number) => `${here} of ${of} here`,
     hereLabel: (name: string) => `${name}, here`,
     smaller: "Your group is smaller than usual, and it is still going ahead.",
+    chat: "Group chat",
+    chatSub: "Say you're running late, or where you are.",
   },
   here: {
     button: "I'm here",
@@ -55,6 +57,7 @@ export const meet = {
     title: "Safety",
     call: "Call 112, emergency",
     callLabel: "Call 112, emergency, opens your phone",
+    report: "Report someone",
     leave: "Leave this plan",
     close: "Close",
   },

@@ -28,3 +28,30 @@ export function fontVariantFor(token: TypographyToken): TextStyle["fontVariant"]
   const style = typography[token];
   return "fontVariant" in style ? [...style.fontVariant] : undefined;
 }
+
+/** Big Shoulders' vertical metrics as a share of its size: hhea ascent 1971, descent 429, no line gap, cap height 1600, 2000 units. */
+export const DISPLAY_FACE_METRICS = { ascent: 0.9855, descent: 0.2145, capHeight: 0.8 } as const;
+
+export interface LeadingFix {
+  paddingTop: number;
+  marginTop: number;
+  marginBottom: number;
+}
+
+/**
+ * The display faces set a line height under the font's own (ascent plus descent). Android takes the cut half from the top and
+ * half from the bottom, so the baseline sits near the line's bottom. iOS puts the baseline one descent above the line's bottom, so
+ * the glyphs sit higher and the text view cuts their tops off. On iOS this moves the glyphs down to Android's place with top
+ * padding and gives the space back with negative margins, so the layout around the text does not move. It also leaves room above
+ * the line for a cap that is taller than the line. Null when no fix is needed.
+ */
+export function displayLeadingFix(os: string, fontSize: number, lineHeight: number): LeadingFix | null {
+  const { ascent, descent, capHeight } = DISPLAY_FACE_METRICS;
+  const natural = (ascent + descent) * fontSize;
+  if (os !== "ios" || lineHeight >= natural) return null;
+  const androidBaseline = ascent * fontSize - (natural - lineHeight) / 2;
+  const iosBaseline = lineHeight - descent * fontSize;
+  const shift = androidBaseline - iosBaseline;
+  const capRoom = Math.ceil(Math.max(0, capHeight * fontSize - androidBaseline)) + 2;
+  return { paddingTop: shift + capRoom, marginTop: -capRoom, marginBottom: -shift };
+}

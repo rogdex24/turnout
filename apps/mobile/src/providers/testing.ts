@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { MeResponse } from "@turnout/contract/app/me";
 import { NOTICE_VERSION } from "@turnout/contract/app/notice";
-import { memoryKv, PREF_KEYS } from "../api/prefs";
+import { type KeyValueStore, memoryKv, PREF_KEYS } from "../api/prefs";
 import { memorySecretStore, SECRET_KEYS } from "../api/secureStorage";
 import { json, type RouteReply, routedTransport, testQueryClient, tokenPairBody } from "../api/testing";
 import type { WhatsAppOtp } from "../api/whatsappOtp";
@@ -12,10 +12,15 @@ export const TEST_USER = "member-1";
 
 /** A complete member: name, gender, photo and a handle waiting for review. Pass what differs. */
 export function meFixture(
-  over: { profile?: Partial<MeResponse["profile"]>; handle?: Partial<MeResponse["handle"]>; consent?: boolean } = {},
+  over: {
+    status?: MeResponse["status"];
+    profile?: Partial<MeResponse["profile"]>;
+    handle?: Partial<MeResponse["handle"]>;
+    consent?: boolean;
+  } = {},
 ): MeResponse {
   return {
-    status: "active",
+    status: over.status ?? "active",
     phoneLast4: "0123",
     profile: {
       firstName: "Ananya",
@@ -37,8 +42,15 @@ export interface TestAppOptions {
   /** The notice version stored on this phone before sign-in. */
   acceptedNotice?: string;
   routes?: Record<string, RouteReply | RouteReply[]>;
+  /** The disk cache as the last run left it, for a warm start. Empty when left out. */
+  cacheStore?: KeyValueStore;
   now?: () => number;
   whatsappOtp?: WhatsAppOtp;
+  /** What sign-out does to the image cache, the picked files, the notifications and telemetry, to be watched. */
+  clearImages?: () => Promise<void>;
+  clearPickedFiles?: () => Promise<void>;
+  clearNotifications?: () => Promise<void>;
+  stopTelemetry?: () => void;
 }
 
 export interface TestApp {
@@ -47,6 +59,8 @@ export interface TestApp {
   transport: ReturnType<typeof routedTransport>;
   prefs: ReturnType<typeof memoryKv>;
   secure: ReturnType<typeof memorySecretStore>;
+  /** The store behind the disk copy of the query cache. */
+  cacheStore: ReturnType<typeof memoryKv>;
 }
 
 /** The real wiring over in-memory stores and a scripted network, for router and screen tests. */
@@ -65,16 +79,21 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   }
   const transport = routedTransport({ ...routes, ...options.routes });
   const queryClient = testQueryClient();
+  const cacheStore = options.cacheStore ?? memoryKv();
   const deps = await createAppDeps({
     secure,
     prefs,
-    cacheStore: memoryKv(),
+    cacheStore,
     origin: TEST_ORIGIN,
     transport: transport.transport,
     appVersion: "0.0.0-test",
     queryClient,
     now,
     whatsappOtp: options.whatsappOtp,
+    clearImages: options.clearImages,
+    clearPickedFiles: options.clearPickedFiles,
+    clearNotifications: options.clearNotifications,
+    stopTelemetry: options.stopTelemetry,
   });
-  return { deps, queryClient, transport, prefs, secure };
+  return { deps, queryClient, transport, prefs, secure, cacheStore };
 }

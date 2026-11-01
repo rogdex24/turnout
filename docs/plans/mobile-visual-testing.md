@@ -7,7 +7,8 @@ The scripts and the LFS rule exist now; the first snapshot lands on Mon 11-02.
 
 v1 ships on Android only. iOS runs on the simulator in CI: `build-ios`, `ios-small` and
 `ios-large` run on every mobile pull request with the same flows and the same visual matrix as
-Android. Push handling is checked with `xcrun simctl push` and a sample payload. These things
+Android. Push handling is checked with `xcrun simctl push` and a sample payload: the `ios-small` job
+runs `apps/mobile/.maestro/ci/ios-push-check.sh` after the capture. These things
 are not covered, and no test result stands in for them:
 
 | Gap | What is missing | What covers it meanwhile |
@@ -15,7 +16,7 @@ are not covered, and no test result stands in for them:
 | TestFlight | No Apple Developer account, so no signed iOS build and no tester distribution | Simulator builds in CI only |
 | A real iPhone | No device runs the app. Haptics, camera and photo picker, keyboard and safe areas are checked on the simulator only | The `ios-small` (iPhone SE, 3rd generation) and `ios-large` (Pro Max) jobs |
 | Universal links | Needs the app's Apple team ID and an associated-domains entitlement | The Android app links path; the server accepts `APP_LINKS_IOS_APP_IDS` but it stays empty |
-| iOS push | Needs APNs credentials from the Apple account. The server accepts iOS tokens and never sends to them until `PUSH_PLATFORMS` includes `ios` | `xcrun simctl push` with a sample payload proves the handler, not delivery. iOS testers see notices on open |
+| iOS push | Needs APNs credentials from the Apple account. The server accepts iOS tokens and never sends to them until `PUSH_PLATFORMS` includes `ios` | `ios-small` sends `apps/mobile/.maestro/push/handle-rejected.json` with `xcrun simctl push` and Maestro taps it: this proves the tap opens the social handle screen, not delivery. iOS testers see notices on open |
 | The App Store listing and review | Needs the account, a listing, privacy answers and Apple's review | Nothing. Review time is not planned for |
 
 Trigger: the user decides to launch on iOS. Enroll in the Apple Developer Program at least 3
@@ -52,14 +53,14 @@ For example `apps/mobile/.maestro/visual/baselines/android-small/events-list/dar
 `apps/mobile` exists now, but the `baselines` folder is still created by the first accepted
 snapshot, because no emulator was available when F20 was written. The path is fixed in three
 places that must change together: `.gitattributes`, `.lfsconfig` and `DEFAULT_BASELINES_DIR` in
-`scripts/visual-accept.ts`. No PNG is committed yet.
+`scripts/visual-accept.ts`. The baselines for every target are committed.
 
 The capture side is in the app. `apps/mobile/.maestro/visual/stories.json` lists the stories to
 shoot (`folder`, Storybook `id`, and the text that shows when the story is ready),
 `apps/mobile/.maestro/visual/capture-story.yaml` takes one shot, and
 `apps/mobile/.maestro/ci/device-run.sh <target>` loops the themes and text sizes and leaves
-`<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` passes with a
-notice while a target has no baseline. The Home story is `screens-home--loaded`
+`<story>/<theme>-<text>.png` files for `visual-compare.sh`. `visual-compare.sh` fails a target
+that has no baseline. The Home story is `screens-home--loaded`
 (folder `home`).
 
 ### Git LFS

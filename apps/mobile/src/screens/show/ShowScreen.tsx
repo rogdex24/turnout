@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Linking } from "react-native";
+import { telemetry } from "@/analytics";
 import { groupsEnabled } from "@/api/features";
 import { memberShowQuery } from "@/api/plans";
 import { showDetailQuery } from "@/api/shows";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead } from "@/model/apiError";
 import { safeWebUrl } from "@/model/externalLink";
+import { useDeps } from "@/providers/AppProviders";
 import { useApi } from "@/providers/hooks";
 import { type ShowDetailState, ShowView } from "./ShowView";
 
@@ -32,16 +35,18 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
   const query = useQuery(showDetailQuery(api, publicId));
   const groups = groupsEnabled();
   const member = useQuery({ ...memberShowQuery(api, publicId), enabled: groups });
+  const { prefs } = useDeps();
+  const shown = query.data !== undefined;
+
+  // The top of the funnel: counted once per show page, when the show is on screen.
+  useEffect(() => {
+    if (shown) telemetry(prefs).track("show_viewed", { show_id: publicId });
+  }, [shown, prefs, publicId]);
 
   let detail: ShowDetailState;
   if (query.data) detail = { status: "ready", show: query.data };
-  else if (query.isError)
-    detail =
-      isApiError(query.error) && query.error.kind === "not_found"
-        ? { status: "not_found" }
-        : { status: "error", kind: errorKind(query.error) };
-  else if (query.isPending && query.fetchStatus === "paused" && query.failureCount > 0) detail = { status: "error", kind: "offline" };
-  else detail = { status: "loading" };
+  else if (isApiError(query.error) && query.error.kind === "not_found") detail = { status: "not_found" };
+  else detail = pendingRead(query);
 
   return (
     <ShowView
@@ -52,7 +57,12 @@ export function ShowScreen({ publicId, onBack, onSeeShows, onGo }: ShowScreenPro
       onRetry={() => void query.refetch()}
       onSeeShows={onSeeShows}
       onOpenLink={openInBrowser}
+      onBuy={(url) => {
+        telemetry(prefs).track("buy_tapped", { show_id: publicId });
+        openInBrowser(url);
+      }}
       onGo={onGo}
+      onGoTapped={() => telemetry(prefs).track("go_tapped", { show_id: publicId, groups_enabled: groups })}
     />
   );
 }

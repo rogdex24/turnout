@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { errorBodySchema } from "@turnout/contract/app/errors";
-import type { Gender } from "@turnout/contract/profile";
 import { appRoutes } from "../src/app-api/routes/index.js";
 import { milestones } from "../src/social/model/schedule.js";
-import { tick } from "../src/social/tick.js";
 import { PHONES, type TestApp, testApp } from "./appHelpers.js";
-import { memberSession, type Session } from "./helpers/appFixture.js";
-import { SHOW_START, seedShow, waitingPlan } from "./helpers/socialFixture.js";
+import type { Session } from "./helpers/appFixture.js";
+import { HOUR, MINUTE, START, type World, world } from "./helpers/groupWorld.js";
+import { SHOW_START } from "./helpers/socialFixture.js";
 
 /**
  * The authorization matrix for the routes M2 and M3 ship. The row list is checked against the route table in both directions, so a
@@ -99,6 +98,13 @@ const ROWS: Row[] = [
   // The staging routes: they answer 404 without the token, so a production-like caller cannot tell they exist.
   { method: "POST", pattern: "/__test/otp", path: "/__test/otp", auth: "none", anonymous: 404 },
   { method: "POST", pattern: "/__test/clock", path: "/__test/clock", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/limits", path: "/__test/limits", auth: "none", anonymous: 404 },
+  // The capture routes take the e2e build's project key instead of the token, so a post without it is 404 too.
+  { method: "POST", pattern: "/__test/posthog/batch", path: "/__test/posthog/batch", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/capture", path: "/__test/posthog/capture", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/e", path: "/__test/posthog/e", auth: "none", anonymous: 404 },
+  { method: "GET", pattern: "/__test/posthog/events", path: "/__test/posthog/events", auth: "none", anonymous: 404 },
+  { method: "POST", pattern: "/__test/posthog/reset", path: "/__test/posthog/reset", auth: "none", anonymous: 404 },
 ];
 
 const errorOf = async (response: Response) => errorBodySchema.parse(await response.json()).error;
@@ -173,86 +179,6 @@ describe("authorization matrix, anonymous and bad credentials", () => {
     expect(secondMe.phoneLast4).toBe((PHONES[4] as string).slice(-4));
   });
 });
-
-// ---------------------------------------------------------------------------------------------------------------------------------
-// The people matrix: one show, two groups, and callers who are in, out, waiting, on another show, suspended or removed.
-// ---------------------------------------------------------------------------------------------------------------------------------
-
-const HOUR = 3_600_000;
-const MINUTE = 60_000;
-const START = Date.parse(SHOW_START);
-const GENDERS_A: Gender[] = ["woman", "man", "woman", "man", "non_binary", "woman"];
-const GENDERS_B: Gender[] = ["woman", "man", "woman", "man"];
-
-interface World {
-  t: TestApp;
-  groupA: string;
-  groupB: string;
-  groupY: string;
-  a: Session[];
-  b: Session[];
-  /** Waiting for a group on show X: the handle is still pending, so the pool skips them. */
-  waiting: Session;
-  /** In a group on a different show. */
-  y: Session[];
-  /** Has a plan on X and a pending handle. */
-  planOf: Map<string, string>;
-  refOf(groupId: string, who: Session): string;
-  /** Moves the clock to `ms` from the show start, runs what is due and signs the given people in again (access tokens are short). */
-  at(ms: number, ...who: Session[]): Promise<void>;
-}
-
-async function world(): Promise<World> {
-  const t = await testApp();
-  seedShow(t.db, { id: "show-x" });
-  seedShow(t.db, { id: "show-y", startsAt: "2026-11-12T14:00:00.000Z" });
-  const form = async (show: string, from: number, genders: Gender[]) => {
-    const people: Session[] = [];
-    for (let i = 0; i < genders.length; i++) {
-      const who = await memberSession(t, from + i, { name: `Person${from + i}`, gender: genders[i] });
-      waitingPlan(t.db, who.memberId, show, t.clock());
-      people.push(who);
-    }
-    tick(t.db, t.clock());
-    return people;
-  };
-  const groupOf = (who: Session) =>
-    (t.db.query("SELECT group_id FROM group_member WHERE member_id = ?").get(who.memberId) as { group_id: string }).group_id;
-  const a = await form("show-x", 0, GENDERS_A);
-  const b = await form("show-x", 6, GENDERS_B);
-  const y = await form("show-y", 11, GENDERS_B);
-  const waiting = await memberSession(t, 15, { name: "Waiting", handle: "pending" });
-  waitingPlan(t.db, waiting.memberId, "show-x", t.clock());
-  // The real keys are random, never derived from the member id, so a photo link cannot give an id away.
-  t.db.query("UPDATE profile SET photo_key = 'photos/' || lower(hex(randomblob(12))) || '.jpg'").run();
-  const planOf = new Map<string, string>();
-  for (const who of [...a, ...b, ...y, waiting]) {
-    planOf.set(who.memberId, (t.db.query("SELECT id FROM plan WHERE member_id = ?").get(who.memberId) as { id: string }).id);
-  }
-  const everyone = [...a, ...b, ...y, waiting];
-  return {
-    t,
-    groupA: groupOf(a[0] as Session),
-    groupB: groupOf(b[0] as Session),
-    groupY: groupOf(y[0] as Session),
-    a,
-    b,
-    waiting,
-    y,
-    planOf,
-    refOf: (groupId, who) =>
-      (
-        t.db.query("SELECT member_ref FROM group_member WHERE group_id = ? AND member_id = ?").get(groupId, who.memberId) as {
-          member_ref: string;
-        }
-      ).member_ref,
-    at: async (ms, ...who) => {
-      t.clock.set(new Date(START + ms));
-      tick(t.db, t.clock());
-      for (const person of who.length > 0 ? who : everyone) person.token = (await t.signIn(person.phone)).accessToken;
-    },
-  };
-}
 
 const statusOf = async (t: TestApp, method: string, path: string, who: Session) =>
   (await t.call(method, path, { token: who.token, body: method === "GET" ? undefined : {} })).status;

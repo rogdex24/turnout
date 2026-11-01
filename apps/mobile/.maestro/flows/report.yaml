@@ -1,0 +1,109 @@
+# Reporting someone from the meet card. Signs in as a member of the seed's live group (scripts/seed-staging.ts, Lata), opens the
+# card, and goes to the report form through the Safety sheet. Call 112 is on the form before anything is picked, Send report waits
+# for a person, and a sent report says it was received and nothing about what happened to the person. The e2e build allows
+# screenshots (EXPO_PUBLIC_ALLOW_CAPTURE=1); a release build blocks them while the form is open, which is checked by hand.
+# The offline queue is covered by the unit tests, since Maestro has no portable way to drop the network on both platforms.
+appId: com.turnout.app.e2e
+name: report
+tags:
+  - report
+env:
+  MEMBER: "+12025550114"
+  EVENT_ID: seed-show-meet-live
+  SUBJECT: Manu
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- launchApp:
+    clearState: false
+# The plan's id and its meet card notice come from the server: the seed makes both with fresh ids on every run, and the app reads
+# the group from the notice, so a made-up notice id opens the plan instead of the card.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: plan
+      PHONE: ${MEMBER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: ""
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
+      SCREEN: meet
+
+# The Safety sheet has Call 112 first, then Report someone. On iOS the tap on Safety can land and the sheet not open (run
+# 41213665995 here, run 41042127207 in loop-meet.yaml), so the tap goes again when the sheet does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn:
+          id: meet-safety
+      - extendedWaitUntil:
+          visible:
+            id: safety-call
+          timeout: 10000
+- assertVisible:
+    id: safety-report
+- tapOn:
+    id: safety-report
+- extendedWaitUntil:
+    visible:
+      id: report
+    timeout: 10000
+
+# Call 112 is on the form from the start, and the report cannot go until someone is picked.
+- assertVisible:
+    id: report-call-112
+- assertVisible: "Who is this about?"
+- assertVisible:
+    id: report-people
+- assertVisible:
+    id: report-send
+- tapOn:
+    id: report-send
+- assertVisible:
+    id: report-people
+
+# Pick the person and what happened, add a line, and send.
+- tapOn: ${SUBJECT}
+- tapOn: "Made me feel unsafe"
+# At the real type sizes the details field is below the fold on a small screen.
+- scrollUntilVisible:
+    element:
+      id: report-details
+    direction: DOWN
+    centerElement: true
+- tapOn:
+    id: report-details
+- inputText: "Kept messaging me after I said no"
+# The send button sits above the keyboard, so the flow leaves the keyboard up on iOS, where hideKeyboard fails on a multiline field.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- tapOn:
+    id: report-send
+
+# It says the report was received. It does not say what became of the person, and Call 112 stays. On iOS the title and the body
+# are one accessible element, so the match allows the body after the title.
+- extendedWaitUntil:
+    visible: "We have your report.*"
+    timeout: 20000
+- assertVisible:
+    id: report-call-112
+- assertNotVisible: ".*(suspended|removed|banned|blocked).*"
+- tapOn: "Done"
+- extendedWaitUntil:
+    visible:
+      id: meet
+    timeout: 10000

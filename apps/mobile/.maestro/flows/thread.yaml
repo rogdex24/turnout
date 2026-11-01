@@ -1,0 +1,115 @@
+# The group chat, from the meet card. Signs in as a member of the seed's live group (scripts/seed-staging.ts, Lata), opens the card
+# the way the "Meet your group" push does, and goes in through the Group chat row. Another member of the group (Manu) speaks through
+# the operator's `say` route, and the flow checks it arrives on the 5 second poll, then writes a line and sends a quick chip. A long
+# press on the other member's line offers Report and opens the report form.
+# The thread is open from T-3h to T+24h of the show; config.yaml runs this flow before any flow moves the server's clock.
+appId: com.turnout.app.e2e
+name: thread
+tags:
+  - thread
+env:
+  MEMBER: "+12025550114"
+  SPEAKER: "+12025550115"
+  EVENT_ID: seed-show-meet-live
+---
+- runFlow:
+    file: ../subflows/sign-in-seed.yaml
+    env:
+      PHONE: ${MEMBER}
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+- launchApp:
+    clearState: false
+# The plan's id and its meet card notice come from the server: the seed makes both with fresh ids on every run, and the app reads
+# the group from the notice, so a made-up notice id opens the plan instead of the card.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: plan
+      PHONE: ${MEMBER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: ""
+- runFlow:
+    file: ../subflows/open-link-to.yaml
+    env:
+      LINK: turnout-e2e://push?kind=meet_card_live&noticeId=${output.noticeId}&planId=${output.planId}
+      SCREEN: meet
+
+# The card has a way into the chat. On a small screen the row is below the group, so the flow scrolls to it.
+- scrollUntilVisible:
+    element:
+      id: meet-thread
+    centerElement: true
+- tapOn:
+    id: meet-thread
+- extendedWaitUntil:
+    visible:
+      id: thread
+    timeout: 15000
+- assertVisible:
+    id: thread-composer
+- assertVisible:
+    id: thread-input
+
+# Nothing said yet. On iOS the empty state is one element named "<title>. <body>", so the title is matched as the start of the name.
+- assertVisible: "Say hello to your group.*"
+
+# Another member writes. The screen polls every 5 seconds while it is open, so the line shows up without a pull.
+- runFlow:
+    file: ../subflows/operator.yaml
+    env:
+      SERVER_URL: ${SERVER_URL}
+      TEST_TOKEN: ${TEST_TOKEN}
+      ROUTE: say
+      PHONE: ${SPEAKER}
+      EVENT_ID: ${EVENT_ID}
+      DECISION: ""
+      REASON: ""
+      PHONES: ""
+      TEXT: "Table by the window, see menu.example.com"
+- extendedWaitUntil:
+    visible: ".*Table by the window.*"
+    timeout: 20000
+- assertNotVisible: "Say hello to your group.*"
+
+# A line is plain text: the address in it is not a link, so there is nothing to tap that leaves the app.
+- assertVisible: ".*menu.example.com.*"
+
+# The person writes a line and sends it. The line stays in the list and the box empties.
+- tapOn:
+    id: thread-input
+- inputText: "Almost there"
+- tapOn:
+    id: thread-send
+- extendedWaitUntil:
+    visible: ".*Almost there.*"
+    timeout: 15000
+
+# A quick chip sends its words as an ordinary message. The message is read as sender, time and text in one item.
+- tapOn: "Running 10 min late"
+- extendedWaitUntil:
+    visible: "You, .*: Running 10 min late"
+    timeout: 15000
+
+# A long press on someone else's line offers Report. A long press on one's own does not.
+- longPressOn: ".*Table by the window.*"
+- assertVisible:
+    id: thread-report
+- tapOn:
+    id: thread-report
+- extendedWaitUntil:
+    visible:
+      id: report
+    timeout: 10000
+- assertVisible:
+    id: report-call-112
+- assertVisible: "About one of their messages."
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: thread

@@ -36,7 +36,7 @@ export function PlanBar({ title, category, when, status, live = false, onPress }
         <Poster variant="thumb" title={title} category={category} />
       </View>
       <View className="min-w-0 flex-1">
-        <Text variant="control" tabular numberOfLines={1} className="font-semibold">
+        <Text variant="control" tabular className="font-semibold">
           {`${title}, ${when}`}
         </Text>
         <Text variant="meta" className={live ? "text-signal" : "text-muted"}>

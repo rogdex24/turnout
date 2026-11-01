@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CheckinResponse, GroupResponse } from "@turnout/contract/app/groups";
 import { useSyncExternalStore } from "react";
 import { Linking } from "react-native";
+import { telemetry } from "@/analytics";
 import { type CheckinVariables, checkinMutationKey, groupQuery, isRevealed, markCheckedIn, meetContextQuery } from "@/api/groups";
 import { queryKeys } from "@/api/keys";
 import { nativeLocation } from "@/api/locationNative";
 import { type Replayable, replayable } from "@/api/mutations";
 import { showsRealMap } from "@/api/variant";
-import { errorKind, isApiError } from "@/model/apiError";
+import { isApiError, pendingRead } from "@/model/apiError";
 import { locationLine, mapsUrl } from "@/model/meetCard";
 import { meetPhase, watchesLocation } from "@/model/meetWindow";
 import { toPoint } from "@/model/walk";
@@ -31,8 +32,14 @@ export interface MeetScreenProps {
   onOpenShow: (eventId: string) => void;
   /** Opens the way to leave this plan. */
   onLeave: (planId: string) => void;
+  /** Opens the group chat. */
+  onOpenThread: () => void;
+  /** Opens the report form for this group. */
+  onReport: () => void;
   /** From the closed card back to the plans. */
   onClosed: () => void;
+  /** From the closed card of a group that is done to the after-the-show screen (A20). */
+  onOpenAfter: () => void;
 }
 
 function open(url: string) {
@@ -43,10 +50,20 @@ function open(url: string) {
  * The meet card on live data. It opens from the group kept on disk, so a person with no signal still sees the cafe, the map pins and
  * the group. "I'm here" is sent with no body: where the phone is stays on the phone, and is only used for the walk line.
  */
-export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onClosed }: MeetScreenProps) {
+export function MeetScreen({
+  groupId,
+  focused,
+  onBack,
+  onOpenShow,
+  onLeave,
+  onOpenThread,
+  onReport,
+  onClosed,
+  onOpenAfter,
+}: MeetScreenProps) {
   const api = useApi();
   const queryClient = useQueryClient();
-  const { connectivity } = useDeps();
+  const { connectivity, prefs } = useDeps();
   const offline = useSyncExternalStore(connectivity.subscribe, connectivity.isOffline);
   const now = useNow(CLOCK_EVERY_MS);
   const group = useQuery({ ...groupQuery(api, groupId), refetchInterval: focused ? REFRESH_EVERY_MS : false });
@@ -81,11 +98,7 @@ export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onCl
   if (group.isError && isApiError(group.error) && group.error.kind === "not_found") {
     state = { status: "closed" };
   } else if (group.data === undefined) {
-    const stalledOffline = group.isPending && group.fetchStatus === "paused" && group.failureCount > 0;
-    state =
-      group.isError || stalledOffline
-        ? { status: "error", kind: stalledOffline ? "offline" : errorKind(group.error) }
-        : { status: "loading" };
+    state = pendingRead(group);
   } else if (phase === "closed") {
     state = { status: "closed" };
   } else if (phase === "waiting" || revealed === null) {
@@ -125,6 +138,7 @@ export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onCl
 
   const onHere = () => {
     moments.imHere();
+    if (plan) telemetry(prefs).track("im_here_tapped", { plan_id: plan.planId });
     checkin.mutate(replayable({ groupId }));
   };
 
@@ -140,14 +154,17 @@ export function MeetScreen({ groupId, focused, onBack, onOpenShow, onLeave, onCl
       onRetry={() => void group.refetch()}
       onOpenShow={plan ? () => onOpenShow(plan.eventId) : null}
       onOpenMaps={() => {
-        if (cafePoint && revealed) open(mapsUrl(cafePoint, revealed.cafe.name));
+        if (cafePoint && revealed) open(mapsUrl(cafePoint));
       }}
       onAskLocation={location.request}
       onOpenSettings={() => void Linking.openSettings().catch(() => undefined)}
       onHere={onHere}
       onCall={() => open(EMERGENCY_URL)}
+      onOpenThread={onOpenThread}
+      onReport={onReport}
       onLeave={plan ? () => onLeave(plan.planId) : null}
       onClosed={onClosed}
+      onOpenAfter={group.isSuccess && group.data.state === "done" ? onOpenAfter : null}
     />
   );
 }

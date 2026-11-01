@@ -11,7 +11,7 @@ import { ticketRejectReasonSchema } from "@turnout/contract/ticket";
 import { z } from "zod";
 import { addMuteRule, countMuted, isMuteField, MUTE_FIELDS, type MuteField, removeMuteRule } from "../curation/mute.js";
 import { SOURCE_ADAPTERS } from "../ingestion/sources/registry.js";
-import { accountDetail, failedNotices, pendingHandles, reportQueue, upcomingShows } from "../social/adminReads.js";
+import { accountDetail, failedNotices, memberIdByPhone, pendingHandles, reportQueue, upcomingShows } from "../social/adminReads.js";
 import { pepperCheck } from "../social/bans.js";
 import { normalizePhone } from "../social/model/phone.js";
 import { DEFAULT_TUNABLES } from "../social/model/tunables.js";
@@ -20,6 +20,7 @@ import {
   approveTicket,
   banMember,
   closeReport,
+  eraseMemberOnRequest,
   liftBan,
   markContacted,
   OperatorRuleError,
@@ -607,7 +608,15 @@ export async function banAction(db: Database, pepper: string | null | undefined,
   return { memberId, status: "banned" as const };
 }
 
-const liftBody = z.strictObject({ phone: z.string().trim().min(1).max(32) });
+/** Erases an account the member asked to have erased. No ban row and no pepper: the number can sign up again. */
+export async function eraseAction(db: Database, files: AdminFiles | null, memberId: string, now: Date) {
+  const result = eraseMemberOnRequest(db, memberId, now, DEFAULT_TUNABLES);
+  if (!result.ok) throw ACCOUNT_ERRORS.not_found;
+  await deleteStored(files, result.fileKeys);
+  return { memberId, status: "deleted" as const };
+}
+
+const phoneBody = z.strictObject({ phone: z.string().trim().min(1).max(32) });
 const E164 = /^\+[1-9]\d{6,14}$/;
 
 /** The number the operator typed, as E.164: an Indian mobile in any common form, or any number already written as +country digits. */
@@ -616,8 +625,18 @@ const operatorPhone = (raw: string): string | null => {
   return E164.test(compact) ? compact : normalizePhone(raw);
 };
 
+/** Finds an account by the number on it, for a request that arrives from a phone number and not a member id. */
+export function findAccountByPhone(db: Database, body: unknown) {
+  const { phone } = parseBody(phoneBody, body);
+  const e164 = operatorPhone(phone);
+  if (e164 === null) throw bad("phone is not a number this service can hold, send it as +91 and ten digits");
+  const memberId = memberIdByPhone(db, e164);
+  if (memberId === null) throw ACCOUNT_ERRORS.not_found;
+  return { memberId };
+}
+
 export function liftBanAction(db: Database, pepper: string | null | undefined, body: unknown, now: Date) {
-  const { phone } = parseBody(liftBody, body);
+  const { phone } = parseBody(phoneBody, body);
   const e164 = operatorPhone(phone);
   if (e164 === null) throw bad("phone is not a number this service can hold, send it as +91 and ten digits");
   if (!liftBan(db, needPepper(db, pepper), e164, now).ok) throw new HttpError(404, "that number is not on the ban list");

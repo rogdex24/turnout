@@ -36,7 +36,7 @@ export function handleNeedsAttention(me: Pick<MeResponse, "handle">): boolean {
   return me.handle.state === "rejected";
 }
 
-export type SessionPhase = "loading" | "signed_out" | "signed_in";
+export type SessionPhase = "loading" | "signing_out" | "signed_out" | "signed_in";
 
 export interface GateInput {
   session: SessionPhase;
@@ -56,7 +56,8 @@ export interface GateInput {
 export type Gate = { kind: "loading" } | { kind: "error" } | { kind: "ready"; step: OnboardingStep };
 
 export function resolveGate(input: GateInput): Gate {
-  if (input.session === "loading") return { kind: "loading" };
+  // While the phone is wiped at sign-out the member's data is going away, so nothing it says is shown.
+  if (input.session === "loading" || input.session === "signing_out") return { kind: "loading" };
   if (input.session === "signed_out") {
     const noticeAccepted = input.acceptedNotice === input.noticeVersion;
     return {

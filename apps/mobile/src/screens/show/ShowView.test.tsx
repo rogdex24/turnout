@@ -11,7 +11,9 @@ const base = (over: Partial<ShowViewProps> = {}): ShowViewProps => ({
   onRetry: jest.fn(),
   onSeeShows: jest.fn(),
   onOpenLink: jest.fn(),
+  onBuy: jest.fn(),
   onGo: jest.fn(),
+  onGoTapped: jest.fn(),
   ...over,
 });
 
@@ -60,7 +62,7 @@ describe("ShowView, a ready show", () => {
     const buy = screen.getByTestId("show-buy");
     expect(buy.props.accessibilityLabel).toBe(copy.buyLabel("BookMyShow"));
     await fireEvent.press(buy);
-    expect(props.onOpenLink).toHaveBeenCalledWith("https://example.com/tickets/monsoon-theory");
+    expect(props.onBuy).toHaveBeenCalledWith("https://example.com/tickets/monsoon-theory");
   });
 
   it("has no buy button for a ticket address that is not a web page", async () => {

@@ -1,6 +1,5 @@
 # The handle check as a person lives it: a handle in review, the operator turning it down with a reason, the person sending a new one
-# from the strip, and the operator accepting it so the strip goes. Asha has a handle in review when the server starts. Written for CI;
-# it has not run on a device yet.
+# from the strip, and the operator accepting it so the strip goes. Asha has a handle in review when the server starts. Written for CI.
 appId: com.turnout.app.e2e
 name: profile-check
 tags:
@@ -30,21 +29,31 @@ env:
       REASON: private_or_empty
       EVENT_ID: ""
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*That account is private or has nothing on it yet.*"
     timeout: 80000
 - assertVisible: "Change handle"
 
-# Change handle opens the Settings page with the field; the new handle goes back to checking in place.
-- tapOn: "Change handle"
-- extendedWaitUntil:
-    visible:
-      id: settings-social
-    timeout: 10000
+# Change handle opens the Settings page with the field; the new handle goes back to checking in place. On iOS the tap can land
+# and nothing open (run 41244298923, as in report.yaml), so the tap goes again when the page does not come.
+- retry:
+    maxRetries: 2
+    commands:
+      - tapOn: "Change handle"
+      - extendedWaitUntil:
+          visible:
+            id: settings-social
+          timeout: 10000
 - tapOn:
     id: social-handle
 - inputText: "@asha.example"
-- hideKeyboard
+# Save sits above the keyboard (SettingsPage avoids it), so the flow leaves the keyboard up on iOS, where hideKeyboard can fail.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: social-save
 - extendedWaitUntil:
@@ -64,12 +73,11 @@ env:
       REASON: ""
       EVENT_ID: ""
       PHONES: ""
-- tapOn:
-    id: back
-- extendedWaitUntil:
-    visible:
-      id: home
-    timeout: 10000
+      TEXT: ""
+- runFlow:
+    file: ../subflows/back-to.yaml
+    env:
+      SCREEN: home
 - extendedWaitUntil:
     notVisible:
       id: profile-check-strip

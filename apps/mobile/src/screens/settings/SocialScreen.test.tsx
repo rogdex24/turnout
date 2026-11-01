@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { MeResponse } from "@turnout/contract/app/me";
 import { AccessibilityInfo } from "react-native";
 import { queryKeys } from "@/api/keys";
@@ -62,6 +62,12 @@ describe("SocialScreen", () => {
     await fireEvent.press(screen.getByTestId("social-save"));
     await waitFor(() => expect(say).toHaveBeenCalledWith(profileCheck.pending));
     expect(say).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Save above the keyboard, so the handle can be saved with the keyboard up", async () => {
+    await open(meFixture());
+    const avoiding = screen.getByTestId("settings-social-body");
+    expect(within(avoiding).getByTestId("social-save")).toBeOnTheScreen();
   });
 
   it("sends nothing for a value that is not a handle", async () => {

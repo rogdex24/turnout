@@ -103,6 +103,11 @@ describe("resolveGate", () => {
     expect(resolveGate(gateInput({ session: "loading", welcomeSeen: true, acceptedNotice: NOTICE }))).toEqual({ kind: "loading" });
   });
 
+  test("waits while the phone is wiped at sign-out, so the member's failed reload does not show an error", () => {
+    const input = gateInput({ session: "signing_out", welcomeSeen: false, acceptedNotice: null, me: { data: undefined, failed: true } });
+    expect(resolveGate(input)).toEqual({ kind: "loading" });
+  });
+
   describe("signed out", () => {
     const cases: [boolean, string | null, Gate][] = [
       [false, null, { kind: "ready", step: "welcome" }],

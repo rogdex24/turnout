@@ -79,7 +79,7 @@ colors:
   app-primary-dark: "#ede8e1"
   app-on-primary: "#ede8e1"
   app-on-primary-dark: "#121212"
-  app-scrim: "#18181873"
+  app-scrim: "#181818a6"
   app-scrim-dark: "#00000099"
   app-on-photo: "#f3eee7"
   app-on-photo-dark: "#f3eee7"
@@ -160,13 +160,13 @@ typography:
     fontWeight: 500
     lineHeight: 20px
   display-hero:
-    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontFamily: '"Big Shoulders", "Inter Variable", sans-serif'
     fontSize: 116px
     fontWeight: 900
     lineHeight: 90px
     letterSpacing: -0.01em
   display-band:
-    fontFamily: '"Big Shoulders Display", "Inter Variable", sans-serif'
+    fontFamily: '"Big Shoulders", "Inter Variable", sans-serif'
     fontSize: 28px
     fontWeight: 800
     lineHeight: 28px
@@ -1045,6 +1045,9 @@ and a single orange that only ever means something is live. The app follows the 
 - `app-pressed` (ink at 8%) and `app-skeleton` (the `app-surface-raised` tone) are not in the mockups; they are derived from
   its ink and raised surface.
 - Text on a poster or photo is `app-on-photo`; the placeholder poster tones are `app-poster-comedy`, `-music` and `-theatre`.
+  A real photo can be any colour, so the caption sits on `app-scrim` and the pair is held to 4.5 over a white photo, the
+  worst case. That is why the light scrim is 65% ink: at the 45% the first mockups use it fell to 2.53 over white. The
+  same scrim is the sheet backdrop and the round buttons on a photo.
 - The marquee band is dark in both themes; its text is `app-ink-dark`.
 
 Contrast, WCAG relative luminance. `test/mobileTokens.test.ts` computes every row from this file and fails on a regression.
@@ -1057,6 +1060,8 @@ Contrast, WCAG relative luminance. `test/mobileTokens.test.ts` computes every ro
 | `app-signal` on the soft chip over bg, surface | 5.14, 5.59 | 5.06, 4.63 | 4.5 (light target 5.1 on bg) |
 | `app-on-primary` on `app-primary` | 14.57 | 15.37 | 4.5 |
 | `app-on-photo` on the poster tones | 9.28 to 12.72 | same | 4.5 |
+| `app-on-photo` on `app-scrim` over a white photo | 4.76 | 4.97 | 4.5 |
+| `app-bg` on `app-ink` (the selected chip) | 14.57 | 15.37 | 4.5 |
 | marquee text on `app-marquee` | 14.57 | 14.28 | 4.5 |
 | `app-outline` on bg | 3.13 | 3.29 | 3 (SC 1.4.11) |
 | `app-signal` on bg (dot, ring) | 5.75 | 6.01 | 3 |
@@ -1067,19 +1072,26 @@ Type. The app takes its scale from the Typography table, with these additions an
 |---|---|---|---|
 | `display` | Inter | 28 / 34 / 600 | yes, up to 1.6 |
 | `title-large` | Inter | 22 / 28 / 600 | yes, up to 1.6 |
-| `app-title` (the app's `title`) | Inter | 17 / 24 / 600 | yes |
-| `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes |
+| `app-title` (the app's `title`) | Inter | 17 / 24 / 600 | yes, up to 2 |
+| `app-body` (the app's `body`) | Inter | 15 / 22 / 400 | yes, up to 2 |
 | `app-control` (the app's `control`) | Inter | 15 / 20 / 500 | yes |
-| `meta`, `label`, `badge` | Inter | as above | `label` and `badge` up to 1.3 |
-| `display-hero` | Big Shoulders Display | 116 / 90 / 900 | no, fixed (the meet time) |
-| `display-band` | Big Shoulders Display | 28 / 28 / 800, caps | no, fixed (the marquee) |
-| `display-poster` | Big Shoulders Display | 30 to 70, 800, caps | no, fixed boxes |
-| `display-numeral` | Big Shoulders Display | 24 to 36, 800 | no (price, count, code digits) |
+| `meta`, `label`, `badge` | Inter | as above | `meta` up to 2, `label` and `badge` up to 1.3 |
+| `display-hero` | Big Shoulders | 116 / 90 / 900 | no, fixed (the meet time) |
+| `display-band` | Big Shoulders | 28 / 28 / 800, caps | no, fixed (the marquee) |
+| `display-poster` | Big Shoulders | 30 to 70, 800, caps | no, fixed boxes |
+| `display-numeral` | Big Shoulders | 24 to 36, 800 | no (price, count, code digits) |
 
 `design.md` types take one size, so the two ranges (`display-poster`, `display-numeral`) and the scaling caps live in
 `packages/design-tokens/native.ts`. The display face is for the wordmark, poster titles, the marquee, the meet time and single
 data numerals; everything else is Inter. Section heads are sentence case; no eyebrows, no all-caps labels. Times, dates, prices,
-counts and codes use tabular figures. Radii (14 fields and faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
+counts and codes use tabular figures. No style grows past 2 times its size: that is 200 percent (WCAG 1.4.4), the most Android
+gives, and the size the stories and tests check. The largest iOS size goes past 3 for body text, where one message filled the thread
+and the phone field hid its +91. A poster title takes the largest `display-poster` size at which it fits the box in both
+directions: at most three lines (four on the show hero) across, and above the category line, which scales, down. The meet time
+stays on one line: where the hour has two digits and the phone is narrow, it shrinks to fit and never wraps. At a text size
+of 1.3 or more the layout takes its large-text form: the countdown goes on its own row under the meet time, so the time keeps
+its width, and the plan steps stack in a column, each bar beside its label, so no label breaks inside a word. Radii (14 fields and
+faces, 16 cards, 20 the featured card, 24 sheet top, pill), spacing in
 dp, hit areas (44 minimum, 56 primary button, 48 secondary), the springs and the pressed feedback are in `native.ts` too.
 
 ## Verification

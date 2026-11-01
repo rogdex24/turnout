@@ -25,6 +25,7 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""
 - extendedWaitUntil:
@@ -43,6 +44,7 @@ env:
       DECISION: reject
       REASON: wrong_show
       PHONES: ""
+      TEXT: ""
 - extendedWaitUntil:
     visible: ".*We couldn't use your ticket.*"
     timeout: 80000
@@ -74,6 +76,7 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""
 - runFlow:
@@ -86,6 +89,7 @@ env:
       EVENT_ID: ${SHOW_ID}
       DECISION: approve
       PHONES: ""
+      TEXT: ""
       REASON: ""
 - extendedWaitUntil:
     visible: ".*Finding your group.*"
@@ -102,5 +106,6 @@ env:
       PHONE: ${MEMBER}
       EVENT_ID: ${SHOW_ID}
       PHONES: ""
+      TEXT: ""
       DECISION: ""
       REASON: ""

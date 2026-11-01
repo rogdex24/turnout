@@ -48,5 +48,6 @@ jobs:
           APP_VARIANT: preview
           EXPO_PUBLIC_STORYBOOK: "0"
           EXPO_PUBLIC_ALLOW_CAPTURE: "0"
+          EXPO_PUBLIC_GROUPS_ENABLED: "1"
           MESSAGE: ${{ github.sha }}
         run: bunx "eas-cli@${EAS_CLI_VERSION}" update --channel preview --environment preview --message "$MESSAGE" --non-interactive

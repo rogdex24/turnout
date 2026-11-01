@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Modal, Pressable, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { common } from "@/copy/common";
 import { useReduceMotion } from "../reduceMotion";
 import { Button } from "./Button";
@@ -22,6 +22,8 @@ export interface SheetProps {
   onClose: () => void;
   primary?: SheetAction;
   secondary?: SheetAction;
+  /** On the panel itself, so the id has a size even when the sheet holds no content of its own. */
+  testID?: string;
   children?: ReactNode;
 }
 
@@ -29,7 +31,7 @@ export interface SheetProps {
  * A bottom sheet: grabber, title, lead, content, one primary and one secondary action. Built on the platform Modal, so the system
  * back closes it. It slides up, or crossfades when Reduce Motion is on.
  */
-export function Sheet({ visible, title, lead, onClose, primary, secondary, children }: SheetProps) {
+export function Sheet({ visible, title, lead, onClose, primary, secondary, testID, children }: SheetProps) {
   const reduceMotion = useReduceMotion();
   return (
     <Modal visible={visible} transparent animationType={reduceMotion ? "fade" : "slide"} onRequestClose={onClose} statusBarTranslucent>
@@ -40,29 +42,31 @@ export function Sheet({ visible, title, lead, onClose, primary, secondary, child
         onPress={onClose}
         testID="sheet-scrim"
       />
-      <SafeAreaView edges={["bottom"]} className="rounded-t-sheet border-t border-line bg-surface px-4 pt-2">
+      <SafeAreaView edges={["bottom"]} className="max-h-[90%] rounded-t-sheet border-t border-line bg-surface px-4 pt-2" testID={testID}>
         <View className="mb-3 h-1 w-9 self-center rounded-pill bg-outline" accessible={false} />
-        <Text variant="title-large" accessibilityRole="header">
-          {title}
-        </Text>
-        {lead ? (
-          <Text variant="body" className="mt-2 text-muted">
-            {lead}
+        <ScrollView bounces={false} keyboardShouldPersistTaps="handled">
+          <Text variant="title-large" accessibilityRole="header">
+            {title}
           </Text>
-        ) : null}
-        {children ? <View className="mt-4">{children}</View> : null}
-        <View className="mb-4 mt-6 gap-3">
-          {primary ? <Button title={primary.title} onPress={primary.onPress} loading={primary.loading} testID={primary.testID} /> : null}
-          {secondary ? (
-            <Button
-              variant="secondary"
-              title={secondary.title}
-              onPress={secondary.onPress}
-              loading={secondary.loading}
-              testID={secondary.testID}
-            />
+          {lead ? (
+            <Text variant="body" className="mt-2 text-muted">
+              {lead}
+            </Text>
           ) : null}
-        </View>
+          {children ? <View className="mt-4">{children}</View> : null}
+          <View className="mb-4 mt-6 gap-3">
+            {primary ? <Button title={primary.title} onPress={primary.onPress} loading={primary.loading} testID={primary.testID} /> : null}
+            {secondary ? (
+              <Button
+                variant="secondary"
+                title={secondary.title}
+                onPress={secondary.onPress}
+                loading={secondary.loading}
+                testID={secondary.testID}
+              />
+            ) : null}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );

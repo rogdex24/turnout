@@ -1,0 +1,82 @@
+name: mobile-dev-build
+
+# Builds the development client by hand, with no Expo or Apple account: the Android APK for any phone or emulator and the app for the
+# iOS Simulator. Install one once, then `bun run mobile:dev` serves the JS to it with live reload (docs/mobile/try-the-app.md).
+# A real iPhone needs a signed build, which this workflow cannot make.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which development builds to make
+        type: choice
+        options: [both, android, ios]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: "1.4.3"
+  XCODE_VERSION: "26.2"
+
+jobs:
+  android:
+    if: inputs.platform != 'ios'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: bun install --frozen-lockfile
+      - name: Gradle cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: gradle-${{ runner.os }}-
+      - name: Build the development APK
+        run: apps/mobile/ci/build-dev-android.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: turnout-dev-android
+          path: apps/mobile/build/turnout-dev.apk
+          retention-days: 30
+          if-no-files-found: error
+
+  ios-simulator:
+    if: inputs.platform != 'android'
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Select Xcode
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - run: bun install --frozen-lockfile
+      - name: Build the development simulator app
+        run: apps/mobile/ci/build-dev-ios.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: turnout-dev-ios-simulator
+          path: apps/mobile/build/turnout-dev-ios.tgz
+          retention-days: 30
+          if-no-files-found: error

@@ -18,7 +18,7 @@ other people in a group.
 | `member.id` | Random sortable id | Names the person in every other row | Server only; never in a response about someone else | Until deletion, then it stays as the tombstone id |
 | `member.phone_e164` | Phone number, E.164 | The sign-in identity and where the code is sent | The member, the operator. Never a co-member | Until deletion; nulled on the tombstone |
 | `member.status` | `active`, `suspended`, `stopped`, `banned` or `deleted` | Decides whether the person can sign in and be grouped | The member (their own state), the operator | Until deletion |
-| `member.status_reason` | Short operator reason code | Audit of why a status changed | The operator | Until deletion |
+| `member.status_reason` | Short reason code (`self`, `request` or `ban` on a tombstone) | Audit of why a status changed | The operator | Until deletion |
 | `member.stop_baseline_at` | When an operator last reinstated the member | The stop rule counts downvotes from here, and it must outlast the year the action log is kept | Operator | Until deletion; nulled on the tombstone |
 | `member.phone_verified_at` | When a code last proved the phone | Matching needs a verified phone | The member, the operator | Until deletion |
 | `member.created_at` | Row creation time | Audit | Operator | Until deletion |
@@ -101,7 +101,7 @@ other people in a group.
 | --- | --- | --- | --- | --- |
 | `rate_bucket.bucket_key` | Keyed hash of a scope and a subject (a phone, an IP, a member) | Counts requests without storing the subject | Server only | One window |
 | `rate_bucket.window_start` | Start of the window, epoch seconds | Fixed-window counting | Server | One window |
-| `rate_bucket.window_seconds` | Length of the window | Tells the sweep when the row is dead | Server | One window; the `otp:sends` counter rows are kept 62 days for the monthly spend alert |
+| `rate_bucket.window_seconds` | Length of the window | Tells the sweep when the row is dead | Server | One window; the `otp:sends` counter rows are kept 62 days for the monthly spend alert. Two more kinds of row use the same table, besides `otp:sends` (see below) |
 | `rate_bucket.count` | Requests in the window | The limit check | Server | One window |
 
 ### `plan`
@@ -249,7 +249,7 @@ Every write the operator makes. `detail` holds codes and ids, never free text ab
 | Column | What | Why | Who sees it | How long |
 | --- | --- | --- | --- | --- |
 | `operator_action.id` | Row id (ULID) | Primary key | Operator | 1 year |
-| `operator_action.action` | What was done, for example `handle_approved` | Audit | Operator | 1 year |
+| `operator_action.action` | What was done, for example `handle_approved`, `member_ban` or `member_erase_request` (the operator erased an account the member asked for out of the app) | Audit | Operator | 1 year |
 | `operator_action.subject_type` | What kind of thing it was done to | Audit | Operator | 1 year |
 | `operator_action.subject_id` | The id of that thing; for a member it is the tombstone id after the account ends | Audit | Operator | 1 year |
 | `operator_action.detail` | A small JSON object of codes | Audit | Operator | 1 year |
@@ -371,11 +371,45 @@ One row. It holds a keyed fingerprint of the ban pepper, not the pepper, and no 
 | `ban_pepper_check.fingerprint` | HMAC-SHA256 of a fixed text with `BAN_PEPPER` | The admin compares its own pepper to this, so a ban made there matches the app's hashes | Server, operator | Overwritten at each app start |
 | `ban_pepper_check.written_at` | When the app last wrote it | Audit | Server | Same |
 
+### Other rows in `rate_bucket`
+
+The table holds more than request counters. The rows below are not counters per person, and none of them names a person.
+
+- `otp:sends`: a count of sign-in messages sent per IST day, unhashed because it names no one. It feeds the daily cap and the monthly spend alert and is kept 62 days.
+- `alert:spend:<month>:<level>`: a marker that the spend alert for that month and level (500, 1,000 and 1,500 INR) has fired. It stops a repeat after a restart and goes with the month's window.
+- `sweep:files`: a marker for the last nightly file sweep, so a restart does not sweep twice.
+
+### Derived, not stored: the never-pair rule
+
+No table holds the set of pairs that must not share a group. `src/social/neverPairs.ts` reads it each time from `downvote` (voter and target) and `report` (reporter and subject), whichever way a report went. Deleting a person deletes their downvotes, and a report keeps its ids after a deletion, so a reported pair stays apart. The rule therefore lasts as long as those two tables hold the rows: a downvote until either person is deleted, a closed report one year after it closed. Neither person is told.
+
+## Not about members
+
+These tables hold the show catalog and the sync's bookkeeping. They hold no member data, and a member row never points into them except through the show id on `plan` and `show_group`. The columns are not listed one by one here, because `test/socialSchema.test.ts` checks the social tables above only.
+
+| Table | What it holds | Personal data | How long |
+| --- | --- | --- | --- |
+| `event` | One row per show occurrence: title, times, venue, price, source link, image link, `organiser_name` | An organiser's or promoter's name as the source printed it, which is public listing text | Kept; a show that drops off the source is marked delisted, not deleted |
+| `venue` | Venue name, address, coordinates, Instagram handle of the venue | A business's public handle, not a member's | Kept |
+| `raw_payload` | The source's page or JSON for each record, so a parse can be replayed | Whatever the public listing held, which can include an organiser's name | 30 days, except the newest copy for each record |
+| `sync_run`, `sync_run_source` | One row per sync and per source: counts, status, error text | None | Kept |
+| `mute_rule` | The operator's rules that hide shows | None | Kept |
+
+## Logs and alerts
+
+- **Request log.** One JSON line per request to the process output (`LogEntry` in `src/app-api/context.ts`): time, method, route pattern, status, milliseconds, a short SHA-256 of the member id when the caller was signed in, and an error class name for a failure nobody expected. It never holds a URL with an id, a body, a phone, a handle, a token or a message. The ticker's failure line has the same shape. How long the lines last is the host's log rotation (owner step in `docs/security/masvs-server.md`). `test/appAudit.test.ts` and `test/auth.test.ts` check that no line holds these.
+- **Alert webhook.** When `OPERATOR_ALERT_WEBHOOK_URL` is set, an operator alert is posted to it as `{ "text": "..." }`. The text names a kind and, at most, a report id or a spend level (cap reached, spend level, code delivery failure, report due, handle review due) and never a phone, a name or a member id. Without the setting, or when the webhook fails, the same text goes to the process error output. So whoever runs the webhook (Slack or similar) sees no personal data. The same kind of alert is sent at most once an hour.
+- **Errors.** The server sends nothing to Sentry. Only the mobile app has Sentry. A server error is a status and a class name in the request log.
+
+## Backups
+
+The database is copied continuously by Litestream to the replica the host slot gives, for 7 days (`docs/deploy.md`). The replica therefore holds everything in the database, phones included, and must be private to the operator; ask the host for encryption at rest. A deleted account leaves the replica after the 7 days. The object store (photos and tickets) is not in the backup. The replica is not set up yet: it is an owner step with the host (S21).
+
 ## Object store
 
 | Prefix | What | Who sees it | How long |
 | --- | --- | --- | --- |
-| `tickets/<plan id>/<ulid>.<ext>` | A ticket the member sent: an image re-encoded to a 2,000 px long edge without metadata, or a PDF that passed the checks. No app route returns it; the operator opens it through a signed link and PDFs download as attachments | The operator only | 24 h after the show starts at the latest, 24 h after an unanswered rejection, at once on withdrawal or deletion |
+| `tickets/<ulid>.<ext>` | A ticket the member sent: an image re-encoded to a 2,000 px long edge without metadata, or a PDF that passed the checks. No app route returns it; the operator opens it through a signed link and PDFs download as attachments | The operator only | 24 h after the show starts at the latest, 24 h after an unanswered rejection, at once on withdrawal or deletion |
 | `photos/<opaque id>.jpg` | The member's profile photo, re-encoded to a 1080 px JPEG without EXIF. The key is a random id, never the member id, so a link to it names no one | See `profile.photo_key` | Until deletion or replacement |
 
 ## Third parties

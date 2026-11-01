@@ -1,0 +1,26 @@
+# The admin console for production. It listens on 127.0.0.1 only; reach it with
+#   ssh -L 3001:127.0.0.1:3001 <user>@<host>
+# It reads production.env for BAN_PEPPER, FILE_LINK_SECRET and the file store, which it must share with the app.
+[Unit]
+Description=Turnout admin console
+After=turnout@production.service
+
+[Service]
+Type=simple
+User=turnout
+Group=turnout
+WorkingDirectory=/srv/turnout/current
+EnvironmentFile=/etc/turnout/production.env
+Environment=ADMIN_HOST=127.0.0.1
+ExecStart=/usr/local/bin/bun src/cli.ts admin --db ${DB_PATH} --port 3001
+Restart=always
+RestartSec=2
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data
+
+[Install]
+WantedBy=multi-user.target

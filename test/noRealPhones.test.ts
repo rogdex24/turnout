@@ -74,3 +74,8 @@ test("the scan allows example addresses, file names with @ and the published tak
   const text = `ana@example.com sprite@2x.png patches/expo-modules-jsi@58.0.21.patch ${TAKEDOWN_EMAIL}`;
   expect(scanText("a.txt", text, allow)).toEqual([]);
 });
+
+test("the scan allows systemd template unit names, which use @ for the instance", () => {
+  const text = "After=turnout@production.service\nsystemctl start turnout@staging.service backup@daily.timer";
+  expect(scanText("a.service", text, allow)).toEqual([]);
+});

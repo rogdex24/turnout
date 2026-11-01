@@ -35,7 +35,7 @@ export function telemetryConfig(raw: { posthogKey?: string; posthogHost?: string
 }
 
 export interface Telemetry {
-  /** Starts what the saved choice allows. Called once after the first screen is up. */
+  /** Starts what the saved choice allows and sends `app_opened`. Called once after the first screen is up. */
   start(): void;
   /** The "Share usage data" switch: saves the choice, then starts or stops everything. */
   setConsent(on: boolean): void;
@@ -56,6 +56,7 @@ export interface TelemetryParts {
 export function createTelemetry({ config, prefs, makeClient, makeSentry }: TelemetryParts): Telemetry {
   let client: AnalyticsClient | null = null;
   let sentry: SentryHandle | null = null;
+  let opened = false;
 
   function activate() {
     if (config.posthogKey && client === null) {
@@ -74,7 +75,13 @@ export function createTelemetry({ config, prefs, makeClient, makeSentry }: Telem
 
   return {
     start() {
-      if (analyticsConsent(prefs)) activate();
+      if (!analyticsConsent(prefs)) return;
+      activate();
+      // The top of the funnel. A launch counts once, and only when the saved choice allows sending.
+      if (client !== null && !opened) {
+        opened = true;
+        client.capture("app_opened", {});
+      }
     },
     setConsent(on) {
       setAnalyticsConsent(prefs, on);

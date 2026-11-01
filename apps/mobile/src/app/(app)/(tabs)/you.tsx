@@ -1,8 +1,23 @@
 // Board: B14.1
+import { useRouter } from "expo-router";
 import { useDeps } from "@/providers/AppProviders";
-import { YouView } from "@/screens/you/YouView";
+import { YouScreen } from "@/screens/you/YouScreen";
+import type { YouTarget } from "@/screens/you/YouView";
+
+const ROUTES = {
+  profile: "/settings/profile",
+  social: "/settings/social",
+  notifications: "/settings/notifications",
+  blocked: "/settings/blocked",
+  safety: "/settings/safety",
+  howMatching: "/settings/how-matching-works",
+  privacy: "/settings/privacy",
+  grievance: "/settings/grievance",
+  deleteAccount: "/settings/delete-account",
+} as const satisfies Record<YouTarget, string>;
 
 export default function You() {
+  const router = useRouter();
   const { session } = useDeps();
-  return <YouView onSignOut={() => void session.signOut()} />;
+  return <YouScreen onOpen={(target) => router.push(ROUTES[target])} onSignOut={() => void session.signOut().catch(() => undefined)} />;
 }

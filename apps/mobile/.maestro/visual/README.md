@@ -1,6 +1,8 @@
 # Visual capture
 
-`capture-story.yaml` opens one Storybook story in the e2e build through `turnout-e2e://storybook?story=<id>` and photographs it.
+`capture-story.yaml` opens one Storybook story in the e2e build through `turnout-e2e://storybook?story=<id>&device=1` and photographs it.
+`device=1` makes the story's `Matrix` show one copy that follows the device theme and text size, which the device job sets. Without
+it, every shot would show the forced "Light, default text" cell at the top.
 `bun scripts/visual-diff.ts` then compares the shots with the baselines. The matrix, the baseline layout and the artifact names are in
 `docs/plans/mobile-visual-testing.md`.
 
@@ -8,9 +10,11 @@ Story ids: the story title lower-cased with `/` and spaces as `-`, then `--`, th
 the story `Loaded` is `screens-home--loaded`.
 
 Stories to capture are listed in `stories.json`: the baseline folder, the story id and a text that shows once the story has rendered.
+The text sits at the top of the screen: Maestro sees only what is on screen, and at the largest text size a line lower down is
+below the fold on the small phones.
 The device jobs run `ci/device-run.sh <target>`, which sets the theme and the text size and captures every listed story.
 
 The events list replaces the `home` entry when it lands in M2. `home` stands in until then, so the pipeline has a shot to compare.
 
-No baseline is committed yet. Baselines come from a CI device run (`scripts/visual-accept.ts <run-id>`), because the pixels have to
+Every target has baselines for every story in `stories.json`, and `visual-compare.sh` fails a target that has none. Baselines come from a CI device run (`scripts/visual-accept.ts <run-id>`), because the pixels have to
 come from the pinned emulator and simulator images, not from a developer machine.

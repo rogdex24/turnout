@@ -97,9 +97,13 @@ export function venueWalkMinutes(cafe: Point | null, venue: Point | null): numbe
   return walk.kind === "at_cafe" ? 1 : walk.minutes;
 }
 
-/** A geo link that opens the person's maps app on the cafe pin, with its name as the label. */
-export function mapsUrl(cafe: Point, label: string): string {
-  return `geo:${cafe.lat},${cafe.lng}?q=${cafe.lat},${cafe.lng}(${encodeURIComponent(label)})`;
+/**
+ * The keyless Google Maps link on the cafe's point (https://developers.google.com/maps/documentation/urls/get-started). Android
+ * hands it to the maps app and iOS opens it in Google Maps or the browser. A `geo:` link has no handler on iOS. The link takes a
+ * point or a search text, not both, so the cafe's name is not in it.
+ */
+export function mapsUrl(cafe: Point): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.lat},${cafe.lng}`)}`;
 }
 
 export interface MapRegion {

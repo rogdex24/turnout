@@ -9,17 +9,29 @@ name: capture story
 tags:
   - visual
 ---
+# No clearState: on iOS it took about 20 s of each story's 40, and the stories share nothing (each renders fixed data). The flows
+# before the capture can leave a member signed in, so the app comes up on Welcome or on Home.
 - launchApp:
-    clearState: true
-- openLink: turnout-e2e://storybook?story=${STORY_ID}
-# The iOS simulator asks "Open in “Turnout (e2e)”?" before it hands a custom-scheme link to the app. Android does not ask.
-- runFlow:
-    when:
-      visible: "Open"
-    commands:
-      - tapOn: "Open"
+    stopApp: true
+# A link sent while the app is still starting is lost (the router is not listening yet), and the app stays where it started.
 - extendedWaitUntil:
-    visible: ${READY_TEXT}
+    visible:
+      id: "welcome|home"
     timeout: 30000
+- openLink: turnout-e2e://storybook?story=${STORY_ID}&device=1
+# The iOS simulator can ask "Open in “Turnout (e2e)”?" before it hands the link over. It never did in a capture run, so the flow
+# answers it only while the story is not up, instead of waiting 10 s for it as subflows/open-link.yaml does.
+# On iOS a text inside an element that is accessible as a whole, such as the poster, is only part of that element's name.
+- retry:
+    maxRetries: 3
+    commands:
+      - runFlow:
+          when:
+            visible: "Open in .Turnout.*"
+          commands:
+            - tapOn: "Open"
+      - extendedWaitUntil:
+          visible: ".*${READY_TEXT}.*"
+          timeout: 10000
 - waitForAnimationToEnd
 - takeScreenshot: capture

@@ -19,24 +19,28 @@ export function Privacy({ grievance }: { grievance: GrievanceBlock | null }) {
         <p key={paragraph}>{paragraph}</p>
       ))}
       <h2>Grievance officer</h2>
-      {grievance ? (
-        <dl>
-          <dt>Name</dt>
-          <dd>{grievance.name}</dd>
-          <dt>Address</dt>
-          <dd>{grievance.address}</dd>
-          <dt>Email</dt>
-          <dd>
-            <a className="link" href={`mailto:${grievance.email}`}>
-              {grievance.email}
-            </a>
-          </dd>
-          <dt>Phone</dt>
-          <dd>{grievance.phone}</dd>
-        </dl>
-      ) : (
-        <p>Details not set.</p>
-      )}
+      <GrievanceDetails grievance={grievance} />
     </>
+  );
+}
+
+/** The grievance officer's contact, from the host's settings. Shown on /privacy and /delete-account. */
+export function GrievanceDetails({ grievance }: { grievance: GrievanceBlock | null }) {
+  if (!grievance) return <p>Details not set.</p>;
+  return (
+    <dl>
+      <dt>Name</dt>
+      <dd>{grievance.name}</dd>
+      <dt>Address</dt>
+      <dd>{grievance.address}</dd>
+      <dt>Email</dt>
+      <dd>
+        <a className="link" href={`mailto:${grievance.email}`}>
+          {grievance.email}
+        </a>
+      </dd>
+      <dt>Phone</dt>
+      <dd>{grievance.phone}</dd>
+    </dl>
   );
 }

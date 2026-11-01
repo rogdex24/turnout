@@ -22,7 +22,7 @@ export function StaticMap({ cafeName, venueName, hasVenuePin, label }: StaticMap
       accessible
       accessibilityRole="image"
       accessibilityLabel={label}
-      className="h-28 justify-center bg-surface-raised"
+      className="min-h-28 justify-center bg-surface-raised py-2"
       testID="meet-map-static"
     >
       <View className="flex-row items-center px-8" importantForAccessibility="no-hide-descendants">
@@ -39,11 +39,11 @@ export function StaticMap({ cafeName, venueName, hasVenuePin, label }: StaticMap
         ) : null}
       </View>
       <View className="mt-2 flex-row justify-between px-6" importantForAccessibility="no-hide-descendants">
-        <Text variant="label" className="max-w-[45%] text-ink" numberOfLines={1}>
+        <Text variant="label" className="max-w-[45%] text-ink">
           {cafeName}
         </Text>
         {hasVenuePin ? (
-          <Text variant="label" className="max-w-[45%] text-muted" numberOfLines={1}>
+          <Text variant="label" className="max-w-[45%] text-muted">
             {venueName ?? copy.map.venue}
           </Text>
         ) : null}

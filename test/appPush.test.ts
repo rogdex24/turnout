@@ -3,7 +3,7 @@ import { PUSH_PLATFORM_NAMES } from "@turnout/contract/app/devices";
 import { NOTICE_PUSH_TEXT, noticeKindSchema } from "@turnout/contract/app/notices";
 import { loadAppConfig } from "../src/app-api/env.js";
 import { ConfigError, createAppContext } from "../src/app-api/index.js";
-import { receiptResult, ticketResult } from "../src/app-api/vendors/expoPush.js";
+import { receiptResult, ticketResult, wireMessage } from "../src/app-api/vendors/expoPush.js";
 import { fakePushSender } from "../src/app-api/vendors/push.js";
 import { memoryStore } from "../src/utils/objectStore.js";
 import { memoryDb } from "./helpers.js";
@@ -46,11 +46,50 @@ describe("Expo ticket and receipt mappers", () => {
   });
 });
 
+describe("the Expo message", () => {
+  const base = {
+    token: "ExponentPushToken[aaaaaaaaaaaaaaaaaaaaaa]",
+    title: "Turnout",
+    body: "New message in your group.",
+    ttlSeconds: 600,
+  };
+
+  test("names the Android channel, and a group key becomes the Android tag and the iOS thread", () => {
+    const wire = wireMessage({
+      ...base,
+      data: { kind: "thread_message", noticeId: "01hn", planId: "01hp" },
+      channelId: "thread",
+      groupKey: "thread:01hp",
+    });
+    expect(wire).toMatchObject({ to: base.token, channelId: "thread", tag: "thread:01hp", threadId: "thread:01hp", ttl: 600 });
+    expect(wire.data).toEqual({ kind: "thread_message", noticeId: "01hn", planId: "01hp" });
+  });
+
+  test("a push with no group key sets neither tag nor thread", () => {
+    const wire = wireMessage({
+      ...base,
+      data: { kind: "head_over", noticeId: "01hn", planId: "01hp" },
+      channelId: "show-day",
+      groupKey: null,
+    });
+    expect(wire.channelId).toBe("show-day");
+    expect("tag" in wire).toBe(false);
+    expect("threadId" in wire).toBe(false);
+  });
+});
+
 describe("the fake sender", () => {
   test("keeps what it was asked to send and answers one result per message in order", async () => {
     const sender = fakePushSender();
     sender.failTokens.set("ExponentPushToken[bad-token-1]", "DeviceNotRegistered");
-    const base = { title: "t", body: "b", data: { kind: "head_over" as const, noticeId: "n", planId: null }, ttlSeconds: 60 };
+    const base = {
+      title: "t",
+      body: "b",
+      data: { kind: "head_over" as const, noticeId: "n", planId: null },
+      ttlSeconds: 60,
+      channelId: "show-day" as const,
+      groupKey: null,
+    };
     const results = await sender.send([
       { ...base, token: "ExponentPushToken[good-token-1]" },
       { ...base, token: "ExponentPushToken[bad-token-1]" },

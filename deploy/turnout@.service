@@ -1,0 +1,32 @@
+# One unit per environment: turnout@production and turnout@staging.
+# Settings come from /etc/turnout/<env>.env (mode 0600, written by deploy/setup.sh and by hand).
+# TURNOUT_PORT and the DB and file paths are in that file too, so both instances share this unit.
+[Unit]
+Description=Turnout server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=turnout
+Group=turnout
+WorkingDirectory=/srv/turnout/current
+EnvironmentFile=/etc/turnout/%i.env
+# Production restores its database from the Litestream replica when the file is missing.
+ExecStartPre=/srv/turnout/current/deploy/prestart.sh %i
+ExecStart=/usr/local/bin/bun src/cli.ts serve --db ${DB_PATH} --port ${TURNOUT_PORT}
+Restart=always
+RestartSec=2
+TimeoutStopSec=20
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

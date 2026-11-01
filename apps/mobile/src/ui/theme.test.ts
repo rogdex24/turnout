@@ -23,6 +23,6 @@ describe("src/theme.css", () => {
 
   test("font families match the names the expo-font plugin registers", () => {
     expect(declared("--font-sans")).toBe('"Inter"');
-    expect(declared("--font-display")).toBe('"Big Shoulders Display"');
+    expect(declared("--font-display")).toBe('"Big Shoulders"');
   });
 });

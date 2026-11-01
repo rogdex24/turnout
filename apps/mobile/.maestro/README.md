@@ -16,18 +16,27 @@ Flows run against the e2e variant (`com.turnout.app.e2e`, scheme `turnout-e2e`),
 | `flows/ticket-rejected.yaml` | A ticket the operator cannot use: the reason in plain words, Send another ticket, and a second ticket accepted |
 | `flows/cancel.yaml` | Leave this plan: the sheet, Stay keeps the plan, Leave plan ends it |
 | `flows/profile-check.yaml` | A handle in review turned down with a reason, Change handle sending a new one, and the operator accepting it so the strip goes |
+| `flows/settings.yaml` | The You tab and its pages: the handle check state, the women-only switch saving and saving back, blocked people, notifications, how matching works, the privacy notice with its WhatsApp (Meta) and banned-only phone hash lines, and the grievance page ("Details not set" on this server) |
+| `flows/delete-account.yaml` | Delete account: what goes and what stays, Keep my account, a wrong code, the right code ending at Welcome, then a relaunch and the same number starting fresh at the profile form |
 | `flows/loop-group.yaml` | Three more people join Dev's show and the plan says group confirmed with a count and a reveal time, and no names |
 | `flows/loop-no-group.yaml` | The server's clock passes T-24h with nobody to group with: the plan says no group this time and offers the next show |
-| `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs last |
+| `flows/group-shrinks.yaml` | A locked group loses a person and goes ahead with three; the plan says so. Moves the clock, so it runs near the end |
+| `flows/after-show.yaml` | The morning after: the server's clock passes 10:00 IST, the plan offers "How did it go?", the page says doing nothing is fine and shows first names and photos, and "I didn't feel comfortable" asks first and then marks one person privately; each person has a Report entry. Moves the clock, so it runs last, after group-shrinks |
 | `flows/push-routing.yaml` | A tap on a push opens the screen its kind names, through the e2e build's `turnout-e2e://push` link; an unknown kind or a bad id lands on Home |
-| `flows/loop-meet.yaml` | The meet card from the "Meet your group" push to "I'm here": the static map, the walk line from a set location, the Safety sheet and the check-in. Left out of the CI run until the seed has the group rows (tag `needs-group-seed`); needs a phone clock inside the check-in window (see its header) |
-| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code, sign in as a seeded member, make a plan the way a person does, and call an operator route |
+| `flows/loop-meet.yaml` | The meet card from the "Meet your group" push to "I'm here": the static map, the walk line from a set location, the Safety sheet and the check-in. Uses the seed's live group, whose show starts 75 minutes after the server, so it runs before any flow moves the clock |
+| `flows/funnel.yaml` | The analytics funnel from one run: Share usage data on, a show opened, Go with a group tapped, the meet card opened and "I'm here" tapped, then `show_viewed`, `go_tapped` and `im_here_tapped` read back in order from the server's capture sink. The e2e build sends its PostHog events there (`EXPO_PUBLIC_POSTHOG_HOST` and `_KEY` in `ci/env.sh`; the host is a path the app puts on the API address), so no PostHog project is needed. Signs in as Nisha, a member of the seed's live group, and runs with the other live-group flows |
+| `flows/thread.yaml` | The group chat from the meet card: another member's line arriving on the poll, a written line, a quick chip, no link in a line, and a long press offering Report. Uses the seed's live group, like loop-meet |
+| `flows/report.yaml` | Report someone from the Safety sheet: Call 112 on the form, Send waiting for a person, a report sent and a line that says nothing about what became of them. Uses the seed's live group, like loop-meet |
+| `subflows/` | Steps the flows share: open the phone step, send a code, enter a code, sign in as a seeded member, make a plan the way a person does, and call an operator route (`say` makes another member write to the group chat) |
 | `visual/capture-story.yaml` | Opens one Storybook story and takes a screenshot (see `visual/README.md`) |
 | `scripts/expect-events.js` | Fails a flow when the seeded server does not answer |
+| `scripts/posthog-reset.js`, `scripts/expect-posthog-events.js` | Empty the server's capture sink, and fail a flow unless it holds the events in `EXPECT` in that order (waits up to 40 seconds, the SDK sends every 10) |
 | `scripts/otp-code.js` | Reads the last sign-in code for a number from the server's test route (needs `TEST_TOKEN`) |
 | `scripts/operator.js` | Calls the seeded server's operator routes (`e2e/mobile-operator.ts`), served on the port after the server's, which it works out from `SERVER_URL` |
 | `scripts/clock.js` | Moves the seeded server's clock forward and runs one ticker pass (the server runs with `--no-ticker`) |
 | `ci/device-run.sh` | What a CI device job runs: pins the clock and screen, runs the flows, then captures every story in `visual/stories.json` |
+| `push/` | The iOS push check, outside the workspace because a push is sent between its two flows: `arm.yaml` signs in and sends the app to the home screen, `handle-rejected.json` is the sample payload (Expo push service shape, the data under `body`), `tap.yaml` opens Notification Center, taps the push and checks that the social handle screen opens |
+| `ci/ios-push-check.sh` | What the `ios-small` job runs after the capture: `arm.yaml`, `xcrun simctl push booted com.turnout.app.e2e push/handle-rejected.json`, then `tap.yaml`. It proves the handler, not delivery |
 
 Run locally, with an e2e build installed on an emulator or simulator:
 

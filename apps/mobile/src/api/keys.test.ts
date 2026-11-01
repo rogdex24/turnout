@@ -48,6 +48,7 @@ describe("query keys", () => {
     expect(isPersistedKey(queryKeys.showMember("abc"))).toBe(false);
     expect(isPersistedKey(queryKeys.plansList())).toBe(true);
     expect(isPersistedKey(queryKeys.planDetail("p1"))).toBe(true);
+    expect(isPersistedKey(queryKeys.thread("g1"))).toBe(true);
     expect(isPersistedKey(queryKeys.after("g1"))).toBe(false);
     expect(isPersistedKey(queryKeys.blocked())).toBe(false);
     expect(isPersistedKey(["something", "new"])).toBe(false);
