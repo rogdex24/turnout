@@ -72,8 +72,31 @@ export type MobileServer = {
   stop: () => Promise<void>;
 };
 
+/** Calls `log` with each line of `stream` until it ends. */
+async function forwardLines(stream: ReadableStream<Uint8Array>, log: (line: string) => void): Promise<void> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let rest = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = (rest + decoder.decode(value, { stream: true })).split("\n");
+    rest = lines.pop() ?? "";
+    for (const line of lines) log(line);
+  }
+  rest += decoder.decode();
+  if (rest) log(rest);
+}
+
 /** Seeds a temp database, starts `serve` on it and resolves once `/api/events` answers. */
-export async function startMobileServer(options: { port?: number; timeoutMs?: number } = {}): Promise<MobileServer> {
+export async function startMobileServer(
+  options: {
+    port?: number;
+    timeoutMs?: number;
+    /** Gets each line `serve` prints instead of the terminal (scripts/mobile-dev.ts). */
+    log?: (line: string) => void;
+  } = {},
+): Promise<MobileServer> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "turnout-mobile-"));
   const dbPath = path.join(dir, "mobile.sqlite");
   // The real clock, so the fixture events are upcoming and show in the list.
@@ -91,8 +114,9 @@ export async function startMobileServer(options: { port?: number; timeoutMs?: nu
   while (Math.abs(servePort - port) < 2) servePort = freePort();
   const child = Bun.spawn([process.execPath, "src/cli.ts", "serve", "--db", dbPath, "--port", String(servePort), ...SERVE_FLAGS], {
     env: { ...process.env, ...serveEnv(dir, testToken) },
-    stdio: ["ignore", "inherit", "inherit"],
+    stdio: ["ignore", options.log ? "pipe" : "inherit", "inherit"],
   });
+  if (options.log && child.stdout instanceof ReadableStream) void forwardLines(child.stdout, options.log);
   let operator: ReturnType<typeof startOperator> | undefined;
   let gate: Gate | undefined;
   const stop = async () => {

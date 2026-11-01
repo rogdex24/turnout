@@ -49,7 +49,7 @@ export type SeedState =
   | "banned"
   | "undeliverable";
 
-interface SeedMember {
+export interface SeedMember {
   state: SeedState;
   /** The tail of the number: `+1202555` and these four digits. */
   line: string;
